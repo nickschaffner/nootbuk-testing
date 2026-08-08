@@ -31,7 +31,9 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { deleteIdea, updateIdea } from '@/hooks/useIdeas'
+import { deleteIdea, moveIdeaToSection, updateIdea } from '@/hooks/useIdeas'
+import { useSectionsForSong } from '@/hooks/useSections'
+import { useAllSongs } from '@/hooks/useSongs'
 import { db } from '@/lib/db'
 import type {
   IdeaRole,
@@ -78,6 +80,12 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [targetSongId, setTargetSongId] = useState('')
+  const [targetSectionId, setTargetSectionId] = useState('unassigned')
+  const [isMoving, setIsMoving] = useState(false)
+
+  const songs = useAllSongs()
+  const sections = useSectionsForSong(targetSongId || undefined)
 
   useEffect(() => {
     if (!idea) {
@@ -121,6 +129,40 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
       // updateIdea already logs the error
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  async function handleMoveToSong() {
+    if (!ideaId || !targetSongId) {
+      return
+    }
+
+    setIsMoving(true)
+    try {
+      const sectionId =
+        targetSectionId === 'unassigned' ? null : targetSectionId
+      await moveIdeaToSection(ideaId, targetSongId, sectionId)
+      onClose()
+    } catch {
+      // moveIdeaToSection already logs the error
+    } finally {
+      setIsMoving(false)
+    }
+  }
+
+  async function handleMoveToPool() {
+    if (!ideaId) {
+      return
+    }
+
+    setIsMoving(true)
+    try {
+      await moveIdeaToSection(ideaId, null, null)
+      onClose()
+    } catch {
+      // moveIdeaToSection already logs the error
+    } finally {
+      setIsMoving(false)
     }
   }
 
@@ -267,6 +309,67 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
                 rows={4}
               />
             </div>
+
+            {idea.songId === null ? (
+              <div className="space-y-3 rounded-lg border p-4">
+                <Label>Move to Song</Label>
+                <Select
+                  value={targetSongId}
+                  onValueChange={(value) => {
+                    setTargetSongId(value)
+                    setTargetSectionId('unassigned')
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a song" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(songs ?? []).map((song) => (
+                      <SelectItem key={song.id} value={song.id}>
+                        {song.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {targetSongId ? (
+                  <Select
+                    value={targetSectionId}
+                    onValueChange={setTargetSectionId}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Section" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unassigned">Unassigned</SelectItem>
+                      {(sections ?? []).map((section) => (
+                        <SelectItem key={section.id} value={section.id}>
+                          {section.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : null}
+
+                <Button
+                  variant="secondary"
+                  disabled={!targetSongId || isMoving}
+                  onClick={() => void handleMoveToSong()}
+                >
+                  {isMoving ? 'Moving...' : 'Move to Song'}
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-lg border p-4">
+                <Button
+                  variant="secondary"
+                  disabled={isMoving}
+                  onClick={() => void handleMoveToPool()}
+                >
+                  {isMoving ? 'Moving...' : 'Move to Pool'}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
