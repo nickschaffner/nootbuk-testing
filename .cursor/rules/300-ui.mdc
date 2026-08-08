@@ -1,0 +1,59 @@
+---
+description: UI component conventions, shadcn/ui usage, Tailwind v4 patterns
+globs: src/components/**, src/app/**
+alwaysApply: false
+---
+
+# UI Component Rules
+
+## Tailwind v4 (CSS-first config)
+- There is NO tailwind.config.ts file. Theme customization is done via @theme in your CSS.
+- CSS entry point uses @import "tailwindcss" — NOT @tailwind base/components/utilities.
+- Use @tailwindcss/vite plugin in vite.config.ts — NOT the PostCSS plugin.
+- Gradient utilities: use bg-linear-to-* (NOT bg-gradient-to-*, which was v3).
+- Colors are OKLCH (shadcn v4 default), not HSL.
+
+## shadcn/ui
+- Style: new-york (the current default). Not the deprecated "default" style.
+- Components are copied into src/components/ui/ — they are source files, not an npm dependency.
+- Add components with: npx shadcn@latest add [component-name]
+- All shadcn components use data-slot attributes for styling hooks.
+- Use sonner for toasts (NOT the deprecated shadcn toast component).
+- Available primitives to use: Button, Dialog, Sheet, Card, DropdownMenu, Tabs, Select, Input, Textarea, Badge, Separator, ScrollArea, Popover, Command, Tooltip.
+
+## Design Direction (MVP scaffolding phase)
+- MVP is functional scaffolding first, polish later. Use shadcn defaults. Do not spend time on custom themes, animations, or micro-interactions.
+- Dark mode is the primary theme. Set up dark class on <html> and use dark: variants. But don't obsess over dark mode styling at scaffold phase.
+- Desktop-first. Target 1280px+ viewport. Use responsive Tailwind classes (md:, lg:) even though mobile is post-MVP — don't hardcode widths.
+- Minimal chrome. Clean, functional layouts. Think Notion or Linear, not Pro Tools.
+
+## Component Patterns
+- Functional components with named exports.
+- Props interfaces defined inline or in the same file.
+- Use React 19 ref-as-prop pattern, not forwardRef.
+- Composition over configuration — prefer compound components (e.g., <Card><CardHeader>...) over prop-heavy monoliths.
+- Loading states: use Skeleton components from shadcn for async content.
+- Empty states: always handle the "no data" case with a clear message and action (e.g., "No ideas yet. Capture your first idea.").
+
+## Drag and Drop (@dnd-kit)
+- Use @dnd-kit/core and @dnd-kit/sortable for:
+  - Reordering ideas within a section
+  - Moving ideas between sections (drag from one section, drop on another)
+  - Reordering sections within a song
+  - Reordering songs within an album track listing
+- Use DndContext at the Song Workspace level, with SortableContext per section.
+- Drop zones should have visual feedback (highlight on hover).
+- After a drop, update sortOrder values in Dexie.
+
+## Rich Text Editor (Tiptap 3)
+- Used for: Production Journal entries, Album Global Notes, Album Reference Material.
+- Packages: @tiptap/react, @tiptap/starter-kit, @tiptap/extension-image, @tiptap/extension-placeholder.
+- Image embeds: handle image upload/paste, store image blobs, insert as base64 data URLs or blob URLs.
+- Keep the toolbar minimal: bold, italic, headings (H2, H3), image insert, link. No tables, no code blocks, no colors.
+- Store editor content as HTML string in the database (songJournalEntries.content, albums.globalNotes, etc.).
+
+## Navigation
+- Use client-side routing (React Router or TanStack Router).
+- Routes: / (Home/Pool), /song/:id (Song Workspace), /album/:id (Album View).
+- Sidebar or top nav with: Home (Pool), Songs, Albums. Keep it minimal.
+- Quick Capture is a modal/overlay accessible from anywhere via a floating button or keyboard shortcut.

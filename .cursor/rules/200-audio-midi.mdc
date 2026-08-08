@@ -1,0 +1,64 @@
+---
+description: Audio recording, MIDI input, synth playback, and audio-to-MIDI conversion rules
+globs: src/hooks/useMidi*, src/hooks/useAudio*, src/hooks/useSynth*, src/components/capture/**, src/components/player/**, src/lib/midi*, src/lib/audio*
+alwaysApply: false
+---
+
+# Audio & MIDI Rules
+
+## Audio Recording (useAudioRecorder.ts)
+- Do NOT use MediaRecorder API for recording. Browsers output webm/opus (Chrome) or mp4/aac (Safari), not WAV. Music production needs lossless WAV.
+- Instead: use an AudioWorklet to capture raw PCM Float32 samples from the mic.
+- After recording, encode PCM to WAV format manually (write RIFF/WAV header + PCM data).
+- Store the resulting WAV Blob in IdeaMedia with mimeType 'audio/wav'.
+- Flow: navigator.mediaDevices.getUserMedia({ audio: true }) → AudioContext → AudioWorkletNode (PCM capture) → on stop, encode to WAV Blob.
+- Always handle permission denial gracefully (user denies mic access).
+- Display a waveform during and after recording. Use the PCM data or AnalyserNode for visualization.
+
+## MIDI Recording (useMidi.ts)
+- Use Web MIDI API directly (navigator.requestMIDIAccess()). No wrapper library needed.
+- Feature-detect first: if requestMIDIAccess is undefined, show "MIDI not supported in this browser" message. Do not crash.
+- List available MIDI inputs. Let user select one.
+- On midimessage events, parse note-on (status 0x90, velocity > 0) and note-off (status 0x80 or 0x90 with velocity 0).
+- During recording, simultaneously play each note through the synth engine (useSynth) so the user hears what they play.
+- After recording, store NoteEvent[] and serialize to Standard MIDI File via @tonejs/midi.
+- Store as IdeaMedia with type 'midi', blob = .mid file, noteData = NoteEvent[].
+
+## Synth Engine (useSynth.ts)
+- Two layers: Tone.js for synthesis, smplr for sample-based instrument playback.
+- ~10 patches available: Piano, Electric Piano, Bass, Synth Bass, Brass, Strings, Synth Lead, Synth Pad, Organ, Mallet.
+- Use smplr with FluidR3_GM or MusyngKite soundfonts for realistic instrument sounds. Load soundfonts on demand (lazy), not all at startup.
+- Fall back to Tone.js built-in synths (Synth, FMSynth, AMSynth, etc.) if soundfont hasn't loaded yet.
+- Tone.js AudioContext must be started on a user gesture (click/tap) — browser autoplay policy. Call Tone.start() on the first user interaction.
+- Provide a simple interface: playSingleNote(pitch, duration, patch), playNoteSequence(notes[], patch), stopAll().
+
+## Audio-to-MIDI (useAudioToMidi.ts)
+- Uses @spotify/basic-pitch (basic-pitch-ts on npm).
+- Runs entirely client-side via TensorFlow.js. No server.
+- The model file loads on first use and should be cached. Show a loading indicator.
+- Input: AudioBuffer (decode the audio blob first via AudioContext.decodeAudioData).
+- basic-pitch downmixes to mono and resamples to 22050 Hz internally.
+- Output: note events with pitch, onset, duration. Convert to NoteEvent[] format.
+- Notes are unquantized — they represent real timing, not snapped to a grid.
+- Works for melodic/polyphonic content. Does NOT detect drums/percussion.
+- After extraction, create a new IdeaMedia (type: 'midi') linked to the same Idea as the source audio.
+- Let user preview the extracted MIDI before confirming.
+
+## MIDI File I/O (src/lib/midi.ts)
+- Use @tonejs/midi for reading and writing Standard MIDI Files.
+- Import: parse .mid file → extract NoteEvent[] → store in IdeaMedia.noteData.
+- Export: convert NoteEvent[] → @tonejs/midi Midi object → write to Blob.
+- Exported .mid files should be single-track, with tempo and time signature metadata from the Idea or Song.
+
+## Note Utilities (src/lib/notes.ts)
+- Conversion between MIDI note numbers (0-127) and note names (C4, F#2, Bb3).
+- Middle C = MIDI 60 = C4.
+- Support flats and sharps in display. Store as MIDI numbers internally.
+- Chord name parsing if needed for the note picker.
+
+## Error Handling
+- Wrap all Web Audio and Web MIDI operations in try/catch.
+- Audio context can be suspended (autoplay policy) — always check state and resume.
+- MIDI devices can disconnect mid-session — handle onStateChange events.
+- Permission prompts (mic access) can be denied — show clear fallback UI.
+- basic-pitch model loading can fail (network, memory) — handle gracefully with retry option.

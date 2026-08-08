@@ -1,0 +1,89 @@
+---
+description: Core project rules for Nootbuk - always applied
+globs:
+alwaysApply: true
+---
+
+# Nootbuk — Project Rules
+
+## What This Is
+Nootbuk is a musician's idea capture and song documentation tool. Desktop-first client-side web app. No backend at MVP. All data in IndexedDB. Read AGENTS.md for the phased build plan.
+
+## Stack (pinned versions — do not upgrade without discussion)
+- React 19.x (19.2.x latest patches)
+- Vite 8.x with @tailwindcss/vite plugin
+- TypeScript 5.x, strict mode
+- Tailwind CSS v4 (CSS-first config via @theme, NOT tailwind.config.ts)
+- shadcn/ui (new-york style, OKLCH colors, npx shadcn@latest)
+- Dexie.js 4.4.x (IndexedDB wrapper)
+- Tone.js 15.x (synth engine)
+- smplr (soundfont playback — NOT soundfont-player, which is archived)
+- @spotify/basic-pitch (audio-to-MIDI, client-side TF.js)
+- @tonejs/midi (MIDI file I/O)
+- @dnd-kit (drag and drop — NOT react-beautiful-dnd)
+- Tiptap 3.x (rich text editor for production journal)
+- Zustand or Jotai for UI state (NOT Redux). Data lives in Dexie, not state management.
+
+## Critical Constraints
+- NO backend, NO server, NO API calls, NO auth. Everything runs client-side.
+- NO Next.js, NO SSR. This is a Vite SPA.
+- NO Electron/Tauri. Runs in a browser tab.
+- Feature-detect Web MIDI API (navigator.requestMIDIAccess) — not available in Safari/iOS.
+- Feature-detect File System Access API (window.showSaveFilePicker) — not available in Firefox/Safari. Use browser-fs-access library for fallback.
+- Audio recording via AudioWorklet capturing PCM, encode to WAV manually. Do NOT rely on MediaRecorder for WAV output (browsers output webm/opus or mp4/aac, not wav).
+- All IDs are UUIDs via crypto.randomUUID()
+- All timestamps are ISO 8601 strings
+- Data schema must map cleanly to Postgres later — explicit foreign keys, no nested objects for relational data.
+
+## File Structure
+```
+/nootbuk/
+  /public/
+    /soundfonts/          # GM soundfont files loaded by smplr
+  /src/
+    /app/                 # App shell, routing, layout
+    /components/
+      /ui/                # shadcn/ui components (copy-pasted, not imported from a package)
+      /capture/           # Audio recorder, MIDI recorder, note picker, capture modal
+      /song/              # Song workspace, section list, idea cards
+      /album/             # Album view
+      /pool/              # Idea pool browser
+      /player/            # Playback controls, synth patch selector
+      /editor/            # Tiptap rich text editor wrapper
+      /export/            # Export dialog and logic
+      /shared/            # Shared components (layout, nav, etc.)
+    /hooks/
+      useMidi.ts          # Web MIDI API connection and recording
+      useAudioRecorder.ts # AudioWorklet-based PCM capture + WAV encoding
+      useSynth.ts         # Tone.js + smplr initialization and playback
+      useAudioToMidi.ts   # @spotify/basic-pitch wrapper
+      useExport.ts        # Export logic (File System Access + JSZip fallback)
+      useDb.ts            # Dexie CRUD operations
+    /lib/
+      db.ts               # Dexie database definition and schema
+      midi.ts             # MIDI file read/write utilities (@tonejs/midi)
+      notes.ts            # Note name/number conversion utilities
+      export.ts           # Folder structure builder, zip creation
+      audio.ts            # WAV encoding, audio utilities
+    /stores/              # Zustand/Jotai stores for UI-only state
+    /types/               # TypeScript interfaces (Idea, Song, Album, etc.)
+  /tests/
+```
+
+## Coding Conventions
+- Functional components only, no class components.
+- Use React 19 patterns: ref as prop (not forwardRef), use() hook where appropriate.
+- Named exports for components. Default export only for pages/routes.
+- Colocate component-specific types in the component file. Shared types in /types/.
+- Error boundaries around audio/MIDI operations — these APIs can fail on permission denial or device disconnect.
+- Every Dexie operation should be in a try/catch — IndexedDB can throw on quota, corruption, or private browsing.
+- Console.warn (not silent failure) when Web MIDI or File System Access is unavailable.
+
+## Do NOT
+- Do not install tailwind config files (tailwind.config.ts/js). Tailwind v4 uses CSS-first @theme.
+- Do not use @tailwind directives. Use @import "tailwindcss" in CSS.
+- Do not use forwardRef — React 19 passes ref as a regular prop.
+- Do not store UI state in Dexie. Dexie is for persistent data only.
+- Do not hardcode pixel widths for layout. Use responsive primitives even though MVP targets desktop.
+- Do not add any cloud/server dependencies.
+- Do not use localStorage or sessionStorage for app data — IndexedDB via Dexie only.

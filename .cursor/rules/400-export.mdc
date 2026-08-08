@@ -1,0 +1,50 @@
+---
+description: Export logic rules - File System Access API, JSZip fallback, folder structure
+globs: src/hooks/useExport*, src/lib/export*, src/components/export/**
+alwaysApply: false
+---
+
+# Export Rules
+
+## Browser API Strategy
+- Primary: File System Access API (showDirectoryPicker) — lets user pick a folder and write files directly. Chrome/Edge only.
+- Fallback: JSZip — bundle all files into a .zip and trigger download. For Firefox, Safari, and any browser without showDirectoryPicker.
+- Use the browser-fs-access library to handle detection and fallback gracefully.
+- Always feature-detect. Never assume showDirectoryPicker exists.
+
+## Export Folder Structure
+When exporting a song, create this structure:
+
+```
+/SongTitle/
+  /audio/
+    [sectionIntent]-[role]-[###].[ext]    (e.g., verse-bassline-001.wav)
+  /midi/
+    [sectionIntent]-[role]-[###].mid      (e.g., intro-chords-001.mid)
+  /images/
+    [original-filename].[ext]             (e.g., amp-settings-001.jpg)
+  /notes/
+    production-journal.md
+    lyrics.txt
+```
+
+## Naming Conventions for Exported Files
+- Use the idea's sectionIntent and role for the filename prefix.
+- If sectionIntent is null/unassigned, use "unassigned" as prefix.
+- Zero-pad the counter to 3 digits (001, 002, ...).
+- Sanitize the song title for filesystem safety (no slashes, colons, special chars).
+- Lowercase filenames.
+
+## Export Content
+- Audio: export the raw blob from IdeaMedia.
+- MIDI: export the .mid blob from IdeaMedia. If only noteData exists (from note picker), serialize to .mid via @tonejs/midi first.
+- Images: export the raw blob from IdeaMedia.
+- Lyrics: combine song-level lyrics + section-level lyrics into a single .txt file, organized by section.
+- Production Journal: combine all SongJournalEntry records into a single .md file, organized by topic. Strip HTML to markdown (or export as HTML with .html extension).
+
+## Export Dialog
+- Show a summary: X audio files, Y MIDI files, Z images.
+- Preview the folder structure.
+- Checkboxes for what to include (Audio, MIDI, Images, Lyrics, Journal).
+- Two buttons: "Save to Folder" (File System Access) and "Download as ZIP" (JSZip).
+- If File System Access is not available, only show the ZIP option.

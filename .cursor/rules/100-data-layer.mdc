@@ -1,0 +1,49 @@
+---
+description: Data layer conventions for Dexie schema, types, and CRUD hooks
+globs: src/lib/db.ts, src/types/**, src/hooks/useDb*
+alwaysApply: false
+---
+
+# Data Layer Rules
+
+## Dexie Schema
+The database is defined in src/lib/db.ts using Dexie.js 4.4.x. The schema is the source of truth.
+
+All tables use UUIDs (crypto.randomUUID()) as primary keys. All timestamps are ISO 8601 strings. Relationships are explicit foreign keys (songId, sectionId, albumId, ideaId).
+
+## Core Tables
+- ideas — the atomic creative unit. songId=null means it's in the Idea Pool.
+- ideaMedia — audio, midi, image, file blobs attached to ideas. One idea can have many media.
+- ideaNoteSequences — manually entered note/chord sequences from the note picker.
+- songs — song workspace metadata.
+- songSections — user-defined sections within a song (Verse 1, Chorus, etc.)
+- songJournalEntries — production journal entries, each with an optional topic.
+- songReferences — reference tracks/links/notes for a song.
+- songAssets — artwork and file attachments at the song level.
+- albums — optional album grouping.
+
+## Schema Rules
+- Blobs (audio, images, MIDI files) are stored in ideaMedia.blob, songAssets.blob, songReferences.audioBlob, and albums.artworkBlob.
+- MIDI recordings store BOTH the .mid file blob AND parsed NoteEvent[] in noteData for fast display without re-parsing.
+- NoteEvent shape: { pitch: number (0-127), startTime: number (seconds), duration: number (seconds), velocity: number (0-127) }
+- sortOrder fields are integers for drag-and-drop reordering. When reordering, update sortOrder on affected items.
+- patchSettings on Idea is Record<string, string> — flat key-value pairs, not nested.
+
+## CRUD Hooks
+- useDb.ts (or split into useIdeas.ts, useSongs.ts, etc.) wraps all Dexie operations.
+- Every database operation must be in try/catch.
+- Return the created/updated record after write operations.
+- Use Dexie's liveQuery() for reactive queries that auto-update UI when data changes.
+- Bulk operations (moving multiple ideas, reordering) should use Dexie transactions: db.transaction('rw', db.ideas, async () => { ... })
+
+## When Creating New Tables or Fields
+- Always add the field to the TypeScript interface in /types/ first.
+- Then update the Dexie schema in db.ts.
+- Increment the Dexie version number when changing indexed fields.
+- Non-indexed fields can be added without a version bump.
+
+## Future-Proofing
+- No auto-increment IDs. UUIDs only.
+- No Date objects. ISO 8601 strings only.
+- No nested objects for relational data. Use separate tables with foreign keys.
+- This schema will map 1:1 to Postgres tables when a backend is added.
