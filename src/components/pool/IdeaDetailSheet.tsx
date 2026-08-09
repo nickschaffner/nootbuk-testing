@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
+import { IdeaMediaSection } from '@/components/pool/IdeaMediaSection'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -193,6 +194,8 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
           <p className="py-8 text-sm text-muted-foreground">Loading...</p>
         ) : (
           <div className="space-y-4 px-1 py-4">
+            <IdeaMediaSection ideaId={idea.id} />
+
             <div className="space-y-2">
               <Label>Role</Label>
               <RolePillSelector value={role} onChange={setRole} />

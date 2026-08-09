@@ -6,24 +6,26 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { useQuickCapture } from '@/stores/quickCapture'
 
 export function CaptureButton() {
+  const { open } = useQuickCapture()
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
           size="lg"
           className="fixed right-6 bottom-6 z-50 size-14 rounded-full shadow-lg"
-          onClick={() => {
-            // Quick Capture modal — Phase 7
-            console.warn('Quick Capture not implemented yet')
-          }}
+          onClick={() => open()}
         >
           <Plus className="size-6" />
           <span className="sr-only">Capture</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="left">Capture</TooltipContent>
+      <TooltipContent side="left">
+        Capture (Ctrl+Shift+C)
+      </TooltipContent>
     </Tooltip>
   )
 }

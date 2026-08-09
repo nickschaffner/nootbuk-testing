@@ -1,0 +1,316 @@
+import { Square } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import * as Tone from 'tone'
+
+import { MidiPlayer } from '@/components/player/MidiPlayer'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useMidi } from '@/hooks/useMidi'
+import { useSynth } from '@/hooks/useSynth'
+import { addMediaToIdea } from '@/hooks/useMedia'
+import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { SYNTH_PATCHES } from '@/lib/synth-patches'
+import { cn } from '@/lib/utils'
+import type { NoteEvent } from '@/types/idea'
+
+interface MidiRecorderProps {
+  ideaId?: string
+  draft?: boolean
+  onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number } | null) => void
+  onSaved?: () => void
+  embedded?: boolean
+  className?: string
+}
+
+export function MidiRecorder({
+  ideaId,
+  draft = false,
+  onDraftChange,
+  onSaved,
+  embedded = false,
+  className,
+}: MidiRecorderProps) {
+  const synth = useSynth()
+  const midi = useMidi({
+    onNoteOn: (pitch, velocity) => {
+      void synth.playNote(pitch, velocity)
+    },
+    onNoteOff: (pitch) => {
+      void synth.stopNote(pitch)
+    },
+  })
+
+  const [metronomeEnabled, setMetronomeEnabled] = useState(false)
+  const [bpm, setBpm] = useState('120')
+  const [isSaving, setIsSaving] = useState(false)
+  const clickSynthRef = useRef<Tone.MembraneSynth | null>(null)
+  const metronomeIdRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!draft) {
+      return
+    }
+
+    if (midi.noteEvents.length === 0) {
+      onDraftChange?.(null)
+      return
+    }
+
+    const parsedBpm = Number.parseInt(bpm, 10)
+    onDraftChange?.({
+      noteEvents: midi.noteEvents,
+      bpm: Number.isFinite(parsedBpm) ? parsedBpm : 120,
+    })
+  }, [bpm, draft, midi.noteEvents, onDraftChange])
+
+  useEffect(() => {
+    let cancelled = false
+
+    void (async () => {
+      if (!metronomeEnabled) {
+        if (metronomeIdRef.current !== null) {
+          Tone.Transport.clear(metronomeIdRef.current)
+          metronomeIdRef.current = null
+        }
+        Tone.Transport.stop()
+        return
+      }
+
+      await synth.ensureStarted()
+
+      if (cancelled) {
+        return
+      }
+
+      if (!clickSynthRef.current) {
+        clickSynthRef.current = new Tone.MembraneSynth({
+          pitchDecay: 0.008,
+          octaves: 2,
+          envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 },
+        }).toDestination()
+      }
+
+      const parsedBpm = Number.parseInt(bpm, 10)
+      Tone.Transport.bpm.value = Number.isFinite(parsedBpm) ? parsedBpm : 120
+
+      if (metronomeIdRef.current !== null) {
+        Tone.Transport.clear(metronomeIdRef.current)
+      }
+
+      metronomeIdRef.current = Tone.Transport.scheduleRepeat((time) => {
+        clickSynthRef.current?.triggerAttackRelease('C5', '32n', time, 0.9)
+      }, '4n')
+
+      Tone.Transport.start()
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [bpm, metronomeEnabled, synth])
+
+  useEffect(() => {
+    return () => {
+      if (metronomeIdRef.current !== null) {
+        Tone.Transport.clear(metronomeIdRef.current)
+      }
+      Tone.Transport.stop()
+      clickSynthRef.current?.dispose()
+      void synth.stopAll()
+    }
+  }, [synth])
+
+  async function handleStartRecording() {
+    await synth.ensureStarted()
+    await synth.setPatch(synth.currentPatch)
+    midi.startRecording()
+  }
+
+  async function handleSave() {
+    if (midi.noteEvents.length === 0 || !ideaId) {
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const blob = noteEventsToMidiBlob(midi.noteEvents, Number.parseInt(bpm, 10) || 120)
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+
+      await addMediaToIdea({
+        ideaId,
+        type: 'midi',
+        filename: `recording-${timestamp}.mid`,
+        mimeType: 'audio/midi',
+        blob,
+        duration: getMidiDuration(midi.noteEvents),
+        noteData: midi.noteEvents,
+      })
+
+      midi.resetRecording()
+      onSaved?.()
+    } catch {
+      // addMediaToIdea already logs the error
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const combinedError = midi.error ?? synth.error
+
+  return (
+    <div
+      className={cn(
+        embedded ? 'space-y-4' : 'space-y-4 rounded-lg border p-4',
+        className,
+      )}
+    >
+      {!embedded ? (
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-medium">Record MIDI</h3>
+          {combinedError ? (
+            <p className="text-xs text-destructive">{combinedError}</p>
+          ) : null}
+        </div>
+      ) : combinedError ? (
+        <p className="text-xs text-destructive">{combinedError}</p>
+      ) : null}
+
+      {!midi.isSupported ? (
+        <p className="text-sm text-muted-foreground">
+          MIDI is not supported in this browser. Try Chrome or Edge on desktop.
+        </p>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>MIDI device</Label>
+              {midi.midiDevices.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No MIDI device detected.
+                </p>
+              ) : (
+                <Select
+                  value={midi.selectedDeviceId ?? undefined}
+                  onValueChange={midi.setSelectedDeviceId}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select device" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {midi.midiDevices.map((device) => (
+                      <SelectItem key={device.id} value={device.id}>
+                        {device.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Patch</Label>
+              <Select
+                value={synth.currentPatch}
+                onValueChange={(value) => void synth.setPatch(value as typeof synth.currentPatch)}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SYNTH_PATCHES.map((patch) => (
+                    <SelectItem key={patch.id} value={patch.id}>
+                      {patch.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {synth.isLoadingPatch ? (
+                <p className="text-xs text-muted-foreground">Loading soundfont...</p>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={metronomeEnabled}
+                onChange={(event) => setMetronomeEnabled(event.target.checked)}
+              />
+              Metronome
+            </label>
+            <div className="w-24 space-y-1">
+              <Label htmlFor="midi-bpm">BPM</Label>
+              <Input
+                id="midi-bpm"
+                type="number"
+                min={40}
+                max={240}
+                value={bpm}
+                onChange={(event) => setBpm(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {!midi.isRecording && midi.noteEvents.length === 0 ? (
+              <Button
+                type="button"
+                size="lg"
+                className="bg-red-600 text-white hover:bg-red-700"
+                disabled={midi.midiDevices.length === 0}
+                onClick={() => void handleStartRecording()}
+              >
+                Record
+              </Button>
+            ) : null}
+
+            {midi.isRecording ? (
+              <Button
+                type="button"
+                size="lg"
+                variant="destructive"
+                onClick={midi.stopRecording}
+              >
+                <Square className="size-4 fill-current" />
+                Stop
+              </Button>
+            ) : null}
+
+            {midi.noteEvents.length > 0 && !midi.isRecording && !draft ? (
+              <>
+                <Button
+                  type="button"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save MIDI'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={midi.resetRecording}
+                  disabled={isSaving}
+                >
+                  Discard
+                </Button>
+              </>
+            ) : null}
+          </div>
+
+          {midi.noteEvents.length > 0 ? (
+            <MidiPlayer notes={midi.noteEvents} patchId={synth.currentPatch} />
+          ) : null}
+        </>
+      )}
+    </div>
+  )
+}

@@ -17,7 +17,6 @@ import { Download } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
-import { AddIdeaSheet } from '@/components/song/AddIdeaSheet'
 import { AddSectionForm } from '@/components/song/AddSectionForm'
 import { ImportFromPoolSheet } from '@/components/song/ImportFromPoolSheet'
 import { SectionContainer } from '@/components/song/SectionContainer'
@@ -32,6 +31,7 @@ import {
 } from '@/hooks/useIdeas'
 import { reorderSections, updateSection } from '@/hooks/useSections'
 import { useSongWithSections } from '@/hooks/useSongs'
+import { useQuickCapture } from '@/stores/quickCapture'
 import {
   getDragType,
   parseIdeaSortableId,
@@ -48,16 +48,11 @@ interface SongWorkspaceProps {
   songId: string
 }
 
-interface AddIdeaTarget {
-  sectionId: string | null
-  label: string
-}
-
 export function SongWorkspace({ songId }: SongWorkspaceProps) {
   const songData = useSongWithSections(songId)
   const songIdeas = useIdeasForSong(songId)
+  const { open: openQuickCapture } = useQuickCapture()
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
-  const [addIdeaTarget, setAddIdeaTarget] = useState<AddIdeaTarget | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
@@ -270,7 +265,11 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
                   ideas={ideasBySection[section.id] ?? []}
                   onTitleChange={handleSectionTitleChange}
                   onAddIdea={(sectionId, label) =>
-                    setAddIdeaTarget({ sectionId, label })
+                    openQuickCapture({
+                      songId,
+                      sectionId,
+                      sectionLabel: label,
+                    })
                   }
                   onIdeaClick={setSelectedIdeaId}
                 />
@@ -283,7 +282,11 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
               ideas={ideasBySection.unassigned}
               isUnassigned
               onAddIdea={() =>
-                setAddIdeaTarget({ sectionId: null, label: 'Unassigned' })
+                openQuickCapture({
+                  songId,
+                  sectionId: null,
+                  sectionLabel: 'Unassigned',
+                })
               }
               onIdeaClick={setSelectedIdeaId}
             />
@@ -303,18 +306,6 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
 
         <AddSectionForm songId={songId} />
       </div>
-
-      <AddIdeaSheet
-        open={addIdeaTarget !== null}
-        onOpenChange={(open) => {
-          if (!open) {
-            setAddIdeaTarget(null)
-          }
-        }}
-        songId={songId}
-        sectionId={addIdeaTarget?.sectionId ?? null}
-        sectionLabel={addIdeaTarget?.label ?? ''}
-      />
 
       <ImportFromPoolSheet
         open={importOpen}

@@ -1,9 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { Disc3, Home, Music2 } from 'lucide-react'
 
+import { QuickCaptureModal } from '@/components/capture/QuickCaptureModal'
 import { CaptureButton } from '@/components/shared/CaptureButton'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { QuickCaptureProvider } from '@/stores/quickCapture'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -14,8 +16,9 @@ const navItems = [
 
 export function AppShell() {
   return (
-    <TooltipProvider>
-      <div className="flex min-h-svh bg-background">
+    <QuickCaptureProvider>
+      <TooltipProvider>
+        <div className="flex min-h-svh bg-background">
         <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
           <div className="flex h-14 items-center px-4">
             <span className="text-lg font-semibold tracking-tight">Nootbuk</span>
@@ -48,8 +51,10 @@ export function AppShell() {
             <Outlet />
           </main>
           <CaptureButton />
+          <QuickCaptureModal />
         </div>
       </div>
-    </TooltipProvider>
+      </TooltipProvider>
+    </QuickCaptureProvider>
   )
 }

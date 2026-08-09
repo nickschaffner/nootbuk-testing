@@ -2,7 +2,9 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
+import { NoteSequencePlayer } from '@/components/player/NoteSequencePlayer'
 import { Badge } from '@/components/ui/badge'
+import { useNoteSequencesForIdea } from '@/hooks/useNoteSequences'
 import { ideaSortableId } from '@/lib/dnd-ids'
 import { formatRoleLabel, getIdeaDisplayLabel } from '@/lib/idea-label'
 import { cn } from '@/lib/utils'
@@ -14,6 +16,9 @@ interface SortableIdeaCardProps {
 }
 
 export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
+  const sequences = useNoteSequencesForIdea(idea.id)
+  const firstSequence = sequences?.[0]
+
   const {
     attributes,
     listeners,
@@ -49,6 +54,10 @@ export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
         <GripVertical className="size-4" />
       </button>
 
+      {firstSequence ? (
+        <NoteSequencePlayer sequence={firstSequence} compact />
+      ) : null}
+
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
@@ -58,6 +67,11 @@ export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
           {formatRoleLabel(idea.role)}
         </Badge>
         <span className="truncate text-sm">{getIdeaDisplayLabel(idea)}</span>
+        {sequences && sequences.length > 1 ? (
+          <span className="shrink-0 text-xs text-muted-foreground">
+            +{sequences.length - 1} seq
+          </span>
+        ) : null}
       </button>
     </div>
   )
