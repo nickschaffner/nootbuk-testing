@@ -8,8 +8,19 @@ export interface Album {
   artworkBlob: Blob | null
   releaseDate: string | null
   credits: string | null
+  label: string | null
+  catalogNumber: string | null
   globalNotes: string | null
   referenceMaterial: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface AlbumReferenceFile {
+  id: string
+  albumId: string
+  filename: string
+  mimeType: string
+  blob: Blob
+  createdAt: string
 }

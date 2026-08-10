@@ -14,6 +14,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { ideaSortableId } from '@/lib/dnd-ids'
 import { cn } from '@/lib/utils'
 import type { Idea } from '@/types/idea'
@@ -22,8 +24,10 @@ interface SectionContainerProps {
   containerId: string
   title: string
   ideas: Idea[]
+  lyrics?: string | null
   editableTitle?: boolean
   onTitleChange?: (name: string) => void
+  onLyricsChange?: (lyrics: string) => void
   dragHandleProps?: HTMLAttributes<HTMLButtonElement>
   onAddIdea: () => void
   onIdeaClick: (ideaId: string) => void
@@ -34,8 +38,10 @@ export function SectionContainer({
   containerId,
   title,
   ideas,
+  lyrics = null,
   editableTitle = false,
   onTitleChange,
+  onLyricsChange,
   dragHandleProps,
   onAddIdea,
   onIdeaClick,
@@ -43,10 +49,15 @@ export function SectionContainer({
 }: SectionContainerProps) {
   const [open, setOpen] = useState(true)
   const [localTitle, setLocalTitle] = useState(title)
+  const [localLyrics, setLocalLyrics] = useState(lyrics ?? '')
 
   useEffect(() => {
     setLocalTitle(title)
   }, [title])
+
+  useEffect(() => {
+    setLocalLyrics(lyrics ?? '')
+  }, [lyrics])
 
   const { setNodeRef, isOver } = useDroppable({
     id: containerId,
@@ -113,6 +124,27 @@ export function SectionContainer({
         </div>
 
         <CollapsibleContent>
+          {!isUnassigned && onLyricsChange ? (
+            <div className="space-y-2 border-b px-3 py-3">
+              <Label htmlFor={`section-lyrics-${containerId}`} className="text-xs">
+                Section lyrics
+              </Label>
+              <Textarea
+                id={`section-lyrics-${containerId}`}
+                value={localLyrics}
+                onChange={(event) => setLocalLyrics(event.target.value)}
+                onBlur={() => {
+                  if (localLyrics !== (lyrics ?? '')) {
+                    onLyricsChange(localLyrics)
+                  }
+                }}
+                placeholder="Lyrics for this section..."
+                rows={3}
+                className="resize-y text-sm"
+              />
+            </div>
+          ) : null}
+
           <div
             ref={setNodeRef}
             className={cn(

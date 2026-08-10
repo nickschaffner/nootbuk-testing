@@ -23,6 +23,7 @@ import { SectionContainer } from '@/components/song/SectionContainer'
 import { SortableIdeaCard } from '@/components/song/SortableIdeaCard'
 import { SortableSection } from '@/components/song/SortableSection'
 import { SongHeader } from '@/components/song/SongHeader'
+import { SongSidebar } from '@/components/song/SongSidebar'
 import { Button } from '@/components/ui/button'
 import {
   moveIdeaToSection,
@@ -222,6 +223,17 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
     }
   }
 
+  async function handleSectionLyricsChange(sectionId: string, lyrics: string) {
+    try {
+      await updateSection({
+        id: sectionId,
+        lyrics: lyrics.trim() || null,
+      })
+    } catch {
+      // updateSection already logs the error
+    }
+  }
+
   if (songData === undefined || songIdeas === undefined) {
     return <p className="text-sm text-muted-foreground">Loading song...</p>
   }
@@ -236,75 +248,80 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
 
   return (
     <>
-      <div className="space-y-6">
-        <SongHeader song={songData.song} />
+      <div className="flex gap-6">
+        <div className="min-w-0 flex-1 space-y-6">
+          <SongHeader song={songData.song} />
 
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Sections</h2>
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-            <Download className="size-4" />
-            Import from Pool
-          </Button>
-        </div>
-
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragStart={handleDragStart}
-          onDragEnd={(event) => void handleDragEnd(event)}
-        >
-          <div className="space-y-4">
-            <SortableContext
-              items={sectionSortableIds}
-              strategy={verticalListSortingStrategy}
-            >
-              {songData.sections.map((section) => (
-                <SortableSection
-                  key={section.id}
-                  section={section}
-                  ideas={ideasBySection[section.id] ?? []}
-                  onTitleChange={handleSectionTitleChange}
-                  onAddIdea={(sectionId, label) =>
-                    openQuickCapture({
-                      songId,
-                      sectionId,
-                      sectionLabel: label,
-                    })
-                  }
-                  onIdeaClick={setSelectedIdeaId}
-                />
-              ))}
-            </SortableContext>
-
-            <SectionContainer
-              containerId={UNASSIGNED_CONTAINER_ID}
-              title="Unassigned"
-              ideas={ideasBySection.unassigned}
-              isUnassigned
-              onAddIdea={() =>
-                openQuickCapture({
-                  songId,
-                  sectionId: null,
-                  sectionLabel: 'Unassigned',
-                })
-              }
-              onIdeaClick={setSelectedIdeaId}
-            />
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold">Sections</h2>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Download className="size-4" />
+              Import from Pool
+            </Button>
           </div>
 
-          <DragOverlay>
-            {activeIdea ? (
-              <div className="w-80 opacity-90">
-                <SortableIdeaCard
-                  idea={activeIdea}
-                  onClick={() => undefined}
-                />
-              </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={(event) => void handleDragEnd(event)}
+          >
+            <div className="space-y-4">
+              <SortableContext
+                items={sectionSortableIds}
+                strategy={verticalListSortingStrategy}
+              >
+                {songData.sections.map((section) => (
+                  <SortableSection
+                    key={section.id}
+                    section={section}
+                    ideas={ideasBySection[section.id] ?? []}
+                    onTitleChange={handleSectionTitleChange}
+                    onLyricsChange={handleSectionLyricsChange}
+                    onAddIdea={(sectionId, label) =>
+                      openQuickCapture({
+                        songId,
+                        sectionId,
+                        sectionLabel: label,
+                      })
+                    }
+                    onIdeaClick={setSelectedIdeaId}
+                  />
+                ))}
+              </SortableContext>
 
-        <AddSectionForm songId={songId} />
+              <SectionContainer
+                containerId={UNASSIGNED_CONTAINER_ID}
+                title="Unassigned"
+                ideas={ideasBySection.unassigned}
+                isUnassigned
+                onAddIdea={() =>
+                  openQuickCapture({
+                    songId,
+                    sectionId: null,
+                    sectionLabel: 'Unassigned',
+                  })
+                }
+                onIdeaClick={setSelectedIdeaId}
+              />
+            </div>
+
+            <DragOverlay>
+              {activeIdea ? (
+                <div className="w-80 opacity-90">
+                  <SortableIdeaCard
+                    idea={activeIdea}
+                    onClick={() => undefined}
+                  />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+
+          <AddSectionForm songId={songId} />
+        </div>
+
+        <SongSidebar song={songData.song} />
       </div>
 
       <ImportFromPoolSheet

@@ -11,6 +11,7 @@ interface SortableSectionProps {
   section: SongSection
   ideas: Idea[]
   onTitleChange: (sectionId: string, name: string) => void
+  onLyricsChange: (sectionId: string, lyrics: string) => void
   onAddIdea: (sectionId: string, label: string) => void
   onIdeaClick: (ideaId: string) => void
 }
@@ -19,6 +20,7 @@ export function SortableSection({
   section,
   ideas,
   onTitleChange,
+  onLyricsChange,
   onAddIdea,
   onIdeaClick,
 }: SortableSectionProps) {
@@ -48,9 +50,11 @@ export function SortableSection({
       <SectionContainer
         containerId={sectionContainerId(section.id)}
         title={section.name}
+        lyrics={section.lyrics}
         ideas={ideas}
         editableTitle
         onTitleChange={(name) => onTitleChange(section.id, name)}
+        onLyricsChange={(lyrics) => onLyricsChange(section.id, lyrics)}
         dragHandleProps={{ ...attributes, ...listeners }}
         onAddIdea={() => onAddIdea(section.id, section.name)}
         onIdeaClick={onIdeaClick}

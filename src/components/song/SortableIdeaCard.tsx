@@ -2,6 +2,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
+import { IdeaMediaQuickPlay } from '@/components/song/IdeaMediaQuickPlay'
 import { NoteSequencePlayer } from '@/components/player/NoteSequencePlayer'
 import { Badge } from '@/components/ui/badge'
 import { useNoteSequencesForIdea } from '@/hooks/useNoteSequences'
@@ -53,6 +54,8 @@ export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
       >
         <GripVertical className="size-4" />
       </button>
+
+      <IdeaMediaQuickPlay ideaId={idea.id} />
 
       {firstSequence ? (
         <NoteSequencePlayer sequence={firstSequence} compact />

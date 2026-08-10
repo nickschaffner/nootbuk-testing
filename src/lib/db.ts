@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 
-import type { Album } from '@/types/album'
+import type { Album, AlbumReferenceFile } from '@/types/album'
 import type { Idea, IdeaMedia, IdeaNoteSequence } from '@/types/idea'
 import type {
   Song,
@@ -20,6 +20,7 @@ export class NootbukDatabase extends Dexie {
   songReferences!: EntityTable<SongReference, 'id'>
   songAssets!: EntityTable<SongAsset, 'id'>
   albums!: EntityTable<Album, 'id'>
+  albumReferenceFiles!: EntityTable<AlbumReferenceFile, 'id'>
 
   constructor() {
     super('NootbukDB')
@@ -34,6 +35,19 @@ export class NootbukDatabase extends Dexie {
       songReferences: 'id, songId',
       songAssets: 'id, songId',
       albums: 'id, createdAt, updatedAt',
+    })
+
+    this.version(2).stores({
+      ideas: 'id, songId, sectionId, role, sectionIntent, status, createdAt',
+      ideaMedia: 'id, ideaId, type',
+      ideaNoteSequences: 'id, ideaId',
+      songs: 'id, albumId, status, createdAt, updatedAt',
+      songSections: 'id, songId, sortOrder',
+      songJournalEntries: 'id, songId, topic',
+      songReferences: 'id, songId',
+      songAssets: 'id, songId',
+      albums: 'id, createdAt, updatedAt',
+      albumReferenceFiles: 'id, albumId',
     })
   }
 }

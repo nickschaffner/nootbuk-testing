@@ -164,3 +164,61 @@ export async function deleteSong(id: string): Promise<void> {
     throw error
   }
 }
+
+export function useSongsForAlbum(albumId: string | undefined) {
+  return useLiveQuery(
+    () => (albumId ? getSongsForAlbum(albumId) : Promise.resolve([])),
+    [albumId],
+  )
+}
+
+export async function getSongsForAlbum(albumId: string): Promise<Song[]> {
+  try {
+    return await db.songs.where('albumId').equals(albumId).sortBy('sortOrder')
+  } catch (error) {
+    console.warn('getSongsForAlbum failed:', error)
+    throw error
+  }
+}
+
+export async function reorderSongsInAlbum(orderedIds: string[]): Promise<void> {
+  try {
+    await db.transaction('rw', db.songs, async () => {
+      const now = new Date().toISOString()
+      await Promise.all(
+        orderedIds.map((id, index) =>
+          db.songs.update(id, { sortOrder: index, updatedAt: now }),
+        ),
+      )
+    })
+  } catch (error) {
+    console.warn('reorderSongsInAlbum failed:', error)
+    throw error
+  }
+}
+
+export async function assignSongToAlbum(
+  songId: string,
+  albumId: string,
+): Promise<Song> {
+  try {
+    const existing = await db.songs.get(songId)
+    if (!existing) {
+      throw new Error(`Song not found: ${songId}`)
+    }
+
+    const sortOrder = await nextSongSortOrder(albumId)
+    const updated: Song = {
+      ...existing,
+      albumId,
+      sortOrder,
+      updatedAt: new Date().toISOString(),
+    }
+
+    await db.songs.put(updated)
+    return updated
+  } catch (error) {
+    console.warn('assignSongToAlbum failed:', error)
+    throw error
+  }
+}

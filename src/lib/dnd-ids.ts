@@ -79,3 +79,15 @@ export function resolveIdeaContainerId(
 
   return undefined
 }
+
+export function albumTrackSortableId(songId: string): string {
+  return `album-track:${songId}`
+}
+
+export function parseAlbumTrackSortableId(id: string): string | undefined {
+  if (id.startsWith('album-track:')) {
+    return id.slice('album-track:'.length)
+  }
+
+  return undefined
+}

@@ -13,6 +13,13 @@ export function useAllAlbums() {
   return useLiveQuery(() => getAllAlbums(), [])
 }
 
+export function useAlbum(albumId: string | undefined) {
+  return useLiveQuery(
+    () => (albumId ? db.albums.get(albumId) : undefined),
+    [albumId],
+  )
+}
+
 export async function getAllAlbums(): Promise<Album[]> {
   try {
     const albums = await db.albums.toArray()
@@ -36,6 +43,8 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
       artworkBlob: input.artworkBlob ?? null,
       releaseDate: input.releaseDate ?? null,
       credits: input.credits ?? null,
+      label: input.label ?? null,
+      catalogNumber: input.catalogNumber ?? null,
       globalNotes: input.globalNotes ?? null,
       referenceMaterial: input.referenceMaterial ?? null,
       createdAt: now,
@@ -73,11 +82,15 @@ export async function updateAlbum(input: UpdateAlbumInput): Promise<Album> {
 
 export async function deleteAlbum(id: string): Promise<void> {
   try {
-    await db.transaction('rw', [db.albums, db.songs], async () => {
+    await db.transaction(
+      'rw',
+      [db.albums, db.songs, db.albumReferenceFiles],
+      async () => {
       await db.songs.where('albumId').equals(id).modify({
         albumId: null,
         updatedAt: new Date().toISOString(),
       })
+      await db.albumReferenceFiles.where('albumId').equals(id).delete()
       await db.albums.delete(id)
     })
   } catch (error) {
