@@ -6,7 +6,7 @@ import { AudioRecorder } from '@/components/capture/AudioRecorder'
 import { MidiImport } from '@/components/capture/MidiImport'
 import { MidiRecorder } from '@/components/capture/MidiRecorder'
 import { IdeaNoteSequencesSection } from '@/components/pool/IdeaNoteSequencesSection'
-import { AudioPlayer } from '@/components/player/AudioPlayer'
+import { AudioMediaPanel } from '@/components/player/AudioMediaPanel'
 import { MidiPlayer } from '@/components/player/MidiPlayer'
 import { Button } from '@/components/ui/button'
 import { removeMedia, useMediaForIdea } from '@/hooks/useMedia'
@@ -61,7 +61,9 @@ export function IdeaMediaSection({ ideaId }: IdeaMediaSectionProps) {
                 <span className="sr-only">Remove audio</span>
               </Button>
             </div>
-            <AudioPlayer blob={item.blob} />
+            {item.type === 'audio' ? (
+              <AudioMediaPanel ideaId={ideaId} media={item} />
+            ) : null}
           </div>
         ))}
 

@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
+import { getAudioMimeType, normalizeAudioBlob } from '@/lib/audio'
 import { db } from '@/lib/db'
 import type { IdeaMedia } from '@/types/idea'
 
@@ -26,22 +27,62 @@ export function useMediaForIdea(ideaId: string | undefined) {
 
 export async function getMediaForIdea(ideaId: string): Promise<IdeaMedia[]> {
   try {
-    return await db.ideaMedia.where('ideaId').equals(ideaId).sortBy('sortOrder')
+    const media = await db.ideaMedia.where('ideaId').equals(ideaId).sortBy('sortOrder')
+    return Promise.all(media.map((item) => rehydrateMediaBlob(item)))
   } catch (error) {
     console.warn('getMediaForIdea failed:', error)
     throw error
   }
 }
 
+async function rehydrateMediaBlob(item: IdeaMedia): Promise<IdeaMedia> {
+  if (item.type !== 'audio') {
+    return item
+  }
+
+  try {
+    const mimeType = getAudioMimeType(item.filename, item.mimeType)
+    const blob = await normalizeAudioBlob(item.blob, mimeType, item.filename)
+
+    if (blob === item.blob && mimeType === item.mimeType) {
+      return item
+    }
+
+    if (item.mimeType !== mimeType || item.blob.type !== mimeType) {
+      void db.ideaMedia.update(item.id, { mimeType, blob }).catch((error) => {
+        console.warn('rehydrateMediaBlob update failed:', error)
+      })
+    }
+
+    return {
+      ...item,
+      mimeType,
+      blob,
+    }
+  } catch (error) {
+    console.warn('rehydrateMediaBlob failed:', error)
+    return item
+  }
+}
+
 export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
   try {
+    const mimeType =
+      input.type === 'audio'
+        ? getAudioMimeType(input.filename, input.mimeType)
+        : input.mimeType
+    const blob =
+      input.type === 'audio'
+        ? await normalizeAudioBlob(input.blob, mimeType, input.filename)
+        : input.blob
+
     const media: IdeaMedia = {
       id: crypto.randomUUID(),
       ideaId: input.ideaId,
       type: input.type,
       filename: input.filename,
-      mimeType: input.mimeType,
-      blob: input.blob,
+      mimeType,
+      blob,
       duration: input.duration ?? null,
       noteData: input.noteData ?? null,
       sortOrder: input.sortOrder ?? (await nextMediaSortOrder(input.ideaId)),

@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from 'react'
 import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { WaveformCanvas } from '@/components/player/WaveformCanvas'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { addMediaToIdea } from '@/hooks/useMedia'
 import { getAudioDuration } from '@/lib/audio'
 import { cn } from '@/lib/utils'
+
+import { AudioImport } from '@/components/capture/AudioImport'
 
 interface AudioRecorderProps {
   ideaId?: string
@@ -151,6 +154,23 @@ export function AudioRecorder({
           </>
         ) : null}
       </div>
+
+      {embedded && draft ? (
+        <>
+          <Separator />
+          <p className="text-center text-xs text-muted-foreground">or</p>
+          <AudioImport
+            draft
+            embedded
+            onDraftChange={(data) => {
+              if (data) {
+                resetRecording()
+                onDraftChangeRef.current?.(data.blob)
+              }
+            }}
+          />
+        </>
+      ) : null}
     </div>
   )
 }

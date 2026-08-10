@@ -24,12 +24,63 @@ export function getFileExtension(filename: string): string {
 }
 
 export function getAudioMimeType(filename: string, fileType: string): string {
-  if (fileType) {
+  const fromExtension = MIME_BY_EXTENSION[getFileExtension(filename)]
+  if (fromExtension) {
+    return fromExtension
+  }
+
+  if (fileType.startsWith('audio/')) {
     return fileType
   }
 
-  const extension = getFileExtension(filename)
-  return MIME_BY_EXTENSION[extension] ?? 'application/octet-stream'
+  return 'application/octet-stream'
+}
+
+export async function normalizeAudioBlob(
+  blob: Blob,
+  mimeType?: string,
+  filename?: string,
+): Promise<Blob> {
+  const resolvedType = getAudioMimeType(
+    filename ?? '',
+    mimeType ?? blob.type,
+  )
+  const buffer = await blob.arrayBuffer()
+
+  if (buffer.byteLength === 0) {
+    throw new Error('Audio blob is empty.')
+  }
+
+  if (blob.type === resolvedType) {
+    return blob
+  }
+
+  return new Blob([buffer], { type: resolvedType })
+}
+
+export function ensurePlaybackBlob(
+  blob: Blob,
+  mimeType?: string,
+  filename?: string,
+): Blob {
+  const resolvedFromExtension = filename
+    ? MIME_BY_EXTENSION[getFileExtension(filename)] ?? null
+    : null
+  const resolvedFromMime =
+    mimeType && mimeType.startsWith('audio/') ? mimeType : null
+  const resolvedFromBlob =
+    blob.type && blob.type.startsWith('audio/') ? blob.type : null
+  const resolvedType =
+    resolvedFromExtension ??
+    resolvedFromMime ??
+    resolvedFromBlob ??
+    'audio/wav'
+
+  if (blob.type === resolvedType) {
+    return blob
+  }
+
+  return new Blob([blob], { type: resolvedType })
 }
 
 function writeString(view: DataView, offset: number, value: string) {

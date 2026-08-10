@@ -2,6 +2,7 @@ import type { NoteEvent, SequenceNote } from '@/types/idea'
 
 export type QuickCaptureBlockType =
   | 'audio'
+  | 'audio-import'
   | 'midi'
   | 'notes'
   | 'text'
@@ -13,6 +14,13 @@ export type QuickCaptureBlock =
       id: string
       type: 'audio'
       blob: Blob | null
+      filename: string | null
+    }
+  | {
+      id: string
+      type: 'audio-import'
+      blob: Blob | null
+      filename: string | null
     }
   | {
       id: string
@@ -48,7 +56,9 @@ export function createEmptyBlock(type: QuickCaptureBlockType): QuickCaptureBlock
 
   switch (type) {
     case 'audio':
-      return { id, type: 'audio', blob: null }
+      return { id, type: 'audio', blob: null, filename: null }
+    case 'audio-import':
+      return { id, type: 'audio-import', blob: null, filename: null }
     case 'midi':
       return { id, type: 'midi', noteEvents: [], bpm: 120 }
     case 'notes':
@@ -65,6 +75,7 @@ export function createEmptyBlock(type: QuickCaptureBlockType): QuickCaptureBlock
 export function blockHasContent(block: QuickCaptureBlock): boolean {
   switch (block.type) {
     case 'audio':
+    case 'audio-import':
       return block.blob !== null
     case 'midi':
       return block.noteEvents.length > 0
@@ -79,7 +90,8 @@ export function blockHasContent(block: QuickCaptureBlock): boolean {
 }
 
 export const BLOCK_LABELS: Record<QuickCaptureBlockType, string> = {
-  audio: 'Audio',
+  audio: 'Record Audio',
+  'audio-import': 'Import Audio',
   midi: 'MIDI',
   notes: 'Note Picker',
   text: 'Text / Lyrics',

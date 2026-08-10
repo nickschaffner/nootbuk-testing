@@ -5,10 +5,12 @@ import {
   Music2,
   Paperclip,
   Piano,
+  Upload,
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
+import { AudioImport } from '@/components/capture/AudioImport'
 import { AudioRecorder } from '@/components/capture/AudioRecorder'
 import { MidiRecorder } from '@/components/capture/MidiRecorder'
 import { NotePicker } from '@/components/capture/NotePicker'
@@ -45,7 +47,7 @@ import { addMediaToIdea } from '@/hooks/useMedia'
 import { createNoteSequence } from '@/hooks/useNoteSequences'
 import { useSectionsForSong } from '@/hooks/useSections'
 import { useAllSongs } from '@/hooks/useSongs'
-import { getAudioDuration } from '@/lib/audio'
+import { getAudioDuration, getAudioMimeType } from '@/lib/audio'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
 import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole, SectionIntent } from '@/types/idea'
@@ -56,6 +58,7 @@ const TOOLBAR_ITEMS: Array<{
   icon: typeof Mic
 }> = [
   { type: 'audio', label: 'Record Audio', icon: Mic },
+  { type: 'audio-import', label: 'Import Audio', icon: Upload },
   { type: 'midi', label: 'Record MIDI', icon: Piano },
   { type: 'notes', label: 'Note Picker', icon: Music2 },
   { type: 'text', label: 'Text / Lyrics', icon: FileText },
@@ -363,14 +366,23 @@ export function QuickCaptureModal() {
         continue
       }
 
-      if (block.type === 'audio' && block.blob) {
+      if (
+        (block.type === 'audio' || block.type === 'audio-import') &&
+        block.blob
+      ) {
         const duration = await getAudioDuration(block.blob)
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const filename =
+          block.filename ??
+          (block.type === 'audio-import'
+            ? `import-${timestamp}.wav`
+            : `recording-${timestamp}.wav`)
+
         await addMediaToIdea({
           ideaId: idea.id,
           type: 'audio',
-          filename: `recording-${timestamp}.wav`,
-          mimeType: 'audio/wav',
+          filename,
+          mimeType: getAudioMimeType(filename, block.blob.type),
           blob: block.blob,
           duration,
           noteData: null,
@@ -473,10 +485,33 @@ export function QuickCaptureModal() {
             embedded
             onDraftChange={(blob) =>
               updateBlock(block.id, (current) =>
-                current.type === 'audio' && current.blob !== blob
-                  ? { ...current, blob }
+                current.type === 'audio' &&
+                (current.blob !== blob || current.filename !== null)
+                  ? { ...current, blob, filename: null }
                   : current,
               )
+            }
+          />
+        )
+      case 'audio-import':
+        return (
+          <AudioImport
+            draft
+            embedded
+            onDraftChange={(data) =>
+              updateBlock(block.id, (current) => {
+                if (current.type !== 'audio-import') {
+                  return current
+                }
+
+                const blob = data?.blob ?? null
+                const filename = data?.filename ?? null
+                if (current.blob === blob && current.filename === filename) {
+                  return current
+                }
+
+                return { ...current, blob, filename }
+              })
             }
           />
         )
