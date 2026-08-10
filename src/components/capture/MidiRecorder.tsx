@@ -53,6 +53,11 @@ export function MidiRecorder({
   const [isSaving, setIsSaving] = useState(false)
   const clickSynthRef = useRef<Tone.MembraneSynth | null>(null)
   const metronomeIdRef = useRef<number | null>(null)
+  const onDraftChangeRef = useRef(onDraftChange)
+
+  useEffect(() => {
+    onDraftChangeRef.current = onDraftChange
+  }, [onDraftChange])
 
   useEffect(() => {
     if (!draft) {
@@ -60,16 +65,16 @@ export function MidiRecorder({
     }
 
     if (midi.noteEvents.length === 0) {
-      onDraftChange?.(null)
+      onDraftChangeRef.current?.(null)
       return
     }
 
     const parsedBpm = Number.parseInt(bpm, 10)
-    onDraftChange?.({
+    onDraftChangeRef.current?.({
       noteEvents: midi.noteEvents,
       bpm: Number.isFinite(parsedBpm) ? parsedBpm : 120,
     })
-  }, [bpm, draft, midi.noteEvents, onDraftChange])
+  }, [bpm, draft, midi.noteEvents])
 
   useEffect(() => {
     let cancelled = false

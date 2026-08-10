@@ -1,5 +1,5 @@
 import { Mic, Square } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { WaveformCanvas } from '@/components/player/WaveformCanvas'
@@ -37,12 +37,17 @@ export function AudioRecorder({
   } = useAudioRecorder()
 
   const [isSaving, setIsSaving] = useState(false)
+  const onDraftChangeRef = useRef(onDraftChange)
+
+  useEffect(() => {
+    onDraftChangeRef.current = onDraftChange
+  }, [onDraftChange])
 
   useEffect(() => {
     if (draft) {
-      onDraftChange?.(audioBlob)
+      onDraftChangeRef.current?.(audioBlob)
     }
-  }, [audioBlob, draft, onDraftChange])
+  }, [audioBlob, draft])
 
   async function handleSave() {
     if (!audioBlob || !ideaId) {

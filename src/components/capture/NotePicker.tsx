@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { NoteSequenceList } from '@/components/capture/NoteSequenceList'
 import { Button } from '@/components/ui/button'
@@ -63,12 +63,17 @@ export function NotePicker({
   const [label, setLabel] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const onDraftChangeRef = useRef(onDraftChange)
+
+  useEffect(() => {
+    onDraftChangeRef.current = onDraftChange
+  }, [onDraftChange])
 
   useEffect(() => {
     if (draft) {
-      onDraftChange?.({ notes, label: label.trim() || null })
+      onDraftChangeRef.current?.({ notes, label: label.trim() || null })
     }
-  }, [draft, label, notes, onDraftChange])
+  }, [draft, label, notes])
 
   function addSingleNote(noteName: string) {
     const displayName = `${noteName}${octave}`

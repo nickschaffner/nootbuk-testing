@@ -10,3 +10,11 @@
 
 \- \[ ] Test Web MIDI fallback messaging in Safari and Firefox
 
+
+
+
+
+\## Phase 7: Quick Capture
+
+\- \[ ] Image attachments save but don't display a preview/thumbnail in Quick Capture or Idea Detail
+

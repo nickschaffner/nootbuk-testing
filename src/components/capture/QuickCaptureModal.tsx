@@ -306,10 +306,26 @@ export function QuickCaptureModal() {
     })
   }
 
-  function updateBlock(id: string, next: QuickCaptureBlock) {
-    setBlocks((current) =>
-      current.map((block) => (block.id === id ? next : block)),
-    )
+  function updateBlock(
+    id: string,
+    updater: (block: QuickCaptureBlock) => QuickCaptureBlock,
+  ) {
+    setBlocks((current) => {
+      let changed = false
+      const nextBlocks = current.map((block) => {
+        if (block.id !== id) {
+          return block
+        }
+
+        const nextBlock = updater(block)
+        if (nextBlock !== block) {
+          changed = true
+        }
+        return nextBlock
+      })
+
+      return changed ? nextBlocks : current
+    })
   }
 
   function hasSavableContent() {
@@ -456,7 +472,11 @@ export function QuickCaptureModal() {
             draft
             embedded
             onDraftChange={(blob) =>
-              updateBlock(block.id, { ...block, blob })
+              updateBlock(block.id, (current) =>
+                current.type === 'audio' && current.blob !== blob
+                  ? { ...current, blob }
+                  : current,
+              )
             }
           />
         )
@@ -466,10 +486,21 @@ export function QuickCaptureModal() {
             draft
             embedded
             onDraftChange={(data) =>
-              updateBlock(block.id, {
-                ...block,
-                noteEvents: data?.noteEvents ?? [],
-                bpm: data?.bpm ?? block.bpm,
+              updateBlock(block.id, (current) => {
+                if (current.type !== 'midi') {
+                  return current
+                }
+
+                const noteEvents = data?.noteEvents ?? []
+                const bpm = data?.bpm ?? current.bpm
+                if (
+                  current.noteEvents === noteEvents &&
+                  current.bpm === bpm
+                ) {
+                  return current
+                }
+
+                return { ...current, noteEvents, bpm }
               })
             }
           />
@@ -480,10 +511,23 @@ export function QuickCaptureModal() {
             draft
             embedded
             onDraftChange={(data) =>
-              updateBlock(block.id, {
-                ...block,
-                notes: data.notes,
-                label: data.label,
+              updateBlock(block.id, (current) => {
+                if (current.type !== 'notes') {
+                  return current
+                }
+
+                if (
+                  current.notes === data.notes &&
+                  current.label === data.label
+                ) {
+                  return current
+                }
+
+                return {
+                  ...current,
+                  notes: data.notes,
+                  label: data.label,
+                }
               })
             }
           />
@@ -493,7 +537,11 @@ export function QuickCaptureModal() {
           <TextCaptureBlock
             content={block.content}
             onChange={(content) =>
-              updateBlock(block.id, { ...block, content })
+              updateBlock(block.id, (current) =>
+                current.type === 'text' && current.content !== content
+                  ? { ...current, content }
+                  : current,
+              )
             }
           />
         )
@@ -503,7 +551,15 @@ export function QuickCaptureModal() {
             file={block.file}
             previewUrl={block.previewUrl}
             onChange={(file, previewUrl) =>
-              updateBlock(block.id, { ...block, file, previewUrl })
+              updateBlock(block.id, (current) =>
+                current.type === 'image' &&
+                current.file === file &&
+                current.previewUrl === previewUrl
+                  ? current
+                  : current.type === 'image'
+                    ? { ...current, file, previewUrl }
+                    : current,
+              )
             }
           />
         )
@@ -511,7 +567,13 @@ export function QuickCaptureModal() {
         return (
           <FileCaptureBlock
             file={block.file}
-            onChange={(file) => updateBlock(block.id, { ...block, file })}
+            onChange={(file) =>
+              updateBlock(block.id, (current) =>
+                current.type === 'file' && current.file !== file
+                  ? { ...current, file }
+                  : current,
+              )
+            }
           />
         )
     }
