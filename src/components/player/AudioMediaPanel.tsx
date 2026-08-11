@@ -25,6 +25,7 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
     error,
   } = useAudioToMidi()
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   if (media.type !== 'audio') {
     return null
@@ -47,6 +48,7 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
     }
 
     setIsSaving(true)
+    setSaveError(null)
     try {
       const blob = noteEventsToMidiBlob(result)
       const baseName = media.filename.replace(/\.[^.]+$/, '')
@@ -63,8 +65,10 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
       })
 
       reset()
-    } catch {
-      // addMediaToIdea already logs the error
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Failed to save extracted MIDI.',
+      )
     } finally {
       setIsSaving(false)
     }
@@ -100,6 +104,8 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
           </Button>
           {error ? (
             <p className="text-xs text-destructive">{error}</p>
+          ) : saveError ? (
+            <p className="text-xs text-destructive">{saveError}</p>
           ) : (
             <p className="text-xs text-muted-foreground">
               Extracted MIDI may be imperfect and is not quantized.

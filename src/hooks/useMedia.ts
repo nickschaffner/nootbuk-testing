@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 import { getAudioMimeType, normalizeAudioBlob } from '@/lib/audio'
 import { db } from '@/lib/db'
+import { toStorageError } from '@/lib/storage'
 import type { IdeaMedia } from '@/types/idea'
 
 type AddMediaInput = Omit<IdeaMedia, 'id' | 'createdAt' | 'sortOrder'> & {
@@ -93,7 +94,7 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
     return media
   } catch (error) {
     console.warn('addMediaToIdea failed:', error)
-    throw error
+    throw toStorageError(error)
   }
 }
 

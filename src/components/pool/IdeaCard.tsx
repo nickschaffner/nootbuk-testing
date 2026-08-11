@@ -1,3 +1,5 @@
+import { memo } from 'react'
+
 import { NoteSequencePlayer } from '@/components/player/NoteSequencePlayer'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,22 +11,27 @@ import type { Idea } from '@/types/idea'
 interface IdeaCardProps {
   idea: Idea
   onClick: () => void
+  showPlayback?: boolean
 }
 
-export function IdeaCard({ idea, onClick }: IdeaCardProps) {
-  const sequences = useNoteSequencesForIdea(idea.id)
+export const IdeaCard = memo(function IdeaCard({
+  idea,
+  onClick,
+  showPlayback = false,
+}: IdeaCardProps) {
+  const sequences = useNoteSequencesForIdea(showPlayback ? idea.id : undefined)
   const firstSequence = sequences?.[0]
 
   return (
     <Card
-      className="cursor-pointer transition-colors hover:bg-muted/40"
+      className="cursor-pointer transition-colors hover:bg-muted/40 [content-visibility:auto] [contain-intrinsic-size:auto_8rem]"
       onClick={onClick}
     >
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{formatRoleLabel(idea.role)}</Badge>
-            {firstSequence ? (
+            {showPlayback && firstSequence ? (
               <div onClick={(event) => event.stopPropagation()}>
                 <NoteSequencePlayer sequence={firstSequence} compact />
               </div>
@@ -45,4 +52,4 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
       ) : null}
     </Card>
   )
-}
+})

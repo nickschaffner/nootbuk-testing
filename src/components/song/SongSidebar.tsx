@@ -12,10 +12,10 @@ interface SongSidebarProps {
 
 export function SongSidebar({ song }: SongSidebarProps) {
   return (
-    <aside className="sticky top-4 h-[calc(100vh-6rem)] overflow-hidden rounded-lg border bg-card">
+    <aside className="w-full rounded-lg border bg-card md:sticky md:top-4 md:h-[calc(100vh-6rem)] md:w-80 md:shrink-0 md:overflow-hidden lg:w-96">
       <Tabs defaultValue="lyrics" className="flex h-full flex-col">
         <div className="border-b p-3">
-          <TabsList className="w-full">
+          <TabsList className="w-full overflow-x-auto">
             <TabsTrigger value="lyrics">Lyrics</TabsTrigger>
             <TabsTrigger value="journal">Journal</TabsTrigger>
             <TabsTrigger value="references">References</TabsTrigger>

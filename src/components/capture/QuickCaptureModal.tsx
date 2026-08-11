@@ -247,6 +247,7 @@ export function QuickCaptureModal() {
   const [tempo, setTempo] = useState('')
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [showSongSave, setShowSongSave] = useState(false)
   const [selectedSongId, setSelectedSongId] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState('unassigned')
@@ -283,6 +284,7 @@ export function QuickCaptureModal() {
     setKey('')
     setTempo('')
     setNotes('')
+    setSaveError(null)
     setShowSongSave(false)
     setSelectedSongId('')
     setSelectedSectionId('unassigned')
@@ -445,12 +447,15 @@ export function QuickCaptureModal() {
     }
 
     setIsSaving(true)
+    setSaveError(null)
     try {
       await persistIdea(null, null)
       resetForm()
       close()
-    } catch {
-      // createIdea already logs the error
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Failed to save idea.',
+      )
     } finally {
       setIsSaving(false)
     }
@@ -462,6 +467,7 @@ export function QuickCaptureModal() {
     }
 
     setIsSaving(true)
+    setSaveError(null)
     try {
       await persistIdea(
         selectedSongId,
@@ -469,8 +475,10 @@ export function QuickCaptureModal() {
       )
       resetForm()
       close()
-    } catch {
-      // createIdea already logs the error
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Failed to save idea.',
+      )
     } finally {
       setIsSaving(false)
     }
@@ -620,7 +628,7 @@ export function QuickCaptureModal() {
     <Sheet open={isOpen} onOpenChange={handleOpenChange}>
       <SheetContent
         side="right"
-        className="h-full max-h-svh w-full overflow-y-auto p-0 sm:max-w-2xl"
+        className="h-full max-h-svh w-full max-w-full overflow-y-auto p-0 sm:max-w-full md:max-w-2xl"
       >
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>Quick Capture</SheetTitle>
@@ -780,6 +788,10 @@ export function QuickCaptureModal() {
                   </Select>
                 </div>
               </div>
+            ) : null}
+
+            {saveError ? (
+              <p className="text-sm text-destructive">{saveError}</p>
             ) : null}
 
             <div className="flex flex-wrap gap-2">

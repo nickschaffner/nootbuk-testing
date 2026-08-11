@@ -16,7 +16,7 @@ export function CaptureButton() {
       <TooltipTrigger asChild>
         <Button
           size="lg"
-          className="fixed right-6 bottom-6 z-50 size-14 rounded-full shadow-lg"
+          className="fixed right-6 bottom-6 z-50 hidden size-14 rounded-full shadow-lg md:inline-flex"
           onClick={() => open()}
         >
           <Plus className="size-6" />

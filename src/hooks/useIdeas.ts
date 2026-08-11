@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
+import { toStorageError } from '@/lib/storage'
 import type { Idea } from '@/types/idea'
 
 type CreateIdeaInput = Omit<
@@ -108,7 +109,7 @@ export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
     return idea
   } catch (error) {
     console.warn('createIdea failed:', error)
-    throw error
+    throw toStorageError(error)
   }
 }
 

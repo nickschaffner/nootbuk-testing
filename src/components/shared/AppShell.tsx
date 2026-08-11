@@ -2,7 +2,10 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { Disc3, Home, Music2 } from 'lucide-react'
 
 import { QuickCaptureModal } from '@/components/capture/QuickCaptureModal'
+import { BrowserSupportNotice } from '@/components/shared/BrowserSupportNotice'
 import { CaptureButton } from '@/components/shared/CaptureButton'
+import { MobileTabBar } from '@/components/shared/MobileTabBar'
+import { StorageWarningBanner } from '@/components/shared/StorageWarningBanner'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { QuickCaptureProvider } from '@/stores/quickCapture'
@@ -19,7 +22,7 @@ export function AppShell() {
     <QuickCaptureProvider>
       <TooltipProvider>
         <div className="flex min-h-svh bg-background">
-        <aside className="flex w-56 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground">
+        <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
           <div className="flex h-14 items-center px-4">
             <span className="text-lg font-semibold tracking-tight">Nootbuk</span>
           </div>
@@ -47,10 +50,13 @@ export function AppShell() {
         </aside>
 
         <div className="relative flex min-w-0 flex-1 flex-col">
-          <main className="flex-1 overflow-auto p-6">
+          <StorageWarningBanner />
+          <BrowserSupportNotice />
+          <main className="flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6">
             <Outlet />
           </main>
           <CaptureButton />
+          <MobileTabBar />
           <QuickCaptureModal />
         </div>
       </div>

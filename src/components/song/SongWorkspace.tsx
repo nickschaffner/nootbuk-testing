@@ -13,9 +13,10 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import { Download } from 'lucide-react'
+import { Download, FolderOutput } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
+import { ExportDialog } from '@/components/export/ExportDialog'
 import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
 import { AddSectionForm } from '@/components/song/AddSectionForm'
 import { ImportFromPoolSheet } from '@/components/song/ImportFromPoolSheet'
@@ -55,6 +56,7 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
   const { open: openQuickCapture } = useQuickCapture()
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
   const [importOpen, setImportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
   const sensors = useSensors(
@@ -248,16 +250,22 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
 
   return (
     <>
-      <div className="flex gap-6">
+      <div className="flex flex-col gap-6 md:flex-row">
         <div className="min-w-0 flex-1 space-y-6">
           <SongHeader song={songData.song} />
 
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-lg font-semibold">Sections</h2>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
-              <Download className="size-4" />
-              Import from Pool
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+                <FolderOutput className="size-4" />
+                Export
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+                <Download className="size-4" />
+                Import from Pool
+              </Button>
+            </div>
           </div>
 
           <DndContext
@@ -328,6 +336,13 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
         open={importOpen}
         onOpenChange={setImportOpen}
         songId={songId}
+      />
+
+      <ExportDialog
+        songId={songId}
+        songTitle={songData.song.title}
+        open={exportOpen}
+        onOpenChange={setExportOpen}
       />
 
       <IdeaDetailSheet

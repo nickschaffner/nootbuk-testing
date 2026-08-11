@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from 'react'
 
+import { shouldIgnoreGlobalShortcut } from '@/lib/browser-capabilities'
+
 export type QuickCaptureTarget = {
   songId: string
   sectionId: string | null
@@ -39,16 +41,24 @@ export function QuickCaptureProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
+      if (shouldIgnoreGlobalShortcut(event)) {
+        return
+      }
+
       const isModifier = event.ctrlKey || event.metaKey
       if (isModifier && event.shiftKey && event.key.toLowerCase() === 'c') {
         event.preventDefault()
-        open()
+        if (isOpen) {
+          close()
+        } else {
+          open()
+        }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  }, [close, isOpen, open])
 
   const value = useMemo(
     () => ({ isOpen, target, open, close }),

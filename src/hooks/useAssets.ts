@@ -1,6 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
+import { toStorageError } from '@/lib/storage'
 import type { SongAsset, SongAssetType } from '@/types/song'
 
 export function useAssetsForSong(songId: string | undefined) {
@@ -45,7 +46,7 @@ export async function addAssetToSong(
     return asset
   } catch (error) {
     console.warn('addAssetToSong failed:', error)
-    throw error
+    throw toStorageError(error)
   }
 }
 

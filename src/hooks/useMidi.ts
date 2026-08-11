@@ -27,12 +27,14 @@ export function useMidi(options: UseMidiOptions = {}) {
   const [isRecording, setIsRecording] = useState(false)
   const [noteEvents, setNoteEvents] = useState<NoteEvent[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [deviceWarning, setDeviceWarning] = useState<string | null>(null)
 
   const midiAccessRef = useRef<MIDIAccess | null>(null)
   const activeInputRef = useRef<MIDIInput | null>(null)
   const activeNotesRef = useRef<Map<number, ActiveRecordingNote>>(new Map())
   const recordStartRef = useRef(0)
   const isRecordingRef = useRef(false)
+  const selectedDeviceIdRef = useRef<string | null>(null)
   const optionsRef = useRef(options)
 
   optionsRef.current = options
@@ -41,21 +43,28 @@ export function useMidi(options: UseMidiOptions = {}) {
     isRecordingRef.current = isRecording
   }, [isRecording])
 
-  const refreshDevices = useCallback((access: MIDIAccess) => {
-    const devices = Array.from(access.inputs.values()).map((input) => ({
-      id: input.id,
-      name: input.name || 'Unknown device',
-    }))
+  useEffect(() => {
+    selectedDeviceIdRef.current = selectedDeviceId
+  }, [selectedDeviceId])
 
-    setMidiDevices(devices)
+  const finalizeActiveNotes = useCallback(() => {
+    const endTime = performance.now() / 1000 - recordStartRef.current
 
-    setSelectedDeviceId((current) => {
-      if (current && devices.some((device) => device.id === current)) {
-        return current
-      }
+    for (const active of activeNotesRef.current.values()) {
+      setNoteEvents((current) =>
+        [
+          ...current,
+          {
+            pitch: active.pitch,
+            startTime: active.startTime,
+            duration: Math.max(0.01, endTime - active.startTime),
+            velocity: active.velocity,
+          },
+        ].sort((a, b) => a.startTime - b.startTime),
+      )
+    }
 
-      return devices[0]?.id ?? null
-    })
+    activeNotesRef.current.clear()
   }, [])
 
   const handleMidiMessage = useCallback((event: MIDIMessageEvent) => {
@@ -124,6 +133,44 @@ export function useMidi(options: UseMidiOptions = {}) {
     [handleMidiMessage],
   )
 
+  const refreshDevices = useCallback(
+    (access: MIDIAccess) => {
+      const previousSelectedId = selectedDeviceIdRef.current
+      const devices = Array.from(access.inputs.values()).map((input) => ({
+        id: input.id,
+        name: input.name || 'Unknown device',
+      }))
+
+      setMidiDevices(devices)
+
+      if (
+        previousSelectedId &&
+        !devices.some((device) => device.id === previousSelectedId)
+      ) {
+        bindInput(null)
+
+        if (isRecordingRef.current) {
+          finalizeActiveNotes()
+          setIsRecording(false)
+          setDeviceWarning(
+            'MIDI device disconnected. Recording stopped and notes were saved.',
+          )
+        } else {
+          setDeviceWarning('MIDI device disconnected.')
+        }
+      }
+
+      setSelectedDeviceId((current) => {
+        if (current && devices.some((device) => device.id === current)) {
+          return current
+        }
+
+        return devices[0]?.id ?? null
+      })
+    },
+    [bindInput, finalizeActiveNotes],
+  )
+
   useEffect(() => {
     if (!isSupported) {
       return
@@ -170,6 +217,7 @@ export function useMidi(options: UseMidiOptions = {}) {
 
   const startRecording = useCallback(() => {
     setError(null)
+    setDeviceWarning(null)
     setNoteEvents([])
     activeNotesRef.current.clear()
     recordStartRef.current = performance.now() / 1000
@@ -177,41 +225,37 @@ export function useMidi(options: UseMidiOptions = {}) {
   }, [])
 
   const stopRecording = useCallback(() => {
-    const endTime = performance.now() / 1000 - recordStartRef.current
-
-    for (const active of activeNotesRef.current.values()) {
-      setNoteEvents((current) =>
-        [
-          ...current,
-          {
-            pitch: active.pitch,
-            startTime: active.startTime,
-            duration: Math.max(0.01, endTime - active.startTime),
-            velocity: active.velocity,
-          },
-        ].sort((a, b) => a.startTime - b.startTime),
-      )
-    }
-
-    activeNotesRef.current.clear()
+    finalizeActiveNotes()
     setIsRecording(false)
-  }, [])
+  }, [finalizeActiveNotes])
 
   const resetRecording = useCallback(() => {
     activeNotesRef.current.clear()
     setNoteEvents([])
     setIsRecording(false)
     setError(null)
+    setDeviceWarning(null)
+  }, [])
+
+  const clearDeviceWarning = useCallback(() => {
+    setDeviceWarning(null)
+  }, [])
+
+  const selectDevice = useCallback((deviceId: string) => {
+    setDeviceWarning(null)
+    setSelectedDeviceId(deviceId)
   }, [])
 
   return {
     isSupported,
     midiDevices,
     selectedDeviceId,
-    setSelectedDeviceId,
+    setSelectedDeviceId: selectDevice,
     isRecording,
     noteEvents,
     error,
+    deviceWarning,
+    clearDeviceWarning,
     startRecording,
     stopRecording,
     resetRecording,

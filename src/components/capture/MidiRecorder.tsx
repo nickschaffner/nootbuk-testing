@@ -51,6 +51,7 @@ export function MidiRecorder({
   const [metronomeEnabled, setMetronomeEnabled] = useState(false)
   const [bpm, setBpm] = useState('120')
   const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const clickSynthRef = useRef<Tone.MembraneSynth | null>(null)
   const metronomeIdRef = useRef<number | null>(null)
   const onDraftChangeRef = useRef(onDraftChange)
@@ -145,6 +146,7 @@ export function MidiRecorder({
     }
 
     setIsSaving(true)
+    setSaveError(null)
     try {
       const blob = noteEventsToMidiBlob(midi.noteEvents, Number.parseInt(bpm, 10) || 120)
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
@@ -161,14 +163,16 @@ export function MidiRecorder({
 
       midi.resetRecording()
       onSaved?.()
-    } catch {
-      // addMediaToIdea already logs the error
+    } catch (error) {
+      setSaveError(
+        error instanceof Error ? error.message : 'Failed to save MIDI recording.',
+      )
     } finally {
       setIsSaving(false)
     }
   }
 
-  const combinedError = midi.error ?? synth.error
+  const combinedError = midi.error ?? midi.deviceWarning ?? synth.error
 
   return (
     <div
@@ -180,12 +184,12 @@ export function MidiRecorder({
       {!embedded ? (
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-medium">Record MIDI</h3>
-          {combinedError ? (
-            <p className="text-xs text-destructive">{combinedError}</p>
+          {combinedError || saveError ? (
+            <p className="text-xs text-destructive">{combinedError ?? saveError}</p>
           ) : null}
         </div>
-      ) : combinedError ? (
-        <p className="text-xs text-destructive">{combinedError}</p>
+      ) : combinedError || saveError ? (
+        <p className="text-xs text-destructive">{combinedError ?? saveError}</p>
       ) : null}
 
       {!midi.isSupported ? (
