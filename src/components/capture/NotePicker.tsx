@@ -11,17 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createNoteSequence } from '@/hooks/useNoteSequences'
+import { addMidiFromSequenceNotes } from '@/hooks/useMedia'
 import { useSynth } from '@/hooks/useSynth'
 import {
   buildChordName,
   CHORD_PRESETS,
+  getChordIntervals,
   getChordLabel,
   type ChordType,
 } from '@/lib/chords'
 import { getNoteNames, noteNameToMidi } from '@/lib/notes'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
-import { SYNTH_PATCHES, type SynthPatchId } from '@/lib/synth-patches'
 import { cn } from '@/lib/utils'
 import type { NoteDuration, SequenceNote } from '@/types/idea'
 
@@ -58,7 +58,6 @@ export function NotePicker({
   const [octave, setOctave] = useState(4)
   const [duration, setDuration] = useState<NoteDuration>('quarter')
   const [chordRoot, setChordRoot] = useState('C')
-  const [patch, setPatch] = useState<SynthPatchId>('piano')
   const [notes, setNotes] = useState<SequenceNote[]>([])
   const [label, setLabel] = useState('')
   const [isPlaying, setIsPlaying] = useState(false)
@@ -79,6 +78,8 @@ export function NotePicker({
     const displayName = `${noteName}${octave}`
     const pitch = noteNameToMidi(displayName)
 
+    void synth.playNote(pitch, 100, 0.25)
+
     setNotes((current) => [
       ...current,
       {
@@ -95,6 +96,11 @@ export function NotePicker({
   function addChord(type: ChordType) {
     const rootPitch = noteNameToMidi(`${chordRoot}${octave}`)
     const chordName = buildChordName(chordRoot, type)
+    const pitches = getChordIntervals(type)
+      .map((interval) => rootPitch + interval)
+      .filter((pitch) => pitch >= 0 && pitch <= 127)
+
+    void synth.playChord(pitches, 100, 0.35)
 
     setNotes((current) => [
       ...current,
@@ -121,14 +127,11 @@ export function NotePicker({
     }
 
     const events = sequenceNotesToNoteEvents(notes)
-    const totalDuration = events.reduce(
-      (max, event) => Math.max(max, event.startTime + event.duration),
-      0,
-    )
 
     setIsPlaying(true)
-    await synth.playNoteSequence(events, patch)
-    window.setTimeout(() => setIsPlaying(false), totalDuration * 1000 + 100)
+    void synth.playNoteSequence(events).finally(() => {
+      setIsPlaying(false)
+    })
   }
 
   async function handleSave() {
@@ -138,7 +141,7 @@ export function NotePicker({
 
     setIsSaving(true)
     try {
-      await createNoteSequence({
+      await addMidiFromSequenceNotes({
         ideaId,
         notes,
         label: label.trim() || null,
@@ -147,7 +150,7 @@ export function NotePicker({
       setLabel('')
       onSaved?.()
     } catch {
-      // createNoteSequence already logs the error
+      // addMidiFromSequenceNotes already logs the error
     } finally {
       setIsSaving(false)
     }
@@ -169,7 +172,7 @@ export function NotePicker({
         </div>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label>Octave</Label>
           <Select
@@ -206,28 +209,6 @@ export function NotePicker({
               ))}
             </SelectContent>
           </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Patch</Label>
-          <Select
-            value={patch}
-            onValueChange={(value) => setPatch(value as SynthPatchId)}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {SYNTH_PATCHES.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {synth.isLoadingPatch ? (
-            <p className="text-xs text-muted-foreground">Loading patch...</p>
-          ) : null}
         </div>
       </div>
 

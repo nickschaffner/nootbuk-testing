@@ -17,7 +17,6 @@ import { useMidi } from '@/hooks/useMidi'
 import { useSynth } from '@/hooks/useSynth'
 import { addMediaToIdea } from '@/hooks/useMedia'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
-import { SYNTH_PATCHES } from '@/lib/synth-patches'
 import { cn } from '@/lib/utils'
 import type { NoteEvent } from '@/types/idea'
 
@@ -121,7 +120,7 @@ export function MidiRecorder({
     return () => {
       cancelled = true
     }
-  }, [bpm, metronomeEnabled, synth])
+  }, [bpm, metronomeEnabled, synth.ensureStarted])
 
   useEffect(() => {
     return () => {
@@ -130,13 +129,16 @@ export function MidiRecorder({
       }
       Tone.Transport.stop()
       clickSynthRef.current?.dispose()
+      clickSynthRef.current = null
       void synth.stopAll()
     }
-  }, [synth])
+  }, [synth.stopAll])
 
   async function handleStartRecording() {
     await synth.ensureStarted()
-    await synth.setPatch(synth.currentPatch)
+    await synth.setPatch(
+      synth.isMuted ? 'muted' : synth.currentPatch,
+    )
     midi.startRecording()
   }
 
@@ -198,53 +200,29 @@ export function MidiRecorder({
         </p>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>MIDI device</Label>
-              {midi.midiDevices.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No MIDI device detected.
-                </p>
-              ) : (
-                <Select
-                  value={midi.selectedDeviceId ?? undefined}
-                  onValueChange={midi.setSelectedDeviceId}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select device" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {midi.midiDevices.map((device) => (
-                      <SelectItem key={device.id} value={device.id}>
-                        {device.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Patch</Label>
+          <div className="space-y-2">
+            <Label>MIDI device</Label>
+            {midi.midiDevices.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No MIDI device detected.
+              </p>
+            ) : (
               <Select
-                value={synth.currentPatch}
-                onValueChange={(value) => void synth.setPatch(value as typeof synth.currentPatch)}
+                value={midi.selectedDeviceId ?? undefined}
+                onValueChange={midi.setSelectedDeviceId}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select device" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SYNTH_PATCHES.map((patch) => (
-                    <SelectItem key={patch.id} value={patch.id}>
-                      {patch.label}
+                  {midi.midiDevices.map((device) => (
+                    <SelectItem key={device.id} value={device.id}>
+                      {device.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              {synth.isLoadingPatch ? (
-                <p className="text-xs text-muted-foreground">Loading soundfont...</p>
-              ) : null}
-            </div>
+            )}
           </div>
 
           <div className="flex flex-wrap items-end gap-3">

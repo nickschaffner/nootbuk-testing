@@ -2,6 +2,7 @@ import { Link2, Music, Trash2, Type } from 'lucide-react'
 import { useRef, useState } from 'react'
 
 import { AudioPlayer } from '@/components/player/AudioPlayer'
+import { AutoSaveTextarea } from '@/components/shared/AutoSaveTextarea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -75,9 +76,9 @@ export function SongReferencesTab({ songId }: SongReferencesTabProps) {
     }
   }
 
-  async function handleTextUpdate(referenceId: string, content: string) {
+  async function handleTextSave(referenceId: string, text: string) {
     try {
-      await updateReference({ id: referenceId, content })
+      await updateReference({ id: referenceId, text })
     } catch {
       // updateReference already logs the error
     }
@@ -89,6 +90,12 @@ export function SongReferencesTab({ songId }: SongReferencesTabProps) {
     } catch {
       // deleteReference already logs the error
     }
+  }
+
+  function getReferenceLabel(ref: { text: string | null; url: string | null; audioBlob: Blob | null }) {
+    if (ref.audioBlob) return 'audio'
+    if (ref.url) return 'link'
+    return 'text'
   }
 
   if (references === undefined) {
@@ -164,7 +171,7 @@ export function SongReferencesTab({ songId }: SongReferencesTabProps) {
         <div key={reference.id} className="space-y-2 rounded-lg border p-3">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-medium uppercase text-muted-foreground">
-              {reference.type}
+              {getReferenceLabel(reference)}
             </span>
             <Button
               type="button"
@@ -177,33 +184,33 @@ export function SongReferencesTab({ songId }: SongReferencesTabProps) {
             </Button>
           </div>
 
-          {reference.type === 'text' ? (
-            <Textarea
-              defaultValue={reference.content}
+          {reference.text !== null && !reference.audioBlob ? (
+            <AutoSaveTextarea
+              initialValue={reference.text}
+              onSave={(text) => void handleTextSave(reference.id, text)}
               rows={3}
-              onBlur={(event) =>
-                void handleTextUpdate(reference.id, event.target.value)
-              }
             />
           ) : null}
 
-          {reference.type === 'link' ? (
+          {reference.url ? (
             <a
-              href={reference.content}
+              href={reference.url}
               target="_blank"
               rel="noreferrer"
               className="text-sm text-primary underline-offset-4 hover:underline"
             >
-              {reference.content}
+              {reference.url}
             </a>
           ) : null}
 
-          {reference.type === 'audio' && reference.audioBlob ? (
+          {reference.audioBlob ? (
             <div className="space-y-1">
-              <p className="text-sm font-medium">{reference.content}</p>
+              {reference.text ? (
+                <p className="text-sm font-medium">{reference.text}</p>
+              ) : null}
               <AudioPlayer
                 blob={reference.audioBlob}
-                filename={reference.content}
+                filename={reference.text ?? 'audio'}
               />
             </div>
           ) : null}

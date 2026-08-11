@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { IdeaCard } from '@/components/pool/IdeaCard'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -10,7 +11,12 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useIdeasInPool } from '@/hooks/useIdeas'
+import {
+  mediaFlagsFor,
+  useIdeaMediaFlagsMap,
+} from '@/hooks/useIdeaMediaIndex'
 import { formatRoleLabel, ideaMatchesSearch, IDEA_ROLES } from '@/lib/idea-label'
+import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole } from '@/types/idea'
 
 interface IdeaPoolProps {
@@ -18,7 +24,9 @@ interface IdeaPoolProps {
 }
 
 export function IdeaPool({ onSelectIdea }: IdeaPoolProps) {
+  const { open: openCapture } = useQuickCapture()
   const ideas = useIdeasInPool()
+  const mediaMap = useIdeaMediaFlagsMap()
   const [roleFilter, setRoleFilter] = useState<IdeaRole | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -69,19 +77,18 @@ export function IdeaPool({ onSelectIdea }: IdeaPoolProps) {
         </Select>
       </div>
 
-      {filteredIdeas.length === 0 ? (
+      {ideas.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center">
           <p className="text-sm font-medium">
-            {ideas.length === 0
-              ? 'No ideas yet. Capture your first idea.'
-              : 'No ideas match your filters.'}
+            No ideas yet. Capture your first idea.
           </p>
-          {ideas.length === 0 ? (
-            <p className="mt-1 text-sm text-muted-foreground">
-              Use the form above to add a text idea, or hit Capture when
-              recording is ready.
-            </p>
-          ) : null}
+          <Button className="mt-4" onClick={() => openCapture()}>
+            Open Quick Capture
+          </Button>
+        </div>
+      ) : filteredIdeas.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-12 text-center">
+          <p className="text-sm font-medium">No ideas match your filters.</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -89,6 +96,8 @@ export function IdeaPool({ onSelectIdea }: IdeaPoolProps) {
             <IdeaCard
               key={idea.id}
               idea={idea}
+              songTitle={null}
+              mediaFlags={mediaFlagsFor(mediaMap, idea.id)}
               onClick={() => onSelectIdea(idea.id)}
             />
           ))}

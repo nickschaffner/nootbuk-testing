@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
-import type { SongReference, SongReferenceType } from '@/types/song'
+import type { SongReference } from '@/types/song'
 
 type CreateReferenceInput = Omit<
   SongReference,
@@ -49,9 +49,12 @@ export async function createReference(
     const reference: SongReference = {
       id: crypto.randomUUID(),
       songId: input.songId,
-      type: input.type,
-      content: input.content,
+      text: input.text ?? null,
+      url: input.url ?? null,
       audioBlob: input.audioBlob ?? null,
+      attachmentBlob: input.attachmentBlob ?? null,
+      attachmentFilename: input.attachmentFilename ?? null,
+      attachmentMimeType: input.attachmentMimeType ?? null,
       sortOrder:
         input.sortOrder ?? (await nextReferenceSortOrder(input.songId)),
       createdAt: new Date().toISOString(),
@@ -98,16 +101,32 @@ export async function deleteReference(id: string): Promise<void> {
 
 export async function addTextReference(
   songId: string,
-  content: string,
+  text: string,
 ): Promise<SongReference> {
-  return createReference({ songId, type: 'text', content, audioBlob: null })
+  return createReference({
+    songId,
+    text,
+    url: null,
+    audioBlob: null,
+    attachmentBlob: null,
+    attachmentFilename: null,
+    attachmentMimeType: null,
+  })
 }
 
 export async function addLinkReference(
   songId: string,
   url: string,
 ): Promise<SongReference> {
-  return createReference({ songId, type: 'link', content: url, audioBlob: null })
+  return createReference({
+    songId,
+    text: null,
+    url,
+    audioBlob: null,
+    attachmentBlob: null,
+    attachmentFilename: null,
+    attachmentMimeType: null,
+  })
 }
 
 export async function addAudioReference(
@@ -116,8 +135,11 @@ export async function addAudioReference(
 ): Promise<SongReference> {
   return createReference({
     songId,
-    type: 'audio' as SongReferenceType,
-    content: file.name,
+    text: file.name,
+    url: null,
     audioBlob: file,
+    attachmentBlob: null,
+    attachmentFilename: null,
+    attachmentMimeType: null,
   })
 }

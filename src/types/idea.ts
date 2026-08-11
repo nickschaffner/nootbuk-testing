@@ -58,6 +58,7 @@ export interface Idea {
   key: string | null
   tempo: number | null
   timeSignature: string | null
+  instrumentId: string | null
   instrumentName: string | null
   patchName: string | null
   patchSettings: Record<string, string> | null
@@ -78,13 +79,5 @@ export interface IdeaMedia {
   duration: number | null
   noteData: NoteEvent[] | null
   sortOrder: number
-  createdAt: string
-}
-
-export interface IdeaNoteSequence {
-  id: string
-  ideaId: string
-  notes: SequenceNote[]
-  label: string | null
   createdAt: string
 }

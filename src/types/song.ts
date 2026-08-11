@@ -7,13 +7,10 @@ export type SongStatus =
   | 'mastering'
   | 'released'
 
-export type SongReferenceType = 'text' | 'link' | 'audio'
-
 export type SongAssetType = 'artwork' | 'file'
 
 export interface Song {
   id: string
-  albumId: string | null
   title: string
   key: string | null
   tempo: number | null
@@ -27,7 +24,6 @@ export interface Song {
   masterEngineer: string | null
   copyright: string | null
   sampleCredits: string | null
-  sortOrder: number
   createdAt: string
   updatedAt: string
 }
@@ -37,7 +33,6 @@ export interface SongSection {
   songId: string
   name: string
   sortOrder: number
-  lyrics: string | null
   createdAt: string
 }
 
@@ -54,9 +49,12 @@ export interface SongJournalEntry {
 export interface SongReference {
   id: string
   songId: string
-  type: SongReferenceType
-  content: string
+  text: string | null
+  url: string | null
   audioBlob: Blob | null
+  attachmentBlob: Blob | null
+  attachmentFilename: string | null
+  attachmentMimeType: string | null
   sortOrder: number
   createdAt: string
 }
@@ -68,5 +66,26 @@ export interface SongAsset {
   filename: string
   mimeType: string
   blob: Blob
+  createdAt: string
+}
+
+export interface SongTodo {
+  id: string
+  songId: string
+  text: string
+  timestamp: number | null
+  completed: boolean
+  sortOrder: number
+  createdAt: string
+}
+
+export interface SongVersion {
+  id: string
+  songId: string
+  label: string | null
+  filename: string
+  mimeType: string
+  blob: Blob
+  isMain: boolean
   createdAt: string
 }

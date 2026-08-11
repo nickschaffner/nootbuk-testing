@@ -225,16 +225,6 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
     }
   }
 
-  async function handleSectionLyricsChange(sectionId: string, lyrics: string) {
-    try {
-      await updateSection({
-        id: sectionId,
-        lyrics: lyrics.trim() || null,
-      })
-    } catch {
-      // updateSection already logs the error
-    }
-  }
 
   if (songData === undefined || songIdeas === undefined) {
     return <p className="text-sm text-muted-foreground">Loading song...</p>
@@ -285,7 +275,6 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
                     section={section}
                     ideas={ideasBySection[section.id] ?? []}
                     onTitleChange={handleSectionTitleChange}
-                    onLyricsChange={handleSectionLyricsChange}
                     onAddIdea={(sectionId, label) =>
                       openQuickCapture({
                         songId,

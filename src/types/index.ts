@@ -1,5 +1,7 @@
 export type {
   Album,
+  AlbumReferenceFile,
+  AlbumSong,
   AlbumStatus,
 } from './album'
 
@@ -7,7 +9,6 @@ export type {
   Idea,
   IdeaMedia,
   IdeaMediaType,
-  IdeaNoteSequence,
   IdeaRole,
   IdeaStatus,
   NoteDuration,
@@ -17,12 +18,18 @@ export type {
 } from './idea'
 
 export type {
+  Instrument,
+  InstrumentType,
+} from './instrument'
+
+export type {
   Song,
   SongAsset,
   SongAssetType,
   SongJournalEntry,
   SongReference,
-  SongReferenceType,
   SongSection,
   SongStatus,
+  SongTodo,
+  SongVersion,
 } from './song'

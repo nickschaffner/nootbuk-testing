@@ -3,7 +3,6 @@ export type AlbumStatus = 'draft' | 'in-progress' | 'released'
 export interface Album {
   id: string
   title: string
-  subtitle: string | null
   status: AlbumStatus
   artworkBlob: Blob | null
   releaseDate: string | null
@@ -12,8 +11,16 @@ export interface Album {
   catalogNumber: string | null
   globalNotes: string | null
   referenceMaterial: string | null
+  notes: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface AlbumSong {
+  id: string
+  albumId: string
+  songId: string
+  trackNumber: number
 }
 
 export interface AlbumReferenceFile {

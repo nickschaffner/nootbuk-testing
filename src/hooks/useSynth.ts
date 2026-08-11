@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useMemo, useSyncExternalStore } from 'react'
 import * as Tone from 'tone'
 import {
   ElectricPiano,
@@ -19,6 +19,13 @@ type TonePatchSynth = Tone.PolySynth<Tone.Synth | Tone.AMSynth | Tone.MonoSynth>
 interface LoadedPatch {
   smplr?: SmplrInstrument
   tone?: TonePatchSynth
+}
+
+type SynthSnapshot = {
+  currentPatch: SynthPatchId
+  isMuted: boolean
+  isLoadingPatch: boolean
+  error: string | null
 }
 
 function createTonePatch(patchId: SynthPatchId): TonePatchSynth {
@@ -99,200 +106,306 @@ function usesToneOnly(patchId: SynthPatchId): boolean {
   return patchId === 'synth-bass' || patchId === 'synth-lead' || patchId === 'synth-pad'
 }
 
-export function useSynth() {
-  const [currentPatch, setCurrentPatch] = useState<SynthPatchId>('piano')
-  const [isLoadingPatch, setIsLoadingPatch] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+/** Shared engine so setPatch in one component affects playback everywhere. */
+const listeners = new Set<() => void>()
+let snapshot: SynthSnapshot = {
+  currentPatch: 'piano',
+  isMuted: false,
+  isLoadingPatch: false,
+  error: null,
+}
+let started = false
+const patchCache: Partial<Record<SynthPatchId, LoadedPatch>> = {}
+const patchLoads: Partial<Record<SynthPatchId, Promise<LoadedPatch | undefined>>> =
+  {}
+const playbackTimeouts: number[] = []
+let patchEpoch = 0
+let sequenceLoopToken = 0
 
-  const startedRef = useRef(false)
-  const patchCacheRef = useRef<Partial<Record<SynthPatchId, LoadedPatch>>>({})
-  const playbackTimeoutsRef = useRef<number[]>([])
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms)
+  })
+}
 
-  const ensureStarted = useCallback(async () => {
-    if (startedRef.current) {
+function emit(partial: Partial<SynthSnapshot>) {
+  snapshot = { ...snapshot, ...partial }
+  listeners.forEach((listener) => listener())
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
+}
+
+function getSnapshot() {
+  return snapshot
+}
+
+async function ensureStarted() {
+  if (started) {
+    return
+  }
+  await Tone.start()
+  started = true
+}
+
+async function loadPatch(patchId: SynthPatchId) {
+  if (patchCache[patchId]) {
+    return patchCache[patchId]
+  }
+
+  const inFlight = patchLoads[patchId]
+  if (inFlight) {
+    return inFlight
+  }
+
+  const loadPromise = (async () => {
+    emit({ isLoadingPatch: true, error: null })
+
+    try {
+      await ensureStarted()
+      const loaded: LoadedPatch = {}
+
+      if (usesToneOnly(patchId)) {
+        loaded.tone = createTonePatch(patchId)
+      } else {
+        const context = Tone.getContext().rawContext as AudioContext
+        const smplrInstrument = await createSmplrPatch(patchId, context)
+        if (smplrInstrument) {
+          loaded.smplr = smplrInstrument
+        } else {
+          loaded.tone = createTonePatch('synth-lead')
+        }
+      }
+
+      patchCache[patchId] = loaded
+      return loaded
+    } catch (caught) {
+      const message =
+        caught instanceof Error ? caught.message : 'Failed to load synth patch.'
+      console.warn('loadPatch failed:', caught)
+      emit({ error: message })
+
+      const fallback: LoadedPatch = { tone: createTonePatch('synth-lead') }
+      patchCache[patchId] = fallback
+      return fallback
+    } finally {
+      delete patchLoads[patchId]
+      emit({ isLoadingPatch: false })
+    }
+  })()
+
+  patchLoads[patchId] = loadPromise
+  return loadPromise
+}
+
+async function playNote(pitch: number, velocity = 100, duration?: number) {
+  try {
+    if (snapshot.isMuted) {
       return
     }
 
-    await Tone.start()
-    startedRef.current = true
-  }, [])
+    await ensureStarted()
+    const requestedPatch = snapshot.currentPatch
+    let patch = await loadPatch(requestedPatch)
 
-  const loadPatch = useCallback(
-    async (patchId: SynthPatchId) => {
-      if (patchCacheRef.current[patchId]) {
-        return patchCacheRef.current[patchId]
+    // Patch may have changed while the soundfont was loading.
+    if (snapshot.isMuted) {
+      return
+    }
+    if (snapshot.currentPatch !== requestedPatch) {
+      patch = await loadPatch(snapshot.currentPatch)
+    }
+
+    const noteName = midiToNoteName(pitch)
+    const normalizedVelocity = Math.max(1, Math.min(127, velocity))
+
+    if (patch?.smplr) {
+      if (duration) {
+        patch.smplr.start({
+          note: pitch,
+          velocity: normalizedVelocity,
+          duration,
+        })
+      } else {
+        patch.smplr.start({ note: pitch, velocity: normalizedVelocity })
       }
+      return
+    }
 
-      setIsLoadingPatch(true)
-      setError(null)
-
-      try {
-        await ensureStarted()
-        const loaded: LoadedPatch = {}
-
-        if (usesToneOnly(patchId)) {
-          loaded.tone = createTonePatch(patchId)
-        } else {
-          const context = Tone.getContext().rawContext as AudioContext
-          const smplrInstrument = await createSmplrPatch(patchId, context)
-          if (smplrInstrument) {
-            loaded.smplr = smplrInstrument
-          } else {
-            loaded.tone = createTonePatch('synth-lead')
-          }
-        }
-
-        patchCacheRef.current[patchId] = loaded
-        return loaded
-      } catch (caught) {
-        const message =
-          caught instanceof Error ? caught.message : 'Failed to load synth patch.'
-        console.warn('loadPatch failed:', caught)
-        setError(message)
-
-        const fallback: LoadedPatch = { tone: createTonePatch('synth-lead') }
-        patchCacheRef.current[patchId] = fallback
-        return fallback
-      } finally {
-        setIsLoadingPatch(false)
-      }
-    },
-    [ensureStarted],
-  )
-
-  const playNote = useCallback(
-    async (pitch: number, velocity = 100, duration?: number) => {
-      try {
-        await ensureStarted()
-        const patch = await loadPatch(currentPatch)
-        const noteName = midiToNoteName(pitch)
-        const normalizedVelocity = Math.max(1, Math.min(127, velocity))
-
-        if (patch?.smplr) {
-          if (duration) {
-            patch.smplr.start({
-              note: pitch,
-              velocity: normalizedVelocity,
-              duration,
-            })
-          } else {
-            patch.smplr.start({ note: pitch, velocity: normalizedVelocity })
-          }
-          return
-        }
-
-        if (patch?.tone) {
-          const toneVelocity = normalizedVelocity / 127
-          if (duration) {
-            patch.tone.triggerAttackRelease(
-              noteName,
-              duration,
-              Tone.now(),
-              toneVelocity,
-            )
-          } else {
-            patch.tone.triggerAttack(noteName, Tone.now(), toneVelocity)
-          }
-        }
-      } catch (caught) {
-        console.warn('playNote failed:', caught)
-        setError('Synth playback failed.')
-      }
-    },
-    [currentPatch, ensureStarted, loadPatch],
-  )
-
-  const stopNote = useCallback(
-    async (pitch: number) => {
-      try {
-        const patch = patchCacheRef.current[currentPatch]
-        if (patch?.smplr) {
-          patch.smplr.stop(pitch)
-          return
-        }
-
-        if (patch?.tone) {
-          patch.tone.triggerRelease(midiToNoteName(pitch), Tone.now())
-        }
-      } catch (caught) {
-        console.warn('stopNote failed:', caught)
-      }
-    },
-    [currentPatch],
-  )
-
-  const stopAll = useCallback(async () => {
-    playbackTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId))
-    playbackTimeoutsRef.current = []
-
-    for (const patch of Object.values(patchCacheRef.current)) {
-      try {
-        patch?.smplr?.stop()
-        patch?.tone?.releaseAll()
-      } catch (caught) {
-        console.warn('stopAll failed for patch:', caught)
+    if (patch?.tone) {
+      const toneVelocity = normalizedVelocity / 127
+      if (duration) {
+        patch.tone.triggerAttackRelease(
+          noteName,
+          duration,
+          Tone.now(),
+          toneVelocity,
+        )
+      } else {
+        patch.tone.triggerAttack(noteName, Tone.now(), toneVelocity)
       }
     }
-  }, [])
-
-  const playNoteSequence = useCallback(
-    async (notes: NoteEvent[], patchId?: SynthPatchId) => {
-      try {
-        await ensureStarted()
-        await stopAll()
-
-        const targetPatch = patchId ?? currentPatch
-        if (targetPatch !== currentPatch) {
-          setCurrentPatch(targetPatch)
-        }
-
-        const patch = await loadPatch(targetPatch)
-        const startTime = Tone.now() + 0.05
-
-        for (const note of notes) {
-          const velocity = note.velocity / 127
-
-          if (patch?.smplr) {
-            patch.smplr.start({
-              note: note.pitch,
-              velocity: note.velocity,
-              time: startTime + note.startTime,
-              duration: note.duration,
-            })
-          } else if (patch?.tone) {
-            patch.tone.triggerAttackRelease(
-              midiToNoteName(note.pitch),
-              note.duration,
-              startTime + note.startTime,
-              velocity,
-            )
-          }
-        }
-      } catch (caught) {
-        console.warn('playNoteSequence failed:', caught)
-        setError('MIDI playback failed.')
-      }
-    },
-    [currentPatch, ensureStarted, loadPatch, stopAll],
-  )
-
-  const setPatch = useCallback(
-    async (patchId: SynthPatchId) => {
-      setCurrentPatch(patchId)
-      await loadPatch(patchId)
-    },
-    [loadPatch],
-  )
-
-  return {
-    currentPatch,
-    setPatch,
-    isLoadingPatch,
-    error,
-    ensureStarted,
-    playNote,
-    stopNote,
-    stopAll,
-    playNoteSequence,
+  } catch (caught) {
+    console.warn('playNote failed:', caught)
+    emit({ error: 'Synth playback failed.' })
   }
+}
+
+async function stopNote(pitch: number) {
+  try {
+    const patch = patchCache[snapshot.currentPatch]
+    if (patch?.smplr) {
+      patch.smplr.stop(pitch)
+      return
+    }
+
+    if (patch?.tone) {
+      patch.tone.triggerRelease(midiToNoteName(pitch), Tone.now())
+    }
+  } catch (caught) {
+    console.warn('stopNote failed:', caught)
+  }
+}
+
+async function stopAll() {
+  sequenceLoopToken += 1
+  playbackTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId))
+  playbackTimeouts.length = 0
+
+  for (const patch of Object.values(patchCache)) {
+    try {
+      patch?.smplr?.stop()
+      patch?.tone?.releaseAll()
+    } catch (caught) {
+      console.warn('stopAll failed for patch:', caught)
+    }
+  }
+}
+
+async function playNoteSequence(
+  notes: NoteEvent[],
+  patchId?: SynthPatchId | 'muted',
+  options?: { loop?: boolean },
+) {
+  const loop = options?.loop ?? true
+
+  try {
+    await ensureStarted()
+    await stopAll()
+    const token = sequenceLoopToken
+
+    const targetPatch =
+      patchId ?? (snapshot.isMuted ? 'muted' : snapshot.currentPatch)
+
+    if (targetPatch === 'muted') {
+      emit({ isMuted: true })
+      return
+    }
+
+    emit({ isMuted: false, currentPatch: targetPatch })
+
+    do {
+      if (token !== sequenceLoopToken) {
+        return
+      }
+
+      const patch = await loadPatch(targetPatch)
+      const startTime = Tone.now() + 0.05
+
+      for (const note of notes) {
+        const velocity = note.velocity / 127
+
+        if (patch?.smplr) {
+          patch.smplr.start({
+            note: note.pitch,
+            velocity: note.velocity,
+            time: startTime + note.startTime,
+            duration: note.duration,
+          })
+        } else if (patch?.tone) {
+          patch.tone.triggerAttackRelease(
+            midiToNoteName(note.pitch),
+            note.duration,
+            startTime + note.startTime,
+            velocity,
+          )
+        }
+      }
+
+      const durationMs =
+        notes.reduce(
+          (max, note) => Math.max(max, note.startTime + note.duration),
+          0,
+        ) *
+          1000 +
+        100
+
+      await sleep(durationMs)
+
+      if (!loop) {
+        break
+      }
+    } while (token === sequenceLoopToken)
+  } catch (caught) {
+    console.warn('playNoteSequence failed:', caught)
+    emit({ error: 'MIDI playback failed.' })
+  }
+}
+
+async function playChord(
+  pitches: number[],
+  velocity = 100,
+  duration = 0.35,
+) {
+  await Promise.all(pitches.map((pitch) => playNote(pitch, velocity, duration)))
+}
+
+async function setPatch(patchId: SynthPatchId | 'muted') {
+  const epoch = ++patchEpoch
+
+  if (patchId === 'muted') {
+    await stopAll()
+    if (epoch !== patchEpoch) {
+      return
+    }
+    emit({ isMuted: true })
+    return
+  }
+
+  emit({ isMuted: false, currentPatch: patchId })
+  await stopAll()
+  if (epoch !== patchEpoch) {
+    return
+  }
+  await loadPatch(patchId)
+}
+
+export function useSynth() {
+  const state = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
+
+  return useMemo(
+    () => ({
+      currentPatch: state.currentPatch,
+      isMuted: state.isMuted,
+      isLoadingPatch: state.isLoadingPatch,
+      error: state.error,
+      setPatch,
+      ensureStarted,
+      playNote,
+      stopNote,
+      stopAll,
+      playNoteSequence,
+      playChord,
+    }),
+    [
+      state.currentPatch,
+      state.isMuted,
+      state.isLoadingPatch,
+      state.error,
+    ],
+  )
 }

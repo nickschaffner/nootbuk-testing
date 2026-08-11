@@ -2,10 +2,9 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical } from 'lucide-react'
 
+import { IdeaActionsMenu } from '@/components/pool/IdeaActionsMenu'
 import { IdeaMediaQuickPlay } from '@/components/song/IdeaMediaQuickPlay'
-import { NoteSequencePlayer } from '@/components/player/NoteSequencePlayer'
 import { Badge } from '@/components/ui/badge'
-import { useNoteSequencesForIdea } from '@/hooks/useNoteSequences'
 import { ideaSortableId } from '@/lib/dnd-ids'
 import { formatRoleLabel, getIdeaDisplayLabel } from '@/lib/idea-label'
 import { cn } from '@/lib/utils'
@@ -17,9 +16,6 @@ interface SortableIdeaCardProps {
 }
 
 export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
-  const sequences = useNoteSequencesForIdea(idea.id)
-  const firstSequence = sequences?.[0]
-
   const {
     attributes,
     listeners,
@@ -55,11 +51,13 @@ export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
         <GripVertical className="size-4" />
       </button>
 
-      <IdeaMediaQuickPlay ideaId={idea.id} />
-
-      {firstSequence ? (
-        <NoteSequencePlayer sequence={firstSequence} compact />
-      ) : null}
+      <div
+        className="flex shrink-0 items-center gap-0.5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <IdeaMediaQuickPlay ideaId={idea.id} idea={idea} />
+        <IdeaActionsMenu idea={idea} />
+      </div>
 
       <button
         type="button"
@@ -70,11 +68,6 @@ export function SortableIdeaCard({ idea, onClick }: SortableIdeaCardProps) {
           {formatRoleLabel(idea.role)}
         </Badge>
         <span className="truncate text-sm">{getIdeaDisplayLabel(idea)}</span>
-        {sequences && sequences.length > 1 ? (
-          <span className="shrink-0 text-xs text-muted-foreground">
-            +{sequences.length - 1} seq
-          </span>
-        ) : null}
       </button>
     </div>
   )

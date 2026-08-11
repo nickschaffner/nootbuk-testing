@@ -9,15 +9,15 @@ import { formatAudioTime } from '@/lib/audio'
 import { midiToNoteName } from '@/lib/notes'
 import { getMidiDuration } from '@/lib/midi'
 import type { NoteEvent } from '@/types/idea'
-import type { SynthPatchId } from '@/lib/synth-patches'
+import type { PlaybackPatchId } from '@/lib/instrument-utils'
 
 interface MidiPlayerProps {
   notes: NoteEvent[]
-  patchId?: SynthPatchId
+  patchId?: PlaybackPatchId
   className?: string
 }
 
-export function MidiPlayer({ notes, patchId = 'piano', className }: MidiPlayerProps) {
+export function MidiPlayer({ notes, patchId, className }: MidiPlayerProps) {
   const { playNoteSequence, stopAll } = useSynth()
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -31,8 +31,9 @@ export function MidiPlayer({ notes, patchId = 'piano', className }: MidiPlayerPr
     }
 
     setIsPlaying(true)
-    await playNoteSequence(notes, patchId)
-    window.setTimeout(() => setIsPlaying(false), duration * 1000 + 100)
+    void playNoteSequence(notes, patchId).finally(() => {
+      setIsPlaying(false)
+    })
   }
 
   if (notes.length === 0) {

@@ -1,16 +1,13 @@
 import {
-  FileText,
   ImageIcon,
   Mic,
   Music2,
   Paperclip,
   Piano,
-  Upload,
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
-import { AudioImport } from '@/components/capture/AudioImport'
 import { AudioRecorder } from '@/components/capture/AudioRecorder'
 import { MidiRecorder } from '@/components/capture/MidiRecorder'
 import { NotePicker } from '@/components/capture/NotePicker'
@@ -23,6 +20,9 @@ import {
 } from '@/components/capture/quickCaptureTypes'
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
 import { SectionIntentPillSelector } from '@/components/pool/SectionIntentPillSelector'
+import { InstrumentSelector } from '@/components/instruments/InstrumentSelector'
+import { KeySelector } from '@/components/shared/KeySelector'
+import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -43,8 +43,7 @@ import {
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
 import { createIdea } from '@/hooks/useIdeas'
-import { addMediaToIdea } from '@/hooks/useMedia'
-import { createNoteSequence } from '@/hooks/useNoteSequences'
+import { addMediaToIdea, addMidiFromSequenceNotes } from '@/hooks/useMedia'
 import { useSectionsForSong } from '@/hooks/useSections'
 import { useAllSongs } from '@/hooks/useSongs'
 import { getAudioDuration, getAudioMimeType } from '@/lib/audio'
@@ -58,10 +57,8 @@ const TOOLBAR_ITEMS: Array<{
   icon: typeof Mic
 }> = [
   { type: 'audio', label: 'Record Audio', icon: Mic },
-  { type: 'audio-import', label: 'Import Audio', icon: Upload },
   { type: 'midi', label: 'Record MIDI', icon: Piano },
   { type: 'notes', label: 'Note Picker', icon: Music2 },
-  { type: 'text', label: 'Text / Lyrics', icon: FileText },
   { type: 'image', label: 'Photo / Image', icon: ImageIcon },
   { type: 'file', label: 'File', icon: Paperclip },
 ]
@@ -92,23 +89,6 @@ function CaptureBlockShell({
       </div>
       {children}
     </div>
-  )
-}
-
-function TextCaptureBlock({
-  content,
-  onChange,
-}: {
-  content: string
-  onChange: (content: string) => void
-}) {
-  return (
-    <Textarea
-      placeholder="Lyrics, lines, ideas, descriptions..."
-      value={content}
-      onChange={(event) => onChange(event.target.value)}
-      rows={4}
-    />
   )
 }
 
@@ -242,9 +222,12 @@ export function QuickCaptureModal() {
   const [blocks, setBlocks] = useState<QuickCaptureBlock[]>([])
   const [role, setRole] = useState<IdeaRole>('melody')
   const [sectionIntent, setSectionIntent] = useState<SectionIntent | null>(null)
-  const [instrumentName, setInstrumentName] = useState('')
-  const [key, setKey] = useState('')
+  const [instrumentId, setInstrumentId] = useState<string | null>(null)
+  const [instrumentName, setInstrumentName] = useState<string | null>(null)
+  const [patchName, setPatchName] = useState<string | null>(null)
+  const [key, setKey] = useState<string | null>(null)
   const [tempo, setTempo] = useState('')
+  const [lyrics, setLyrics] = useState('')
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -280,9 +263,12 @@ export function QuickCaptureModal() {
     setBlocks([])
     setRole('melody')
     setSectionIntent(null)
-    setInstrumentName('')
-    setKey('')
+    setInstrumentId(null)
+    setInstrumentName(null)
+    setPatchName(null)
+    setKey(null)
     setTempo('')
+    setLyrics('')
     setNotes('')
     setSaveError(null)
     setShowSongSave(false)
@@ -298,7 +284,21 @@ export function QuickCaptureModal() {
   }
 
   function addBlock(type: QuickCaptureBlockType) {
-    setBlocks((current) => [...current, createEmptyBlock(type)])
+    setBlocks((current) => {
+      if (type === 'audio') {
+        const withoutAudio = current.filter((block) => block.type !== 'audio')
+        return [...withoutAudio, createEmptyBlock('audio')]
+      }
+
+      if (type === 'midi' || type === 'notes') {
+        const withoutMidiSource = current.filter(
+          (block) => block.type !== 'midi' && block.type !== 'notes',
+        )
+        return [...withoutMidiSource, createEmptyBlock(type)]
+      }
+
+      return [...current, createEmptyBlock(type)]
+    })
   }
 
   function removeBlock(id: string) {
@@ -334,31 +334,26 @@ export function QuickCaptureModal() {
   }
 
   function hasSavableContent() {
-    return blocks.some(blockHasContent)
+    return blocks.some(blockHasContent) || lyrics.trim().length > 0
   }
 
   async function persistIdea(
     songId: string | null,
     sectionId: string | null,
   ) {
-    const lyrics = blocks
-      .filter((block) => block.type === 'text')
-      .map((block) => block.content.trim())
-      .filter(Boolean)
-      .join('\n\n')
-
     const idea = await createIdea({
       songId,
       sectionId,
       role,
       sectionIntent,
-      key: key.trim() || null,
+      key,
       tempo: tempo ? Number.parseInt(tempo, 10) : null,
       timeSignature: null,
-      instrumentName: instrumentName.trim() || null,
-      patchName: null,
+      instrumentId,
+      instrumentName,
+      patchName,
       patchSettings: null,
-      lyrics: lyrics || null,
+      lyrics: lyrics.trim() || null,
       notes: notes.trim() || null,
       status: 'raw',
     })
@@ -368,17 +363,10 @@ export function QuickCaptureModal() {
         continue
       }
 
-      if (
-        (block.type === 'audio' || block.type === 'audio-import') &&
-        block.blob
-      ) {
+      if (block.type === 'audio' && block.blob) {
         const duration = await getAudioDuration(block.blob)
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-        const filename =
-          block.filename ??
-          (block.type === 'audio-import'
-            ? `import-${timestamp}.wav`
-            : `recording-${timestamp}.wav`)
+        const filename = block.filename ?? `recording-${timestamp}.wav`
 
         await addMediaToIdea({
           ideaId: idea.id,
@@ -406,10 +394,11 @@ export function QuickCaptureModal() {
       }
 
       if (block.type === 'notes' && block.notes.length > 0) {
-        await createNoteSequence({
+        await addMidiFromSequenceNotes({
           ideaId: idea.id,
           notes: block.notes,
           label: block.label,
+          bpm: 120,
         })
       }
 
@@ -501,28 +490,6 @@ export function QuickCaptureModal() {
             }
           />
         )
-      case 'audio-import':
-        return (
-          <AudioImport
-            draft
-            embedded
-            onDraftChange={(data) =>
-              updateBlock(block.id, (current) => {
-                if (current.type !== 'audio-import') {
-                  return current
-                }
-
-                const blob = data?.blob ?? null
-                const filename = data?.filename ?? null
-                if (current.blob === blob && current.filename === filename) {
-                  return current
-                }
-
-                return { ...current, blob, filename }
-              })
-            }
-          />
-        )
       case 'midi':
         return (
           <MidiRecorder
@@ -575,19 +542,6 @@ export function QuickCaptureModal() {
             }
           />
         )
-      case 'text':
-        return (
-          <TextCaptureBlock
-            content={block.content}
-            onChange={(content) =>
-              updateBlock(block.id, (current) =>
-                current.type === 'text' && current.content !== content
-                  ? { ...current, content }
-                  : current,
-              )
-            }
-          />
-        )
       case 'image':
         return (
           <ImageCaptureBlock
@@ -633,8 +587,8 @@ export function QuickCaptureModal() {
         <SheetHeader className="border-b px-6 py-4">
           <SheetTitle>Quick Capture</SheetTitle>
           <SheetDescription>
-            Jot down an idea fast. Stack audio, MIDI, notes, text, and files in
-            one capture.
+            Jot down an idea fast. Stack audio, MIDI, notes, and files in one
+            capture.
             <span className="mt-1 block text-xs">
               Shortcut: Ctrl+Shift+C
             </span>
@@ -696,26 +650,23 @@ export function QuickCaptureModal() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="capture-instrument">Instrument</Label>
-              <Input
-                id="capture-instrument"
-                placeholder="Piano, Minitaur, etc."
-                value={instrumentName}
-                onChange={(event) => setInstrumentName(event.target.value)}
-              />
-            </div>
+            <InstrumentSelector
+              id="capture-instrument"
+              value={{ instrumentId, instrumentName }}
+              onChange={(next) => {
+                setInstrumentId(next.instrumentId)
+                setInstrumentName(next.instrumentName)
+              }}
+              onAutoPatch={(patch) => setPatchName(patch)}
+            />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="capture-key">Key</Label>
-                <Input
-                  id="capture-key"
-                  placeholder="Cm, F#, Bb"
-                  value={key}
-                  onChange={(event) => setKey(event.target.value)}
-                />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <SynthPatchSelector
+                id="capture-patch"
+                value={patchName}
+                onChange={setPatchName}
+              />
+              <KeySelector id="capture-key" value={key} onChange={setKey} />
               <div className="space-y-2">
                 <Label htmlFor="capture-tempo">Tempo</Label>
                 <Input
@@ -727,6 +678,17 @@ export function QuickCaptureModal() {
                   onChange={(event) => setTempo(event.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="capture-lyrics">Lyrics</Label>
+              <Textarea
+                id="capture-lyrics"
+                placeholder="Lyric lines, hooks, melodies..."
+                value={lyrics}
+                onChange={(event) => setLyrics(event.target.value)}
+                rows={3}
+              />
             </div>
 
             <div className="space-y-2">

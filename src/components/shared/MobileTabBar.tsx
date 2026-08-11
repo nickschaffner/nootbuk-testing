@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Disc3, Home, Music2, Plus } from 'lucide-react'
+import { Disc3, Guitar, Home, Lightbulb, Music2, Plus } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useQuickCapture } from '@/stores/quickCapture'
@@ -7,8 +7,10 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/ideas', label: 'Ideas', icon: Lightbulb },
   { to: '/songs', label: 'Songs', icon: Music2 },
   { to: '/albums', label: 'Albums', icon: Disc3 },
+  { to: '/instruments', label: 'Gear', icon: Guitar },
 ] as const
 
 export function MobileTabBar() {

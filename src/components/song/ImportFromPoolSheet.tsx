@@ -8,7 +8,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { moveIdeaToSection, useIdeasInPool } from '@/hooks/useIdeas'
+import {
+  copyIdeaToSong,
+  moveIdeaToSection,
+  useIdeasInPool,
+} from '@/hooks/useIdeas'
 
 interface ImportFromPoolSheetProps {
   open: boolean
@@ -22,16 +26,23 @@ export function ImportFromPoolSheet({
   songId,
 }: ImportFromPoolSheetProps) {
   const poolIdeas = useIdeasInPool()
-  const [movingId, setMovingId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeMode, setActiveMode] = useState<'move' | 'copy' | null>(null)
 
-  async function handleImport(ideaId: string) {
-    setMovingId(ideaId)
+  async function handleImport(ideaId: string, mode: 'move' | 'copy') {
+    setActiveId(ideaId)
+    setActiveMode(mode)
     try {
-      await moveIdeaToSection(ideaId, songId, null)
+      if (mode === 'move') {
+        await moveIdeaToSection(ideaId, songId, null)
+      } else {
+        await copyIdeaToSong(ideaId, songId, null)
+      }
     } catch {
-      // moveIdeaToSection already logs the error
+      // hooks already log the error
     } finally {
-      setMovingId(null)
+      setActiveId(null)
+      setActiveMode(null)
     }
   }
 
@@ -52,16 +63,31 @@ export function ImportFromPoolSheet({
           ) : (
             poolIdeas.map((idea) => (
               <div key={idea.id} className="space-y-2">
-                <IdeaCard idea={idea} onClick={() => {}} />
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="w-full"
-                  disabled={movingId === idea.id}
-                  onClick={() => void handleImport(idea.id)}
-                >
-                  {movingId === idea.id ? 'Adding...' : 'Add to Unassigned'}
-                </Button>
+                <IdeaCard idea={idea} onClick={() => {}} showLocation={false} />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="flex-1"
+                    disabled={activeId === idea.id}
+                    onClick={() => void handleImport(idea.id, 'move')}
+                  >
+                    {activeId === idea.id && activeMode === 'move'
+                      ? 'Moving...'
+                      : 'Move to Unassigned'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    disabled={activeId === idea.id}
+                    onClick={() => void handleImport(idea.id, 'copy')}
+                  >
+                    {activeId === idea.id && activeMode === 'copy'
+                      ? 'Copying...'
+                      : 'Copy to Unassigned'}
+                  </Button>
+                </div>
               </div>
             ))
           )}

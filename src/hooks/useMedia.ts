@@ -2,8 +2,10 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 import { getAudioMimeType, normalizeAudioBlob } from '@/lib/audio'
 import { db } from '@/lib/db'
+import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
 import { toStorageError } from '@/lib/storage'
-import type { IdeaMedia } from '@/types/idea'
+import type { IdeaMedia, NoteEvent, SequenceNote } from '@/types/idea'
 
 type AddMediaInput = Omit<IdeaMedia, 'id' | 'createdAt' | 'sortOrder'> & {
   sortOrder?: number
@@ -17,6 +19,24 @@ async function nextMediaSortOrder(ideaId: string): Promise<number> {
   }
 
   return Math.max(...media.map((item) => item.sortOrder)) + 1
+}
+
+/** Audio and MIDI are zero-or-one per idea; replace any existing of that type. */
+async function removeExistingExclusiveMedia(
+  ideaId: string,
+  type: 'audio' | 'midi',
+): Promise<void> {
+  const existing = await db.ideaMedia
+    .where('ideaId')
+    .equals(ideaId)
+    .filter((item) => item.type === type)
+    .toArray()
+
+  if (existing.length === 0) {
+    return
+  }
+
+  await db.ideaMedia.bulkDelete(existing.map((item) => item.id))
 }
 
 export function useMediaForIdea(ideaId: string | undefined) {
@@ -77,6 +97,10 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
         ? await normalizeAudioBlob(input.blob, mimeType, input.filename)
         : input.blob
 
+    if (input.type === 'audio' || input.type === 'midi') {
+      await removeExistingExclusiveMedia(input.ideaId, input.type)
+    }
+
     const media: IdeaMedia = {
       id: crypto.randomUUID(),
       ideaId: input.ideaId,
@@ -96,6 +120,33 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
     console.warn('addMediaToIdea failed:', error)
     throw toStorageError(error)
   }
+}
+
+/** Save a manual note sequence as the idea's single MIDI source. */
+export async function addMidiFromSequenceNotes(input: {
+  ideaId: string
+  notes: SequenceNote[]
+  label?: string | null
+  bpm?: number
+}): Promise<IdeaMedia> {
+  const bpm = input.bpm ?? 120
+  const noteData: NoteEvent[] = sequenceNotesToNoteEvents(input.notes, bpm)
+  const blob = noteEventsToMidiBlob(noteData, bpm)
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const safeLabel = input.label?.trim().replace(/[^\w\-]+/g, '-')
+  const filename = safeLabel
+    ? `${safeLabel}.mid`
+    : `notes-${timestamp}.mid`
+
+  return addMediaToIdea({
+    ideaId: input.ideaId,
+    type: 'midi',
+    filename,
+    mimeType: 'audio/midi',
+    blob,
+    duration: getMidiDuration(noteData),
+    noteData,
+  })
 }
 
 export async function removeMedia(id: string): Promise<void> {

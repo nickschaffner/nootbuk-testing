@@ -38,7 +38,6 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
     const album: Album = {
       id: crypto.randomUUID(),
       title: input.title,
-      subtitle: input.subtitle ?? null,
       status: input.status ?? 'draft',
       artworkBlob: input.artworkBlob ?? null,
       releaseDate: input.releaseDate ?? null,
@@ -47,6 +46,7 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
       catalogNumber: input.catalogNumber ?? null,
       globalNotes: input.globalNotes ?? null,
       referenceMaterial: input.referenceMaterial ?? null,
+      notes: input.notes ?? null,
       createdAt: now,
       updatedAt: now,
     }
@@ -84,15 +84,13 @@ export async function deleteAlbum(id: string): Promise<void> {
   try {
     await db.transaction(
       'rw',
-      [db.albums, db.songs, db.albumReferenceFiles],
+      [db.albums, db.albumSongs, db.albumReferenceFiles],
       async () => {
-      await db.songs.where('albumId').equals(id).modify({
-        albumId: null,
-        updatedAt: new Date().toISOString(),
-      })
-      await db.albumReferenceFiles.where('albumId').equals(id).delete()
-      await db.albums.delete(id)
-    })
+        await db.albumSongs.where('albumId').equals(id).delete()
+        await db.albumReferenceFiles.where('albumId').equals(id).delete()
+        await db.albums.delete(id)
+      },
+    )
   } catch (error) {
     console.warn('deleteAlbum failed:', error)
     throw error

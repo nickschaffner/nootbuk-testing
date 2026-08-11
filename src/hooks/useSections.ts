@@ -47,7 +47,6 @@ export async function createSection(
       name: input.name,
       sortOrder:
         input.sortOrder ?? (await nextSectionSortOrder(input.songId)),
-      lyrics: input.lyrics ?? null,
       createdAt: new Date().toISOString(),
     }
 

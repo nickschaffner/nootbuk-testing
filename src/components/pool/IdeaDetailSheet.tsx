@@ -2,7 +2,11 @@ import { useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
+import { IdeaActionsMenu } from '@/components/pool/IdeaActionsMenu'
 import { IdeaMediaSection } from '@/components/pool/IdeaMediaSection'
+import { InstrumentSelector } from '@/components/instruments/InstrumentSelector'
+import { KeySelector } from '@/components/shared/KeySelector'
+import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,9 +36,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
-import { deleteIdea, moveIdeaToSection, updateIdea } from '@/hooks/useIdeas'
-import { useSectionsForSong } from '@/hooks/useSections'
-import { useAllSongs } from '@/hooks/useSongs'
+import { deleteIdea, updateIdea } from '@/hooks/useIdeas'
 import { db } from '@/lib/db'
 import type {
   IdeaRole,
@@ -72,21 +74,16 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
   const [sectionIntent, setSectionIntent] = useState<SectionIntent | 'none'>(
     'none',
   )
-  const [key, setKey] = useState('')
+  const [key, setKey] = useState<string | null>(null)
   const [tempo, setTempo] = useState('')
   const [timeSignature, setTimeSignature] = useState('')
-  const [instrumentName, setInstrumentName] = useState('')
-  const [patchName, setPatchName] = useState('')
+  const [instrumentId, setInstrumentId] = useState<string | null>(null)
+  const [instrumentName, setInstrumentName] = useState<string | null>(null)
+  const [patchName, setPatchName] = useState<string | null>(null)
   const [lyrics, setLyrics] = useState('')
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
-  const [targetSongId, setTargetSongId] = useState('')
-  const [targetSectionId, setTargetSectionId] = useState('unassigned')
-  const [isMoving, setIsMoving] = useState(false)
-
-  const songs = useAllSongs()
-  const sections = useSectionsForSong(targetSongId || undefined)
 
   useEffect(() => {
     if (!idea) {
@@ -96,11 +93,12 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
     setRole(idea.role)
     setStatus(idea.status)
     setSectionIntent(idea.sectionIntent ?? 'none')
-    setKey(idea.key ?? '')
+    setKey(idea.key ?? null)
     setTempo(idea.tempo?.toString() ?? '')
     setTimeSignature(idea.timeSignature ?? '')
-    setInstrumentName(idea.instrumentName ?? '')
-    setPatchName(idea.patchName ?? '')
+    setInstrumentId(idea.instrumentId ?? null)
+    setInstrumentName(idea.instrumentName ?? null)
+    setPatchName(idea.patchName ?? null)
     setLyrics(idea.lyrics ?? '')
     setNotes(idea.notes ?? '')
   }, [idea])
@@ -117,11 +115,12 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
         role,
         status,
         sectionIntent: sectionIntent === 'none' ? null : sectionIntent,
-        key: key.trim() || null,
+        key,
         tempo: tempo ? Number.parseInt(tempo, 10) : null,
         timeSignature: timeSignature.trim() || null,
-        instrumentName: instrumentName.trim() || null,
-        patchName: patchName.trim() || null,
+        instrumentId,
+        instrumentName,
+        patchName,
         lyrics: lyrics.trim() || null,
         notes: notes.trim() || null,
       })
@@ -130,40 +129,6 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
       // updateIdea already logs the error
     } finally {
       setIsSaving(false)
-    }
-  }
-
-  async function handleMoveToSong() {
-    if (!ideaId || !targetSongId) {
-      return
-    }
-
-    setIsMoving(true)
-    try {
-      const sectionId =
-        targetSectionId === 'unassigned' ? null : targetSectionId
-      await moveIdeaToSection(ideaId, targetSongId, sectionId)
-      onClose()
-    } catch {
-      // moveIdeaToSection already logs the error
-    } finally {
-      setIsMoving(false)
-    }
-  }
-
-  async function handleMoveToPool() {
-    if (!ideaId) {
-      return
-    }
-
-    setIsMoving(true)
-    try {
-      await moveIdeaToSection(ideaId, null, null)
-      onClose()
-    } catch {
-      // moveIdeaToSection already logs the error
-    } finally {
-      setIsMoving(false)
     }
   }
 
@@ -244,15 +209,23 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
               </div>
             </div>
 
+            <InstrumentSelector
+              id="detail-instrument"
+              value={{ instrumentId, instrumentName }}
+              onChange={(next) => {
+                setInstrumentId(next.instrumentId)
+                setInstrumentName(next.instrumentName)
+              }}
+              onAutoPatch={(patch) => setPatchName(patch)}
+            />
+
             <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="detail-key">Key</Label>
-                <Input
-                  id="detail-key"
-                  value={key}
-                  onChange={(event) => setKey(event.target.value)}
-                />
-              </div>
+              <SynthPatchSelector
+                id="detail-patch"
+                value={patchName}
+                onChange={setPatchName}
+              />
+              <KeySelector id="detail-key" value={key} onChange={setKey} />
               <div className="space-y-2">
                 <Label htmlFor="detail-tempo">Tempo</Label>
                 <Input
@@ -263,6 +236,9 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
                   onChange={(event) => setTempo(event.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="detail-time">Time</Label>
                 <Input
@@ -270,25 +246,6 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
                   placeholder="4/4"
                   value={timeSignature}
                   onChange={(event) => setTimeSignature(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="detail-instrument">Instrument</Label>
-                <Input
-                  id="detail-instrument"
-                  value={instrumentName}
-                  onChange={(event) => setInstrumentName(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="detail-patch">Patch</Label>
-                <Input
-                  id="detail-patch"
-                  value={patchName}
-                  onChange={(event) => setPatchName(event.target.value)}
                 />
               </div>
             </div>
@@ -313,66 +270,16 @@ export function IdeaDetailSheet({ ideaId, onClose }: IdeaDetailSheetProps) {
               />
             </div>
 
-            {idea.songId === null ? (
-              <div className="space-y-3 rounded-lg border p-4">
-                <Label>Move to Song</Label>
-                <Select
-                  value={targetSongId}
-                  onValueChange={(value) => {
-                    setTargetSongId(value)
-                    setTargetSectionId('unassigned')
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a song" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(songs ?? []).map((song) => (
-                      <SelectItem key={song.id} value={song.id}>
-                        {song.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {targetSongId ? (
-                  <Select
-                    value={targetSectionId}
-                    onValueChange={setTargetSectionId}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Section" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {(sections ?? []).map((section) => (
-                        <SelectItem key={section.id} value={section.id}>
-                          {section.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : null}
-
-                <Button
-                  variant="secondary"
-                  disabled={!targetSongId || isMoving}
-                  onClick={() => void handleMoveToSong()}
-                >
-                  {isMoving ? 'Moving...' : 'Move to Song'}
-                </Button>
-              </div>
-            ) : (
-              <div className="rounded-lg border p-4">
-                <Button
-                  variant="secondary"
-                  disabled={isMoving}
-                  onClick={() => void handleMoveToPool()}
-                >
-                  {isMoving ? 'Moving...' : 'Move to Pool'}
-                </Button>
-              </div>
-            )}
+            <div className="rounded-lg border p-4">
+              <Label className="mb-3 block">Idea actions</Label>
+              {idea ? (
+                <IdeaActionsMenu
+                  idea={idea}
+                  variant="button"
+                  onActionComplete={onClose}
+                />
+              ) : null}
+            </div>
           </div>
         )}
 

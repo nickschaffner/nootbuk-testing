@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
+import { KeySelector } from '@/components/shared/KeySelector'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,7 @@ export function NewIdeaForm() {
   const [lyrics, setLyrics] = useState('')
   const [notes, setNotes] = useState('')
   const [instrumentName, setInstrumentName] = useState('')
-  const [key, setKey] = useState('')
+  const [key, setKey] = useState<string | null>(null)
   const [tempo, setTempo] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -26,9 +27,10 @@ export function NewIdeaForm() {
         sectionId: null,
         role,
         sectionIntent: null,
-        key: key.trim() || null,
+        key,
         tempo: tempo ? Number.parseInt(tempo, 10) : null,
         timeSignature: null,
+        instrumentId: null,
         instrumentName: instrumentName.trim() || null,
         patchName: null,
         patchSettings: null,
@@ -40,7 +42,7 @@ export function NewIdeaForm() {
       setLyrics('')
       setNotes('')
       setInstrumentName('')
-      setKey('')
+      setKey(null)
       setTempo('')
     } catch {
       // createIdea already logs the error
@@ -61,15 +63,7 @@ export function NewIdeaForm() {
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="new-idea-key">Key</Label>
-            <Input
-              id="new-idea-key"
-              placeholder="Cm, F#, Bb"
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-            />
-          </div>
+          <KeySelector id="new-idea-key" value={key} onChange={setKey} />
           <div className="space-y-2">
             <Label htmlFor="new-idea-tempo">Tempo</Label>
             <Input

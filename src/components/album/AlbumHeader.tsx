@@ -1,6 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { ImageIcon } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ImageIcon, Trash2 } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -9,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { updateAlbum } from '@/hooks/useAlbums'
+import { deleteAlbum, updateAlbum } from '@/hooks/useAlbums'
 import type { Album, AlbumStatus } from '@/types/album'
 
 const ALBUM_STATUSES: AlbumStatus[] = ['draft', 'in-progress', 'released']
@@ -19,15 +32,15 @@ interface AlbumHeaderProps {
 }
 
 export function AlbumHeader({ album }: AlbumHeaderProps) {
+  const navigate = useNavigate()
   const artworkInputRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(album.title)
-  const [subtitle, setSubtitle] = useState(album.subtitle ?? '')
   const [status, setStatus] = useState(album.status)
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     setTitle(album.title)
-    setSubtitle(album.subtitle ?? '')
     setStatus(album.status)
   }, [album])
 
@@ -57,6 +70,18 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
     }
 
     await persist({ id: album.id, artworkBlob: file })
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    try {
+      await deleteAlbum(album.id)
+      navigate('/albums')
+    } catch {
+      // deleteAlbum already logs the error
+    } finally {
+      setIsDeleting(false)
+    }
   }
 
   return (
@@ -105,21 +130,6 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
           />
         </div>
 
-        <div className="min-w-[200px] flex-1 space-y-1">
-          <label className="text-xs text-muted-foreground">Subtitle</label>
-          <Input
-            value={subtitle}
-            placeholder="Optional subtitle"
-            onChange={(event) => setSubtitle(event.target.value)}
-            onBlur={() => {
-              const next = subtitle.trim() || null
-              if (next !== album.subtitle) {
-                void persist({ id: album.id, subtitle: next })
-              }
-            }}
-          />
-        </div>
-
         <div className="w-40 space-y-1">
           <label className="text-xs text-muted-foreground">Status</label>
           <Select
@@ -142,6 +152,42 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
             </SelectContent>
           </Select>
         </div>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              disabled={isDeleting}
+              aria-label="Delete album"
+            >
+              <Trash2 />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this album?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This removes the album and its track listing links. Songs on
+                this album will not be deleted. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                variant="destructive"
+                disabled={isDeleting}
+                onClick={(event) => {
+                  event.preventDefault()
+                  void handleDelete()
+                }}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )

@@ -373,7 +373,7 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
 
 1. **Increment Dexie version number** for all schema changes below.
 
-2. **Add Instrument and InstrumentPatch tables:**
+2. **Add Instrument table:**
    ```
    interface Instrument {
      id: string;
@@ -383,15 +383,9 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
      createdAt: string;
      updatedAt: string;
    }
-
-   interface InstrumentPatch {
-     id: string;
-     instrumentId: string;
-     name: string;             // "37 voice", "Totoroids preset", "Summer Madness"
-     sortOrder: number;
-   }
    ```
-   - Dexie indexes: instruments: 'id, type, createdAt', instrumentPatches: 'id, instrumentId'
+   - Dexie indexes: instruments: 'id, type, createdAt'
+   - NO InstrumentPatch table. Patch names are stored as a plain text field (patchName) on the Idea.
 
 3. **Add SongTodo table:**
    ```
@@ -439,8 +433,8 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
    - Add `instrumentId: string | null` (optional link to Instrument for the primary/lead instrument)
 
 7. **Update Idea interface:**
-   - Add `instrumentId: string | null` (optional FK to instruments table)
-   - Keep `instrumentName` for backward compatibility — if instrumentId is set, display the instrument's name from the instruments table; if null, display instrumentName as freeform text
+   - Add `instrumentId: string | null` (FK to instruments table)
+   - Remove `instrumentName` — instrument name comes from the instruments table via instrumentId
 
 8. **Update SongReference interface:**
    - Change to support any combination of text + URL + audio + attachment:
@@ -467,14 +461,14 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
    - Add `notes: string | null` for general album notes
 
 10. **Create CRUD hooks:**
-    - `useInstruments.ts` — createInstrument, updateInstrument, deleteInstrument, getAllInstruments, getInstrumentPatches, addPatch, removePatch
+    - `useInstruments.ts` — createInstrument, updateInstrument, deleteInstrument, getAllInstruments
     - `useSongTodos.ts` — createTodo, updateTodo, toggleComplete, deleteTodo, reorderTodos, getTodosForSong
     - `useSongVersions.ts` — addVersion, removeVersion, setMainVersion, getVersionsForSong
     - `useAlbumSongs.ts` — addSongToAlbum, removeSongFromAlbum, reorderTracks, getAlbumsForSong, getSongsForAlbum
     - Update `useIdeas.ts` — add copyIdea, copyIdeaToSong, moveIdeaToPool, copyIdeaToPool
     - Update `useSongs.ts` — remove albumId-related logic
 
-**Acceptance:** All new tables exist. All CRUD hooks work. Existing data still loads (backward compatible — instrumentName still displayed for old ideas).
+**Acceptance:** All new tables exist. All CRUD hooks work.
 
 ---
 
@@ -510,28 +504,26 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
 
 1. **Build the Instruments page** (/instruments route):
    - List all saved instruments
-   - Each row: name, type badge, number of patches (for synths), number of ideas using it
+   - Each row: name, type badge
    - "Add Instrument" button → form with Name and Type fields
-   - Click an instrument → edit page showing name, type, and patch list (if synth type)
-   - Delete with confirmation (only if no ideas reference it, or confirm to unlink)
+   - Click an instrument → edit name and type
+   - Delete with confirmation
 
 2. **Add Instruments to main navigation** alongside Home, Ideas, Songs, Albums.
 
 3. **Update Quick Capture and Idea Detail** — replace the freeform instrument name text input with:
    - Dropdown of saved instruments + "Add New" option at the bottom
    - Selecting "Add New" opens a quick inline form (name + type), creates the instrument, and selects it
-   - When an instrument is selected and its type maps to a synth patch, auto-set the synth preview patch:
+   - When an instrument is selected, auto-set the synth preview patch based on type:
      - bass → Bass patch
-     - guitar → clean guitar or Piano (closest available)
+     - guitar → Piano (closest available)
      - keys → Piano patch
-     - synth-hardware, synth-vst → Synth Lead or Synth Pad (user picks)
-     - drums → Drums (if available) or muted
+     - synth-hardware, synth-vst → Synth Lead
+     - drums → muted
      - other types → Piano as default
-   - If the instrument is a synth type (synth-hardware or synth-vst), show an additional "Patch" text input for the specific preset name (stored in InstrumentPatch)
+   - If the selected instrument is a synth type, the patchName text field on the idea is where the user types the specific preset name
 
-4. **Migration for existing ideas:** Ideas with instrumentName but no instrumentId should still display the instrumentName. The user can optionally link them to a saved instrument later.
-
-**Acceptance:** Can create, edit, delete instruments. Quick Capture shows instrument dropdown. Selecting an instrument auto-sets the synth patch. Synth instruments show a Patch field.
+**Acceptance:** Can create, edit, delete instruments. Quick Capture shows instrument dropdown. Selecting an instrument auto-sets the synth patch. Synth instruments have a patchName text field.
 
 ---
 
@@ -551,9 +543,10 @@ Phases 0–13 built the initial scaffold. The iterations below refactor and impr
 
 3. **When importing from Idea Pool into a Song:** offer both "Move" (removes from pool) and "Copy" (stays in pool).
 
-4. **Copy implementation:** duplicate the Idea record with a new UUID. Also duplicate all IdeaMedia and IdeaNoteSequence records linked to it. The copies are independent — editing one does not affect the other.
+4. **Copy implementation:** duplicate the Idea record with a new UUID. Also duplicate all IdeaMedia records linked to it. The copies are independent — editing one does not affect the other. There is no IdeaNoteSequence table — note sequences are stored as IdeaMedia with type midi.
 
 5. **Inline play buttons on idea cards everywhere** (Pool, Ideas page, Song Workspace sections):
+   - Each idea has at most one audio and at most one MIDI
    - If idea has audio → show audio play button
    - If idea has MIDI → show MIDI play button
    - If idea has both → show both buttons (audio icon + MIDI icon)

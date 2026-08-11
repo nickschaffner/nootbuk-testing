@@ -76,6 +76,7 @@ export function AudioPlayer({ blob, className }: AudioPlayerProps) {
 
     const source = context.createBufferSource()
     source.buffer = buffer
+    source.loop = true
     source.connect(context.destination)
     source.onended = () => {
       if (sourceRef.current !== source) {
@@ -83,7 +84,7 @@ export function AudioPlayer({ blob, className }: AudioPlayerProps) {
       }
 
       offsetRef.current = 0
-      setCurrentTime(buffer.duration)
+      setCurrentTime(0)
       isPlayingRef.current = false
       setIsPlaying(false)
       sourceRef.current = null

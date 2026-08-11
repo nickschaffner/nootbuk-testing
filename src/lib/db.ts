@@ -1,26 +1,34 @@
 import Dexie, { type EntityTable } from 'dexie'
 
-import type { Album, AlbumReferenceFile } from '@/types/album'
-import type { Idea, IdeaMedia, IdeaNoteSequence } from '@/types/idea'
+import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
+import type { Album, AlbumReferenceFile, AlbumSong } from '@/types/album'
+import type { Idea, IdeaMedia, SequenceNote } from '@/types/idea'
+import type { Instrument } from '@/types/instrument'
 import type {
   Song,
   SongAsset,
   SongJournalEntry,
   SongReference,
   SongSection,
+  SongTodo,
+  SongVersion,
 } from '@/types/song'
 
 export class NootbukDatabase extends Dexie {
   ideas!: EntityTable<Idea, 'id'>
   ideaMedia!: EntityTable<IdeaMedia, 'id'>
-  ideaNoteSequences!: EntityTable<IdeaNoteSequence, 'id'>
   songs!: EntityTable<Song, 'id'>
   songSections!: EntityTable<SongSection, 'id'>
   songJournalEntries!: EntityTable<SongJournalEntry, 'id'>
   songReferences!: EntityTable<SongReference, 'id'>
   songAssets!: EntityTable<SongAsset, 'id'>
+  songTodos!: EntityTable<SongTodo, 'id'>
+  songVersions!: EntityTable<SongVersion, 'id'>
   albums!: EntityTable<Album, 'id'>
+  albumSongs!: EntityTable<AlbumSong, 'id'>
   albumReferenceFiles!: EntityTable<AlbumReferenceFile, 'id'>
+  instruments!: EntityTable<Instrument, 'id'>
 
   constructor() {
     super('NootbukDB')
@@ -49,6 +57,202 @@ export class NootbukDatabase extends Dexie {
       albums: 'id, createdAt, updatedAt',
       albumReferenceFiles: 'id, albumId',
     })
+
+    this.version(3)
+      .stores({
+        ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: 'id, ideaId, type',
+        ideaNoteSequences: 'id, ideaId',
+        songs: 'id, status, createdAt, updatedAt',
+        songSections: 'id, songId, sortOrder',
+        songJournalEntries: 'id, songId, topic',
+        songReferences: 'id, songId',
+        songAssets: 'id, songId',
+        songTodos: 'id, songId, completed',
+        songVersions: 'id, songId, isMain',
+        albums: 'id, createdAt, updatedAt',
+        albumSongs: 'id, albumId, songId',
+        albumReferenceFiles: 'id, albumId',
+        instruments: 'id, type, createdAt',
+        instrumentPatches: 'id, instrumentId',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('ideas').toCollection().modify((idea) => {
+          if (idea.instrumentId === undefined) {
+            idea.instrumentId = null
+          }
+        })
+
+        await tx.table('songReferences').toCollection().modify((ref) => {
+          if (ref.text === undefined) {
+            const oldType = ref.type as string | undefined
+            const oldContent = ref.content as string | undefined
+
+            if (oldType === 'text') {
+              ref.text = oldContent ?? null
+              ref.url = null
+            } else if (oldType === 'link') {
+              ref.text = null
+              ref.url = oldContent ?? null
+            } else if (oldType === 'audio') {
+              ref.text = oldContent ?? null
+              ref.url = null
+            } else {
+              ref.text = oldContent ?? null
+              ref.url = null
+            }
+
+            ref.attachmentBlob = null
+            ref.attachmentFilename = null
+            ref.attachmentMimeType = null
+
+            delete ref.type
+            delete ref.content
+          }
+        })
+
+        await tx.table('albums').toCollection().modify((album) => {
+          if (album.notes === undefined) {
+            album.notes = null
+          }
+        })
+
+        const songs = await tx.table('songs').toArray()
+        const albumSongsTable = tx.table('albumSongs')
+        for (const song of songs) {
+          const albumId = song.albumId as string | null | undefined
+          if (albumId) {
+            await albumSongsTable.add({
+              id: crypto.randomUUID(),
+              albumId,
+              songId: song.id as string,
+              trackNumber: (song.sortOrder as number) ?? 0,
+            })
+          }
+        }
+      })
+
+    // Drop InstrumentPatch — preset names are freeform idea.patchName
+    this.version(4).stores({
+      ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+      ideaMedia: 'id, ideaId, type',
+      ideaNoteSequences: 'id, ideaId',
+      songs: 'id, status, createdAt, updatedAt',
+      songSections: 'id, songId, sortOrder',
+      songJournalEntries: 'id, songId, topic',
+      songReferences: 'id, songId',
+      songAssets: 'id, songId',
+      songTodos: 'id, songId, completed',
+      songVersions: 'id, songId, isMain',
+      albums: 'id, createdAt, updatedAt',
+      albumSongs: 'id, albumId, songId',
+      albumReferenceFiles: 'id, albumId',
+      instruments: 'id, type, createdAt',
+      instrumentPatches: null,
+    })
+
+    // Merge IdeaNoteSequence into IdeaMedia; enforce one audio + one MIDI per idea
+    this.version(5)
+      .stores({
+        ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: 'id, ideaId, type',
+        ideaNoteSequences: null,
+        songs: 'id, status, createdAt, updatedAt',
+        songSections: 'id, songId, sortOrder',
+        songJournalEntries: 'id, songId, topic',
+        songReferences: 'id, songId',
+        songAssets: 'id, songId',
+        songTodos: 'id, songId, completed',
+        songVersions: 'id, songId, isMain',
+        albums: 'id, createdAt, updatedAt',
+        albumSongs: 'id, albumId, songId',
+        albumReferenceFiles: 'id, albumId',
+        instruments: 'id, type, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const mediaTable = tx.table('ideaMedia')
+        const sequencesTable = tx.table('ideaNoteSequences')
+
+        type LegacySequence = {
+          id: string
+          ideaId: string
+          notes: SequenceNote[]
+          label: string | null
+          createdAt: string
+        }
+
+        const sequences = (await sequencesTable.toArray()) as LegacySequence[]
+        const sequencesByIdea = new Map<string, LegacySequence[]>()
+        for (const sequence of sequences) {
+          const list = sequencesByIdea.get(sequence.ideaId) ?? []
+          list.push(sequence)
+          sequencesByIdea.set(sequence.ideaId, list)
+        }
+
+        for (const [ideaId, ideaSequences] of sequencesByIdea) {
+          const existingMidi = await mediaTable
+            .where('ideaId')
+            .equals(ideaId)
+            .filter((item) => item.type === 'midi')
+            .toArray()
+
+          if (existingMidi.length > 0) {
+            continue
+          }
+
+          const sorted = [...ideaSequences].sort((a, b) =>
+            a.createdAt.localeCompare(b.createdAt),
+          )
+          const source = sorted[0]
+          if (!source || source.notes.length === 0) {
+            continue
+          }
+
+          const noteData = sequenceNotesToNoteEvents(source.notes, 120)
+          const blob = noteEventsToMidiBlob(noteData, 120)
+          const safeLabel = source.label?.trim().replace(/[^\w\-]+/g, '-')
+          const filename = safeLabel
+            ? `${safeLabel}.mid`
+            : `notes-${source.createdAt.replace(/[:.]/g, '-')}.mid`
+
+          await mediaTable.add({
+            id: crypto.randomUUID(),
+            ideaId,
+            type: 'midi',
+            filename,
+            mimeType: 'audio/midi',
+            blob,
+            duration: getMidiDuration(noteData),
+            noteData,
+            sortOrder: 0,
+            createdAt: source.createdAt,
+          })
+        }
+
+        const allMedia = (await mediaTable.toArray()).sort(
+          (a, b) =>
+            ((a.sortOrder as number) ?? 0) - ((b.sortOrder as number) ?? 0),
+        )
+        const deleteIds: string[] = []
+        const firstExclusive = new Map<string, string>()
+
+        for (const item of allMedia) {
+          if (item.type !== 'audio' && item.type !== 'midi') {
+            continue
+          }
+
+          const key = `${item.ideaId}:${item.type}`
+          if (firstExclusive.has(key)) {
+            deleteIds.push(item.id as string)
+          } else {
+            firstExclusive.set(key, item.id as string)
+          }
+        }
+
+        if (deleteIds.length > 0) {
+          await mediaTable.bulkDelete(deleteIds)
+        }
+      })
   }
 }
 

@@ -15,7 +15,6 @@ export function AlbumsPage() {
     try {
       const album = await createAlbum({
         title: 'Untitled Album',
-        subtitle: null,
         status: 'draft',
         artworkBlob: null,
         releaseDate: null,
@@ -24,6 +23,7 @@ export function AlbumsPage() {
         catalogNumber: null,
         globalNotes: null,
         referenceMaterial: null,
+        notes: null,
       })
       navigate(`/album/${album.id}`)
     } catch {

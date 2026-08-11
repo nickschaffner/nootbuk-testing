@@ -2,7 +2,7 @@ import { AlbumHeader } from '@/components/album/AlbumHeader'
 import { AlbumSidebar } from '@/components/album/AlbumSidebar'
 import { AlbumTrackList } from '@/components/album/AlbumTrackList'
 import { useAlbum } from '@/hooks/useAlbums'
-import { useSongsForAlbum } from '@/hooks/useSongs'
+import { useAlbumSongs } from '@/hooks/useAlbumSongs'
 
 interface AlbumViewProps {
   albumId: string
@@ -10,9 +10,9 @@ interface AlbumViewProps {
 
 export function AlbumView({ albumId }: AlbumViewProps) {
   const album = useAlbum(albumId)
-  const songs = useSongsForAlbum(albumId)
+  const tracks = useAlbumSongs(albumId)
 
-  if (album === undefined || songs === undefined) {
+  if (album === undefined || tracks === undefined) {
     return <p className="text-sm text-muted-foreground">Loading album...</p>
   }
 
@@ -26,7 +26,7 @@ export function AlbumView({ albumId }: AlbumViewProps) {
 
       <div className="flex gap-6">
         <div className="min-w-0 flex-1">
-          <AlbumTrackList albumId={albumId} songs={songs} />
+          <AlbumTrackList albumId={albumId} tracks={tracks} />
         </div>
 
         <AlbumSidebar album={album} />

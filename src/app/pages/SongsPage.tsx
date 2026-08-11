@@ -1,14 +1,104 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { createSong, useAllSongs } from '@/hooks/useSongs'
+import { createSong, deleteSong, useAllSongs } from '@/hooks/useSongs'
 import { formatRelativeTime } from '@/lib/format'
-import type { SongStatus } from '@/types/song'
+import type { Song, SongStatus } from '@/types/song'
 
 function formatSongStatus(status: SongStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1)
+}
+
+function SongRow({ song }: { song: Song }) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    try {
+      await deleteSong(song.id)
+    } catch {
+      // deleteSong already logs the error
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <li className="flex items-center gap-2 px-2 py-1 pr-2 sm:px-4">
+      <Link
+        to={`/song/${song.id}`}
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 py-2 transition-colors hover:bg-muted/40"
+      >
+        <p className="min-w-0 flex-1 truncate text-sm font-medium">
+          {song.title}
+        </p>
+        <Badge variant="outline" className="shrink-0 capitalize">
+          {formatSongStatus(song.status)}
+        </Badge>
+        <span className="w-16 shrink-0 text-sm text-muted-foreground">
+          {song.key ?? '—'}
+        </span>
+        <span className="w-16 shrink-0 text-sm text-muted-foreground">
+          {song.tempo ? `${song.tempo} BPM` : '—'}
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {formatRelativeTime(song.updatedAt)}
+        </span>
+      </Link>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 text-muted-foreground hover:text-destructive"
+            disabled={isDeleting}
+            aria-label={`Delete ${song.title}`}
+          >
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete “{song.title}”?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the song and its sections, journal, references,
+              assets, todos, and versions. Ideas in this song will be moved back
+              to the pool. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleDelete()
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </li>
+  )
 }
 
 export function SongsPage() {
@@ -21,7 +111,6 @@ export function SongsPage() {
     try {
       const song = await createSong({
         title: 'Untitled Song',
-        albumId: null,
         key: null,
         tempo: null,
         timeSignature: null,
@@ -66,28 +155,7 @@ export function SongsPage() {
       ) : (
         <ul className="divide-y rounded-lg border">
           {songs.map((song) => (
-            <li key={song.id}>
-              <Link
-                to={`/song/${song.id}`}
-                className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 transition-colors hover:bg-muted/40"
-              >
-                <p className="min-w-0 flex-1 truncate text-sm font-medium">
-                  {song.title}
-                </p>
-                <Badge variant="outline" className="shrink-0 capitalize">
-                  {formatSongStatus(song.status)}
-                </Badge>
-                <span className="w-16 shrink-0 text-sm text-muted-foreground">
-                  {song.key ?? '—'}
-                </span>
-                <span className="w-16 shrink-0 text-sm text-muted-foreground">
-                  {song.tempo ? `${song.tempo} BPM` : '—'}
-                </span>
-                <span className="shrink-0 text-xs text-muted-foreground">
-                  {formatRelativeTime(song.updatedAt)}
-                </span>
-              </Link>
-            </li>
+            <SongRow key={song.id} song={song} />
           ))}
         </ul>
       )}

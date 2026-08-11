@@ -1,7 +1,5 @@
-import { useEffect, useState } from 'react'
-
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { AutoSaveTextarea } from '@/components/shared/AutoSaveTextarea'
 import { updateSong } from '@/hooks/useSongs'
 import type { Song } from '@/types/song'
 
@@ -10,16 +8,8 @@ interface SongLyricsTabProps {
 }
 
 export function SongLyricsTab({ song }: SongLyricsTabProps) {
-  const [lyrics, setLyrics] = useState(song.lyrics ?? '')
-
-  useEffect(() => {
-    setLyrics(song.lyrics ?? '')
-  }, [song.id, song.lyrics])
-
-  async function handleBlur() {
-    const trimmed = lyrics.trim()
-    const nextLyrics = trimmed || null
-
+  async function handleSave(text: string) {
+    const nextLyrics = text.trim() || null
     if (nextLyrics === song.lyrics) {
       return
     }
@@ -34,11 +24,10 @@ export function SongLyricsTab({ song }: SongLyricsTabProps) {
   return (
     <div className="space-y-2">
       <Label htmlFor="song-lyrics">Song lyrics</Label>
-      <Textarea
+      <AutoSaveTextarea
         id="song-lyrics"
-        value={lyrics}
-        onChange={(event) => setLyrics(event.target.value)}
-        onBlur={() => void handleBlur()}
+        initialValue={song.lyrics ?? ''}
+        onSave={(text) => void handleSave(text)}
         placeholder="Full lyric sheet for this song..."
         rows={16}
         className="min-h-64 resize-y font-mono text-sm"

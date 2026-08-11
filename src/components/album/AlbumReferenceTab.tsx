@@ -1,7 +1,7 @@
 import { FileIcon, Plus, Trash2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 
-import { RichTextEditor } from '@/components/editor/RichTextEditor'
+import { AutoSaveTextarea } from '@/components/shared/AutoSaveTextarea'
 import { Button } from '@/components/ui/button'
 import {
   addAlbumReferenceFile,
@@ -18,20 +18,16 @@ interface AlbumReferenceTabProps {
 export function AlbumReferenceTab({ album }: AlbumReferenceTabProps) {
   const files = useAlbumReferenceFiles(album.id)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [content, setContent] = useState(album.referenceMaterial ?? '')
   const [isUploading, setIsUploading] = useState(false)
 
-  useEffect(() => {
-    setContent(album.referenceMaterial ?? '')
-  }, [album.referenceMaterial])
+  async function handleContentSave(text: string) {
+    const trimmed = text.trim() || null
+    if (trimmed === album.referenceMaterial) {
+      return
+    }
 
-  async function handleContentChange(html: string) {
-    setContent(html)
     try {
-      await updateAlbum({
-        id: album.id,
-        referenceMaterial: html === '<p></p>' ? null : html,
-      })
+      await updateAlbum({ id: album.id, referenceMaterial: trimmed })
     } catch {
       // updateAlbum already logs the error
     }
@@ -65,10 +61,11 @@ export function AlbumReferenceTab({ album }: AlbumReferenceTabProps) {
 
   return (
     <div className="space-y-4">
-      <RichTextEditor
-        content={content}
-        onChange={(html) => void handleContentChange(html)}
+      <AutoSaveTextarea
+        initialValue={album.referenceMaterial ?? ''}
+        onSave={(text) => void handleContentSave(text)}
         placeholder="Reference notes, links, technique references..."
+        rows={8}
       />
 
       <div className="space-y-2">

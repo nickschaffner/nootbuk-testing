@@ -1,8 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
+import { getIdeaDisplayLabel } from '@/lib/idea-label'
 import { toStorageError } from '@/lib/storage'
+import { createSong } from '@/hooks/useSongs'
 import type { Idea } from '@/types/idea'
+import type { Song } from '@/types/song'
 
 type CreateIdeaInput = Omit<
   Idea,
@@ -30,8 +33,25 @@ async function nextIdeaSortOrder(
   return Math.max(...ideas.map((idea) => idea.sortOrder)) + 1
 }
 
+export function useAllIdeas() {
+  return useLiveQuery(() => getAllIdeas(), [])
+}
+
 export function useIdeasInPool() {
   return useLiveQuery(() => getIdeasInPool(), [])
+}
+
+export async function getAllIdeas(): Promise<Idea[]> {
+  try {
+    const ideas = await db.ideas.toArray()
+    return ideas.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
+  } catch (error) {
+    console.warn('getAllIdeas failed:', error)
+    throw error
+  }
 }
 
 export function useIdeasForSong(songId: string | undefined) {
@@ -95,6 +115,7 @@ export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
       key: input.key ?? null,
       tempo: input.tempo ?? null,
       timeSignature: input.timeSignature ?? null,
+      instrumentId: input.instrumentId ?? null,
       instrumentName: input.instrumentName ?? null,
       patchName: input.patchName ?? null,
       patchSettings: input.patchSettings ?? null,
@@ -136,17 +157,10 @@ export async function updateIdea(input: UpdateIdeaInput): Promise<Idea> {
 
 export async function deleteIdea(id: string): Promise<void> {
   try {
-    await db.transaction(
-      'rw',
-      db.ideas,
-      db.ideaMedia,
-      db.ideaNoteSequences,
-      async () => {
-        await db.ideaMedia.where('ideaId').equals(id).delete()
-        await db.ideaNoteSequences.where('ideaId').equals(id).delete()
-        await db.ideas.delete(id)
-      },
-    )
+    await db.transaction('rw', db.ideas, db.ideaMedia, async () => {
+      await db.ideaMedia.where('ideaId').equals(id).delete()
+      await db.ideas.delete(id)
+    })
   } catch (error) {
     console.warn('deleteIdea failed:', error)
     throw error
@@ -178,6 +192,10 @@ export async function moveIdeaToSection(
   }
 }
 
+export async function moveIdeaToPool(ideaId: string): Promise<Idea> {
+  return moveIdeaToSection(ideaId, null, null)
+}
+
 export async function reorderIdeas(orderedIds: string[]): Promise<void> {
   try {
     await db.transaction('rw', db.ideas, async () => {
@@ -189,6 +207,167 @@ export async function reorderIdeas(orderedIds: string[]): Promise<void> {
     })
   } catch (error) {
     console.warn('reorderIdeas failed:', error)
+    throw error
+  }
+}
+
+async function duplicateIdeaMedia(sourceIdeaId: string, targetIdeaId: string) {
+  const mediaItems = await db.ideaMedia.where('ideaId').equals(sourceIdeaId).toArray()
+  for (const item of mediaItems) {
+    await db.ideaMedia.add({
+      ...item,
+      id: crypto.randomUUID(),
+      ideaId: targetIdeaId,
+      createdAt: new Date().toISOString(),
+    })
+  }
+}
+
+export async function copyIdea(ideaId: string): Promise<Idea> {
+  try {
+    const existing = await db.ideas.get(ideaId)
+    if (!existing) {
+      throw new Error(`Idea not found: ${ideaId}`)
+    }
+
+    const now = new Date().toISOString()
+    const sortOrder = await nextIdeaSortOrder(existing.songId, existing.sectionId)
+    const newIdea: Idea = {
+      ...existing,
+      id: crypto.randomUUID(),
+      sortOrder,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
+      await db.ideas.add(newIdea)
+      await duplicateIdeaMedia(ideaId, newIdea.id)
+    })
+
+    return newIdea
+  } catch (error) {
+    console.warn('copyIdea failed:', error)
+    throw error
+  }
+}
+
+export async function copyIdeaToSong(
+  ideaId: string,
+  songId: string,
+  sectionId: string | null = null,
+): Promise<Idea> {
+  try {
+    const existing = await db.ideas.get(ideaId)
+    if (!existing) {
+      throw new Error(`Idea not found: ${ideaId}`)
+    }
+
+    const now = new Date().toISOString()
+    const sortOrder = await nextIdeaSortOrder(songId, sectionId)
+    const newIdea: Idea = {
+      ...existing,
+      id: crypto.randomUUID(),
+      songId,
+      sectionId,
+      sortOrder,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
+      await db.ideas.add(newIdea)
+      await duplicateIdeaMedia(ideaId, newIdea.id)
+    })
+
+    return newIdea
+  } catch (error) {
+    console.warn('copyIdeaToSong failed:', error)
+    throw error
+  }
+}
+
+export async function copyIdeaToPool(ideaId: string): Promise<Idea> {
+  try {
+    const existing = await db.ideas.get(ideaId)
+    if (!existing) {
+      throw new Error(`Idea not found: ${ideaId}`)
+    }
+
+    const now = new Date().toISOString()
+    const sortOrder = await nextIdeaSortOrder(null, null)
+    const newIdea: Idea = {
+      ...existing,
+      id: crypto.randomUUID(),
+      songId: null,
+      sectionId: null,
+      sortOrder,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
+      await db.ideas.add(newIdea)
+      await duplicateIdeaMedia(ideaId, newIdea.id)
+    })
+
+    return newIdea
+  } catch (error) {
+    console.warn('copyIdeaToPool failed:', error)
+    throw error
+  }
+}
+
+function songDefaultsFromIdea(idea: Idea) {
+  return {
+    title: getIdeaDisplayLabel(idea),
+    key: idea.key,
+    tempo: idea.tempo,
+    timeSignature: idea.timeSignature,
+    status: 'sketch' as const,
+    genre: null,
+    lyrics: idea.lyrics,
+    songwriter: null,
+    publisher: null,
+    ipiNumber: null,
+    masterEngineer: null,
+    copyright: null,
+    sampleCredits: null,
+  }
+}
+
+export async function turnIdeaIntoSong(
+  ideaId: string,
+): Promise<{ song: Song; idea: Idea }> {
+  try {
+    const existing = await db.ideas.get(ideaId)
+    if (!existing) {
+      throw new Error(`Idea not found: ${ideaId}`)
+    }
+
+    const song = await createSong(songDefaultsFromIdea(existing))
+    const idea = await moveIdeaToSection(ideaId, song.id, null)
+    return { song, idea }
+  } catch (error) {
+    console.warn('turnIdeaIntoSong failed:', error)
+    throw error
+  }
+}
+
+export async function copyIdeaIntoNewSong(
+  ideaId: string,
+): Promise<{ song: Song; idea: Idea }> {
+  try {
+    const existing = await db.ideas.get(ideaId)
+    if (!existing) {
+      throw new Error(`Idea not found: ${ideaId}`)
+    }
+
+    const song = await createSong(songDefaultsFromIdea(existing))
+    const idea = await copyIdeaToSong(ideaId, song.id, null)
+    return { song, idea }
+  } catch (error) {
+    console.warn('copyIdeaIntoNewSong failed:', error)
     throw error
   }
 }

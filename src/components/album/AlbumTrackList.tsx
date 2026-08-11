@@ -17,16 +17,17 @@ import { useMemo, useState } from 'react'
 import { AddSongToAlbumSheet } from '@/components/album/AddSongToAlbumSheet'
 import { SortableTrackRow } from '@/components/album/SortableTrackRow'
 import { Button } from '@/components/ui/button'
-import { reorderSongsInAlbum } from '@/hooks/useSongs'
+import { reorderTracks, type getSongsForAlbum } from '@/hooks/useAlbumSongs'
 import { albumTrackSortableId } from '@/lib/dnd-ids'
-import type { Song } from '@/types/song'
+
+type AlbumTrackEntry = Awaited<ReturnType<typeof getSongsForAlbum>>[number]
 
 interface AlbumTrackListProps {
   albumId: string
-  songs: Song[]
+  tracks: AlbumTrackEntry[]
 }
 
-export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
+export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
   const [addOpen, setAddOpen] = useState(false)
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -35,8 +36,13 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
   )
 
   const sortableIds = useMemo(
-    () => songs.map((song) => albumTrackSortableId(song.id)),
-    [songs],
+    () => tracks.map((t) => albumTrackSortableId(t.songId)),
+    [tracks],
+  )
+
+  const existingSongIds = useMemo(
+    () => tracks.map((t) => t.songId),
+    [tracks],
   )
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -47,7 +53,6 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
 
     const activeId = String(active.id)
     const overId = String(over.id)
-    const songIds = songs.map((song) => song.id)
     const oldIndex = sortableIds.indexOf(activeId)
     const newIndex = sortableIds.indexOf(overId)
 
@@ -55,10 +60,11 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
       return
     }
 
+    const songIds = tracks.map((t) => t.songId)
     try {
-      await reorderSongsInAlbum(arrayMove(songIds, oldIndex, newIndex))
+      await reorderTracks(albumId, arrayMove(songIds, oldIndex, newIndex))
     } catch {
-      // reorderSongsInAlbum already logs the error
+      // reorderTracks already logs the error
     }
   }
 
@@ -73,7 +79,7 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
           </Button>
         </div>
 
-        {songs.length === 0 ? (
+        {tracks.length === 0 ? (
           <p className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
             No songs on this album yet. Add a song to build the track listing.
           </p>
@@ -88,10 +94,10 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
               strategy={verticalListSortingStrategy}
             >
               <div className="space-y-2">
-                {songs.map((song, index) => (
+                {tracks.map((track, index) => (
                   <SortableTrackRow
-                    key={song.id}
-                    song={song}
+                    key={track.songId}
+                    song={track.song}
                     trackNumber={index + 1}
                   />
                 ))}
@@ -103,6 +109,7 @@ export function AlbumTrackList({ albumId, songs }: AlbumTrackListProps) {
 
       <AddSongToAlbumSheet
         albumId={albumId}
+        existingSongIds={existingSongIds}
         open={addOpen}
         onOpenChange={setAddOpen}
       />

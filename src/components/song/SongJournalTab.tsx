@@ -1,7 +1,7 @@
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 
-import { RichTextEditor } from '@/components/editor/RichTextEditor'
+import { AutoSaveTextarea } from '@/components/shared/AutoSaveTextarea'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -32,7 +32,7 @@ export function SongJournalTab({ songId }: SongJournalTabProps) {
       await createEntry({
         songId,
         topic,
-        content: '<p></p>',
+        content: '',
       })
       setNewTopic('')
     } catch {
@@ -51,7 +51,7 @@ export function SongJournalTab({ songId }: SongJournalTabProps) {
     }
   }
 
-  async function handleContentChange(entryId: string, content: string) {
+  async function handleContentSave(entryId: string, content: string) {
     try {
       await updateEntry({ id: entryId, content })
     } catch {
@@ -127,10 +127,11 @@ export function SongJournalTab({ songId }: SongJournalTabProps) {
             </Button>
           </div>
 
-          <RichTextEditor
-            content={entry.content}
-            onChange={(content) => void handleContentChange(entry.id, content)}
+          <AutoSaveTextarea
+            initialValue={entry.content}
+            onSave={(content) => void handleContentSave(entry.id, content)}
             placeholder="Production notes, gear settings, mix decisions..."
+            rows={4}
           />
         </div>
       ))}

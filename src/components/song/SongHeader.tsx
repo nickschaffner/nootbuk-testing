@@ -1,5 +1,20 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Trash2 } from 'lucide-react'
 
+import { KeySelector } from '@/components/shared/KeySelector'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -8,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { updateSong } from '@/hooks/useSongs'
+import { deleteSong, updateSong } from '@/hooks/useSongs'
 import type { Song, SongStatus } from '@/types/song'
 
 const SONG_STATUSES: SongStatus[] = [
@@ -26,15 +41,15 @@ interface SongHeaderProps {
 }
 
 export function SongHeader({ song }: SongHeaderProps) {
+  const navigate = useNavigate()
   const [title, setTitle] = useState(song.title)
-  const [keyValue, setKeyValue] = useState(song.key ?? '')
   const [tempo, setTempo] = useState(song.tempo?.toString() ?? '')
   const [timeSignature, setTimeSignature] = useState(song.timeSignature ?? '')
   const [status, setStatus] = useState(song.status)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     setTitle(song.title)
-    setKeyValue(song.key ?? '')
     setTempo(song.tempo?.toString() ?? '')
     setTimeSignature(song.timeSignature ?? '')
     setStatus(song.status)
@@ -45,6 +60,18 @@ export function SongHeader({ song }: SongHeaderProps) {
       await updateSong(fields)
     } catch {
       // updateSong already logs the error
+    }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true)
+    try {
+      await deleteSong(song.id)
+      navigate('/songs')
+    } catch {
+      // deleteSong already logs the error
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -64,17 +91,14 @@ export function SongHeader({ song }: SongHeaderProps) {
         />
       </div>
 
-      <div className="w-24 space-y-1">
-        <label className="text-xs text-muted-foreground">Key</label>
-        <Input
-          value={keyValue}
-          placeholder="Cm"
-          onChange={(event) => setKeyValue(event.target.value)}
-          onBlur={() => {
-            void persist({
-              id: song.id,
-              key: keyValue.trim() || null,
-            })
+      <div className="min-w-[220px]">
+        <KeySelector
+          compact
+          value={song.key}
+          onChange={(next) => {
+            if (next !== song.key) {
+              void persist({ id: song.id, key: next })
+            }
           }}
         />
       </div>
@@ -133,6 +157,43 @@ export function SongHeader({ song }: SongHeaderProps) {
           </SelectContent>
         </Select>
       </div>
+
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            disabled={isDeleting}
+            aria-label="Delete song"
+          >
+            <Trash2 />
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this song?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This removes the song and its sections, journal, references,
+              assets, todos, and versions. Ideas in this song will be moved back
+              to the pool. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleDelete()
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

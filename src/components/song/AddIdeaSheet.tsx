@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
+import { KeySelector } from '@/components/shared/KeySelector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -34,7 +35,7 @@ export function AddIdeaSheet({
   const [lyrics, setLyrics] = useState('')
   const [notes, setNotes] = useState('')
   const [instrumentName, setInstrumentName] = useState('')
-  const [key, setKey] = useState('')
+  const [key, setKey] = useState<string | null>(null)
   const [tempo, setTempo] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
@@ -43,7 +44,7 @@ export function AddIdeaSheet({
     setLyrics('')
     setNotes('')
     setInstrumentName('')
-    setKey('')
+    setKey(null)
     setTempo('')
   }
 
@@ -55,9 +56,10 @@ export function AddIdeaSheet({
         sectionId,
         role,
         sectionIntent: null,
-        key: key.trim() || null,
+        key,
         tempo: tempo ? Number.parseInt(tempo, 10) : null,
         timeSignature: null,
+        instrumentId: null,
         instrumentName: instrumentName.trim() || null,
         patchName: null,
         patchSettings: null,
@@ -88,15 +90,7 @@ export function AddIdeaSheet({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="section-idea-key">Key</Label>
-              <Input
-                id="section-idea-key"
-                placeholder="Cm, F#, Bb"
-                value={key}
-                onChange={(event) => setKey(event.target.value)}
-              />
-            </div>
+            <KeySelector id="section-idea-key" value={key} onChange={setKey} />
             <div className="space-y-2">
               <Label htmlFor="section-idea-tempo">Tempo</Label>
               <Input

@@ -8,25 +8,10 @@ export interface SongWithSections {
   sections: SongSection[]
 }
 
-type CreateSongInput = Omit<
-  Song,
-  'id' | 'createdAt' | 'updatedAt' | 'sortOrder'
-> & {
-  sortOrder?: number
-}
+type CreateSongInput = Omit<Song, 'id' | 'createdAt' | 'updatedAt'>
 
 type UpdateSongInput = Partial<Omit<Song, 'id' | 'createdAt'>> & {
   id: string
-}
-
-async function nextSongSortOrder(albumId: string | null): Promise<number> {
-  const songs = await db.songs.filter((song) => song.albumId === albumId).toArray()
-
-  if (songs.length === 0) {
-    return 0
-  }
-
-  return Math.max(...songs.map((song) => song.sortOrder)) + 1
 }
 
 export function useAllSongs() {
@@ -78,7 +63,6 @@ export async function createSong(input: CreateSongInput): Promise<Song> {
     const now = new Date().toISOString()
     const song: Song = {
       id: crypto.randomUUID(),
-      albumId: input.albumId ?? null,
       title: input.title,
       key: input.key ?? null,
       tempo: input.tempo ?? null,
@@ -92,8 +76,6 @@ export async function createSong(input: CreateSongInput): Promise<Song> {
       masterEngineer: input.masterEngineer ?? null,
       copyright: input.copyright ?? null,
       sampleCredits: input.sampleCredits ?? null,
-      sortOrder:
-        input.sortOrder ?? (await nextSongSortOrder(input.albumId ?? null)),
       createdAt: now,
       updatedAt: now,
     }
@@ -137,88 +119,33 @@ export async function deleteSong(id: string): Promise<void> {
         db.songJournalEntries,
         db.songReferences,
         db.songAssets,
+        db.songTodos,
+        db.songVersions,
+        db.albumSongs,
         db.ideas,
-        db.ideaMedia,
-        db.ideaNoteSequences,
       ],
       async () => {
-        const ideaIds = await db.ideas.where('songId').equals(id).primaryKeys()
+        const now = new Date().toISOString()
 
-        await Promise.all(
-          ideaIds.map(async (ideaId) => {
-            await db.ideaMedia.where('ideaId').equals(ideaId).delete()
-            await db.ideaNoteSequences.where('ideaId').equals(ideaId).delete()
-          }),
-        )
+        // Move ideas back to the pool — do not delete them
+        await db.ideas.where('songId').equals(id).modify({
+          songId: null,
+          sectionId: null,
+          updatedAt: now,
+        })
 
-        await db.ideas.where('songId').equals(id).delete()
         await db.songSections.where('songId').equals(id).delete()
         await db.songJournalEntries.where('songId').equals(id).delete()
         await db.songReferences.where('songId').equals(id).delete()
         await db.songAssets.where('songId').equals(id).delete()
+        await db.songTodos.where('songId').equals(id).delete()
+        await db.songVersions.where('songId').equals(id).delete()
+        await db.albumSongs.where('songId').equals(id).delete()
         await db.songs.delete(id)
       },
     )
   } catch (error) {
     console.warn('deleteSong failed:', error)
-    throw error
-  }
-}
-
-export function useSongsForAlbum(albumId: string | undefined) {
-  return useLiveQuery(
-    () => (albumId ? getSongsForAlbum(albumId) : Promise.resolve([])),
-    [albumId],
-  )
-}
-
-export async function getSongsForAlbum(albumId: string): Promise<Song[]> {
-  try {
-    return await db.songs.where('albumId').equals(albumId).sortBy('sortOrder')
-  } catch (error) {
-    console.warn('getSongsForAlbum failed:', error)
-    throw error
-  }
-}
-
-export async function reorderSongsInAlbum(orderedIds: string[]): Promise<void> {
-  try {
-    await db.transaction('rw', db.songs, async () => {
-      const now = new Date().toISOString()
-      await Promise.all(
-        orderedIds.map((id, index) =>
-          db.songs.update(id, { sortOrder: index, updatedAt: now }),
-        ),
-      )
-    })
-  } catch (error) {
-    console.warn('reorderSongsInAlbum failed:', error)
-    throw error
-  }
-}
-
-export async function assignSongToAlbum(
-  songId: string,
-  albumId: string,
-): Promise<Song> {
-  try {
-    const existing = await db.songs.get(songId)
-    if (!existing) {
-      throw new Error(`Song not found: ${songId}`)
-    }
-
-    const sortOrder = await nextSongSortOrder(albumId)
-    const updated: Song = {
-      ...existing,
-      albumId,
-      sortOrder,
-      updatedAt: new Date().toISOString(),
-    }
-
-    await db.songs.put(updated)
-    return updated
-  } catch (error) {
-    console.warn('assignSongToAlbum failed:', error)
     throw error
   }
 }

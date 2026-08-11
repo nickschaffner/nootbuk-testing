@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Disc3, Home, Music2 } from 'lucide-react'
+import { Disc3, Guitar, Home, Lightbulb, Music2 } from 'lucide-react'
 
 import { QuickCaptureModal } from '@/components/capture/QuickCaptureModal'
 import { BrowserSupportNotice } from '@/components/shared/BrowserSupportNotice'
@@ -13,8 +13,10 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', label: 'Home', icon: Home, end: true },
+  { to: '/ideas', label: 'Ideas', icon: Lightbulb },
   { to: '/songs', label: 'Songs', icon: Music2 },
   { to: '/albums', label: 'Albums', icon: Disc3 },
+  { to: '/instruments', label: 'Instruments', icon: Guitar },
 ] as const
 
 export function AppShell() {

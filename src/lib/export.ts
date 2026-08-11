@@ -4,13 +4,11 @@ import JSZip from 'jszip'
 import { getEntriesForSong } from '@/hooks/useJournal'
 import { getIdeasForSong } from '@/hooks/useIdeas'
 import { getMediaForIdea } from '@/hooks/useMedia'
-import { getNoteSequencesForIdea } from '@/hooks/useNoteSequences'
 import { getSongWithSections } from '@/hooks/useSongs'
 import { getFileExtension } from '@/lib/audio'
 import { noteEventsToMidiBlob } from '@/lib/midi'
-import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
 import type { Idea, IdeaMedia } from '@/types/idea'
-import type { SongJournalEntry, SongSection } from '@/types/song'
+import type { SongJournalEntry } from '@/types/song'
 
 export interface ExportOptions {
   includeAudio: boolean
@@ -148,27 +146,12 @@ function htmlToMarkdown(html: string): string {
 function buildLyricsText(
   songTitle: string,
   songLyrics: string | null,
-  sections: SongSection[],
 ): string {
-  const lines: string[] = []
-
-  if (songLyrics?.trim()) {
-    lines.push(songTitle, '', '=== Song Lyrics ===', songLyrics.trim(), '')
+  if (!songLyrics?.trim()) {
+    return ''
   }
 
-  for (const section of sections) {
-    if (!section.lyrics?.trim()) {
-      continue
-    }
-
-    if (lines.length === 0) {
-      lines.push(songTitle, '')
-    }
-
-    lines.push(`=== ${section.name} ===`, section.lyrics.trim(), '')
-  }
-
-  return lines.join('\n').trim()
+  return [songTitle, '', songLyrics.trim()].join('\n').trim()
 }
 
 function buildJournalMarkdown(entries: SongJournalEntry[]): string {
@@ -229,7 +212,7 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
     throw new Error(`Song not found: ${songId}`)
   }
 
-  const { song, sections } = songData
+  const { song } = songData
   const ideas = await getIdeasForSong(songId)
   const journalEntries = await getEntriesForSong(songId)
   const allocator = createFilenameAllocator()
@@ -242,7 +225,6 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
   for (const idea of ideas) {
     const mediaItems = await getMediaForIdea(idea.id)
     const prefix = getIdeaPrefix(idea)
-    const hasMidiMedia = mediaItems.some((item) => item.type === 'midi')
 
     for (const media of mediaItems) {
       if (media.type === 'audio') {
@@ -284,29 +266,9 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
         })
       }
     }
-
-    if (!hasMidiMedia) {
-      const sequences = await getNoteSequencesForIdea(idea.id)
-      for (const sequence of sequences) {
-        if (sequence.notes.length === 0) {
-          continue
-        }
-
-        midiCount += 1
-        const noteEvents = sequenceNotesToNoteEvents(
-          sequence.notes,
-          idea.tempo ?? 120,
-        )
-        files.push({
-          path: `midi/${allocator.nextMediaFilename(prefix, '.mid')}`,
-          content: noteEventsToMidiBlob(noteEvents, idea.tempo ?? 120),
-          category: 'midi',
-        })
-      }
-    }
   }
 
-  const lyricsText = buildLyricsText(song.title, song.lyrics, sections)
+  const lyricsText = buildLyricsText(song.title, song.lyrics)
   const journalMarkdown = buildJournalMarkdown(journalEntries)
   const hasLyrics = lyricsText.length > 0
   const hasJournal = journalMarkdown.length > 0

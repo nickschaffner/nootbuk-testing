@@ -22,7 +22,7 @@ export function AddSectionForm({ songId }: AddSectionFormProps) {
 
     setIsSaving(true)
     try {
-      await createSection({ songId, name: trimmed, lyrics: null })
+      await createSection({ songId, name: trimmed })
       setName('')
     } catch {
       // createSection already logs the error

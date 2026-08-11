@@ -28,7 +28,6 @@ export function RecentSongsList() {
     try {
       const song = await createSong({
         title: 'Untitled Song',
-        albumId: null,
         key: null,
         tempo: null,
         timeSignature: null,

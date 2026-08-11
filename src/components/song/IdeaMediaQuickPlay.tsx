@@ -1,31 +1,37 @@
-import { Pause, Play } from 'lucide-react'
+import { Mic, Pause, Piano } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { useIdeaPlaybackPatch } from '@/hooks/useIdeaPlaybackPatch'
 import { useMediaForIdea } from '@/hooks/useMedia'
 import { useSynth } from '@/hooks/useSynth'
-import { getMidiDuration } from '@/lib/midi'
+import type { Idea, NoteEvent } from '@/types/idea'
 
 interface IdeaMediaQuickPlayProps {
   ideaId: string
+  idea?: Idea
 }
 
-export function IdeaMediaQuickPlay({ ideaId }: IdeaMediaQuickPlayProps) {
+export function IdeaMediaQuickPlay({ ideaId, idea }: IdeaMediaQuickPlayProps) {
   const media = useMediaForIdea(ideaId)
+  const playbackPatch = useIdeaPlaybackPatch(idea)
   const audioItem = media?.find((item) => item.type === 'audio')
   const midiItem = media?.find(
     (item) => item.type === 'midi' && item.noteData && item.noteData.length > 0,
   )
 
-  if (audioItem) {
-    return <CompactAudioPlay blob={audioItem.blob} />
+  if (!audioItem && !midiItem?.noteData) {
+    return null
   }
 
-  if (midiItem?.noteData) {
-    return <CompactMidiPlay notes={midiItem.noteData} />
-  }
-
-  return null
+  return (
+    <div className="flex shrink-0 items-center gap-0.5">
+      {audioItem ? <CompactAudioPlay blob={audioItem.blob} /> : null}
+      {midiItem?.noteData ? (
+        <CompactMidiPlay notes={midiItem.noteData} patchId={playbackPatch} />
+      ) : null}
+    </div>
+  )
 }
 
 function CompactAudioPlay({ blob }: { blob: Blob }) {
@@ -89,6 +95,7 @@ function CompactAudioPlay({ blob }: { blob: Blob }) {
 
     const source = context.createBufferSource()
     source.buffer = buffer
+    source.loop = true
     source.connect(context.destination)
     source.onended = () => {
       setIsPlaying(false)
@@ -110,16 +117,21 @@ function CompactAudioPlay({ blob }: { blob: Blob }) {
       disabled={!isReady}
       onClick={(event) => void togglePlayback(event)}
     >
-      {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-      <span className="sr-only">Play audio</span>
+      {isPlaying ? <Pause className="size-3.5" /> : <Mic className="size-3.5" />}
+      <span className="sr-only">{isPlaying ? 'Stop audio' : 'Play audio'}</span>
     </Button>
   )
 }
 
-function CompactMidiPlay({ notes }: { notes: NonNullable<import('@/types/idea').NoteEvent[]> }) {
+function CompactMidiPlay({
+  notes,
+  patchId,
+}: {
+  notes: NoteEvent[]
+  patchId: import('@/lib/instrument-utils').PlaybackPatchId
+}) {
   const { playNoteSequence, stopAll } = useSynth()
   const [isPlaying, setIsPlaying] = useState(false)
-  const duration = getMidiDuration(notes)
 
   async function togglePlayback(event: React.MouseEvent) {
     event.stopPropagation()
@@ -131,8 +143,9 @@ function CompactMidiPlay({ notes }: { notes: NonNullable<import('@/types/idea').
     }
 
     setIsPlaying(true)
-    await playNoteSequence(notes, 'piano')
-    window.setTimeout(() => setIsPlaying(false), duration * 1000 + 100)
+    void playNoteSequence(notes, patchId).finally(() => {
+      setIsPlaying(false)
+    })
   }
 
   return (
@@ -143,8 +156,8 @@ function CompactMidiPlay({ notes }: { notes: NonNullable<import('@/types/idea').
       className="size-7 shrink-0"
       onClick={(event) => void togglePlayback(event)}
     >
-      {isPlaying ? <Pause className="size-3.5" /> : <Play className="size-3.5" />}
-      <span className="sr-only">Play MIDI</span>
+      {isPlaying ? <Pause className="size-3.5" /> : <Piano className="size-3.5" />}
+      <span className="sr-only">{isPlaying ? 'Stop MIDI' : 'Play MIDI'}</span>
     </Button>
   )
 }

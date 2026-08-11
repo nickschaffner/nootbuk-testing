@@ -7,20 +7,19 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import {
-  assignSongToAlbum,
-  createSong,
-  useAllSongs,
-} from '@/hooks/useSongs'
+import { addSongToAlbum } from '@/hooks/useAlbumSongs'
+import { createSong, useAllSongs } from '@/hooks/useSongs'
 
 interface AddSongToAlbumSheetProps {
   albumId: string
+  existingSongIds: string[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 export function AddSongToAlbumSheet({
   albumId,
+  existingSongIds,
   open,
   onOpenChange,
 }: AddSongToAlbumSheetProps) {
@@ -29,16 +28,15 @@ export function AddSongToAlbumSheet({
   const [addingId, setAddingId] = useState<string | null>(null)
 
   const availableSongs = useMemo(
-    () => (allSongs ?? []).filter((song) => song.albumId !== albumId),
-    [allSongs, albumId],
+    () => (allSongs ?? []).filter((song) => !existingSongIds.includes(song.id)),
+    [allSongs, existingSongIds],
   )
 
   async function handleCreateNew() {
     setIsCreating(true)
     try {
-      await createSong({
+      const song = await createSong({
         title: 'Untitled Song',
-        albumId,
         key: null,
         tempo: null,
         timeSignature: null,
@@ -52,6 +50,7 @@ export function AddSongToAlbumSheet({
         copyright: null,
         sampleCredits: null,
       })
+      await addSongToAlbum(albumId, song.id)
       onOpenChange(false)
     } catch {
       // createSong already logs the error
@@ -63,10 +62,10 @@ export function AddSongToAlbumSheet({
   async function handleAddExisting(songId: string) {
     setAddingId(songId)
     try {
-      await assignSongToAlbum(songId, albumId)
+      await addSongToAlbum(albumId, songId)
       onOpenChange(false)
     } catch {
-      // assignSongToAlbum already logs the error
+      // addSongToAlbum already logs the error
     } finally {
       setAddingId(null)
     }
@@ -96,7 +95,7 @@ export function AddSongToAlbumSheet({
               <p className="text-sm text-muted-foreground">Loading songs...</p>
             ) : availableSongs.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                All songs are already on this album.
+                No songs available to add.
               </p>
             ) : (
               <ul className="space-y-2">
@@ -107,11 +106,6 @@ export function AddSongToAlbumSheet({
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{song.title}</p>
-                      {song.albumId ? (
-                        <p className="text-xs text-muted-foreground">
-                          On another album
-                        </p>
-                      ) : null}
                     </div>
                     <Button
                       size="sm"
