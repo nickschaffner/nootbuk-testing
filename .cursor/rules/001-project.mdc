@@ -21,8 +21,8 @@ Nootbuk is a musician's idea capture and song documentation tool. Desktop-first 
 - @spotify/basic-pitch (audio-to-MIDI, client-side TF.js)
 - @tonejs/midi (MIDI file I/O)
 - @dnd-kit (drag and drop — NOT react-beautiful-dnd)
-- Tiptap 3.x (rich text editor for production journal)
 - Zustand or Jotai for UI state (NOT Redux). Data lives in Dexie, not state management.
+- NO rich text editors. No Tiptap, no BlockNote, no ProseMirror. Plain textarea everywhere.
 
 ## Critical Constraints
 - NO backend, NO server, NO API calls, NO auth. Everything runs client-side.
@@ -48,8 +48,9 @@ Nootbuk is a musician's idea capture and song documentation tool. Desktop-first 
       /song/              # Song workspace, section list, idea cards
       /album/             # Album view
       /pool/              # Idea pool browser
+      /ideas/             # Ideas list page
+      /instruments/       # Instrument management
       /player/            # Playback controls, synth patch selector
-      /editor/            # Tiptap rich text editor wrapper
       /export/            # Export dialog and logic
       /shared/            # Shared components (layout, nav, etc.)
     /hooks/

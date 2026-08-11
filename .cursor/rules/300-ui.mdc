@@ -45,15 +45,14 @@ alwaysApply: false
 - Drop zones should have visual feedback (highlight on hover).
 - After a drop, update sortOrder values in Dexie.
 
-## Rich Text Editor (Tiptap 3)
-- Used for: Production Journal entries, Album Global Notes, Album Reference Material.
-- Packages: @tiptap/react, @tiptap/starter-kit, @tiptap/extension-image, @tiptap/extension-placeholder.
-- Image embeds: handle image upload/paste, store image blobs, insert as base64 data URLs or blob URLs.
-- Keep the toolbar minimal: bold, italic, headings (H2, H3), image insert, link. No tables, no code blocks, no colors.
-- Store editor content as HTML string in the database (songJournalEntries.content, albums.globalNotes, etc.).
+## Text Editing
+- NO rich text editors. No Tiptap, no BlockNote, no ProseMirror.
+- Production Journal entries, Album Global Notes, Album Reference Material all use plain textarea.
+- Image attachments are handled separately (upload/display), not embedded inline in text.
+- Store all text content as plain strings in the database.
 
 ## Navigation
 - Use client-side routing (React Router or TanStack Router).
-- Routes: / (Home/Pool), /song/:id (Song Workspace), /album/:id (Album View).
-- Sidebar or top nav with: Home (Pool), Songs, Albums. Keep it minimal.
+- Routes: / (Home), /ideas (All Ideas), /songs (Songs list), /song/:id (Song Workspace), /albums (Albums list), /album/:id (Album View), /instruments (Instrument management).
+- Main nav items: Home, Ideas, Songs, Albums, Instruments.
 - Quick Capture is a modal/overlay accessible from anywhere via a floating button or keyboard shortcut.
