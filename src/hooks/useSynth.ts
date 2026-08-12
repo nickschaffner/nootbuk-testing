@@ -9,8 +9,11 @@ import {
 } from 'smplr'
 
 import { midiToNoteName } from '@/lib/notes'
+import {
+  getSynthPatchLabel,
+  type SynthPatchId,
+} from '@/lib/synth-patches'
 import type { NoteEvent } from '@/types/idea'
-import type { SynthPatchId } from '@/lib/synth-patches'
 
 type SmplrInstrument = Smplr
 
@@ -25,23 +28,56 @@ type SynthSnapshot = {
   currentPatch: SynthPatchId
   isMuted: boolean
   isLoadingPatch: boolean
+  synthSource: 'tonejs' | 'smplr'
   error: string | null
 }
 
+const SOUNDFONT_KIT = 'MusyngKite' as const
+const PRELOAD_PATCHES: SynthPatchId[] = ['piano', 'bass']
+
 function createTonePatch(patchId: SynthPatchId): TonePatchSynth {
-  if (patchId === 'synth-bass') {
+  if (patchId === 'synth-bass' || patchId === 'bass') {
     return new Tone.PolySynth(Tone.MonoSynth, {
       oscillator: { type: 'sawtooth' },
       envelope: { attack: 0.01, decay: 0.2, sustain: 0.4, release: 0.3 },
     }).toDestination()
   }
 
-  if (patchId === 'synth-pad') {
+  if (patchId === 'synth-pad' || patchId === 'strings') {
     return new Tone.PolySynth(Tone.AMSynth, {
       envelope: { attack: 0.25, decay: 0.3, sustain: 0.8, release: 1.4 },
     }).toDestination()
   }
 
+  if (patchId === 'organ') {
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sine' },
+      envelope: { attack: 0.02, decay: 0.1, sustain: 0.9, release: 0.4 },
+    }).toDestination()
+  }
+
+  if (patchId === 'brass') {
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'sawtooth' },
+      envelope: { attack: 0.05, decay: 0.2, sustain: 0.6, release: 0.3 },
+    }).toDestination()
+  }
+
+  if (patchId === 'mallet') {
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.001, decay: 0.4, sustain: 0.1, release: 0.3 },
+    }).toDestination()
+  }
+
+  if (patchId === 'electric-piano') {
+    return new Tone.PolySynth(Tone.Synth, {
+      oscillator: { type: 'triangle' },
+      envelope: { attack: 0.005, decay: 0.3, sustain: 0.4, release: 0.5 },
+    }).toDestination()
+  }
+
+  // piano, synth-lead, and anything else — bright polysynth fallback
   return new Tone.PolySynth(Tone.Synth).toDestination()
 }
 
@@ -63,7 +99,7 @@ async function createSmplrPatch(
     case 'bass': {
       const instrument = Soundfont(context, {
         instrument: 'acoustic_bass',
-        kit: 'FluidR3_GM',
+        kit: SOUNDFONT_KIT,
       })
       await instrument.load
       return instrument
@@ -71,7 +107,7 @@ async function createSmplrPatch(
     case 'brass': {
       const instrument = Soundfont(context, {
         instrument: 'brass_section',
-        kit: 'FluidR3_GM',
+        kit: SOUNDFONT_KIT,
       })
       await instrument.load
       return instrument
@@ -79,7 +115,7 @@ async function createSmplrPatch(
     case 'strings': {
       const instrument = Soundfont(context, {
         instrument: 'string_ensemble_1',
-        kit: 'FluidR3_GM',
+        kit: SOUNDFONT_KIT,
       })
       await instrument.load
       return instrument
@@ -87,7 +123,7 @@ async function createSmplrPatch(
     case 'organ': {
       const instrument = Soundfont(context, {
         instrument: 'drawbar_organ',
-        kit: 'FluidR3_GM',
+        kit: SOUNDFONT_KIT,
       })
       await instrument.load
       return instrument
@@ -103,7 +139,11 @@ async function createSmplrPatch(
 }
 
 function usesToneOnly(patchId: SynthPatchId): boolean {
-  return patchId === 'synth-bass' || patchId === 'synth-lead' || patchId === 'synth-pad'
+  return (
+    patchId === 'synth-bass' ||
+    patchId === 'synth-lead' ||
+    patchId === 'synth-pad'
+  )
 }
 
 /** Shared engine so setPatch in one component affects playback everywhere. */
@@ -112,9 +152,11 @@ let snapshot: SynthSnapshot = {
   currentPatch: 'piano',
   isMuted: false,
   isLoadingPatch: false,
+  synthSource: 'tonejs',
   error: null,
 }
 let started = false
+let preloadStarted = false
 const patchCache: Partial<Record<SynthPatchId, LoadedPatch>> = {}
 const patchLoads: Partial<Record<SynthPatchId, Promise<LoadedPatch | undefined>>> =
   {}
@@ -144,22 +186,44 @@ function getSnapshot() {
   return snapshot
 }
 
-async function ensureStarted() {
-  if (started) {
-    return
-  }
-  await Tone.start()
-  started = true
+function refreshLoadingFlag() {
+  emit({ isLoadingPatch: Object.keys(patchLoads).length > 0 })
 }
 
-async function loadPatch(patchId: SynthPatchId) {
-  if (patchCache[patchId]) {
-    return patchCache[patchId]
+function resolveSynthSource(patchId: SynthPatchId): 'tonejs' | 'smplr' {
+  return patchCache[patchId]?.smplr ? 'smplr' : 'tonejs'
+}
+
+function syncSynthSource(patchId: SynthPatchId) {
+  const synthSource = resolveSynthSource(patchId)
+  if (snapshot.synthSource !== synthSource) {
+    emit({ synthSource })
+  }
+  return synthSource
+}
+
+function ensureToneFallback(patchId: SynthPatchId): LoadedPatch {
+  const existing = patchCache[patchId]
+  if (existing?.tone || existing?.smplr) {
+    return existing
   }
 
-  const inFlight = patchLoads[patchId]
-  if (inFlight) {
-    return inFlight
+  const loaded: LoadedPatch = { tone: createTonePatch(patchId) }
+  patchCache[patchId] = loaded
+  return loaded
+}
+
+function startSmplrLoad(patchId: SynthPatchId): void {
+  if (usesToneOnly(patchId)) {
+    return
+  }
+
+  if (patchCache[patchId]?.smplr) {
+    return
+  }
+
+  if (patchLoads[patchId]) {
+    return
   }
 
   const loadPromise = (async () => {
@@ -167,39 +231,74 @@ async function loadPatch(patchId: SynthPatchId) {
 
     try {
       await ensureStarted()
-      const loaded: LoadedPatch = {}
+      const context = Tone.getContext().rawContext as AudioContext
+      const smplrInstrument = await createSmplrPatch(patchId, context)
+      const existing = patchCache[patchId] ?? ensureToneFallback(patchId)
 
-      if (usesToneOnly(patchId)) {
-        loaded.tone = createTonePatch(patchId)
-      } else {
-        const context = Tone.getContext().rawContext as AudioContext
-        const smplrInstrument = await createSmplrPatch(patchId, context)
-        if (smplrInstrument) {
-          loaded.smplr = smplrInstrument
-        } else {
-          loaded.tone = createTonePatch('synth-lead')
+      if (smplrInstrument) {
+        patchCache[patchId] = { ...existing, smplr: smplrInstrument }
+        if (snapshot.currentPatch === patchId && !snapshot.isMuted) {
+          syncSynthSource(patchId)
         }
       }
 
-      patchCache[patchId] = loaded
-      return loaded
+      return patchCache[patchId]
     } catch (caught) {
       const message =
         caught instanceof Error ? caught.message : 'Failed to load synth patch.'
-      console.warn('loadPatch failed:', caught)
+      console.warn('startSmplrLoad failed:', caught)
       emit({ error: message })
-
-      const fallback: LoadedPatch = { tone: createTonePatch('synth-lead') }
-      patchCache[patchId] = fallback
-      return fallback
+      return patchCache[patchId] ?? ensureToneFallback(patchId)
     } finally {
       delete patchLoads[patchId]
-      emit({ isLoadingPatch: false })
+      refreshLoadingFlag()
     }
   })()
 
   patchLoads[patchId] = loadPromise
-  return loadPromise
+}
+
+function warmCommonPatches() {
+  if (preloadStarted) {
+    return
+  }
+  preloadStarted = true
+
+  for (const patchId of PRELOAD_PATCHES) {
+    ensureToneFallback(patchId)
+    startSmplrLoad(patchId)
+  }
+}
+
+async function ensureStarted() {
+  if (started) {
+    return
+  }
+  await Tone.start()
+  started = true
+  warmCommonPatches()
+}
+
+/** Kick off Piano + Bass preload after first audio unlock. */
+export function preloadCommonPatches() {
+  void ensureStarted().catch((caught) => {
+    console.warn('preloadCommonPatches failed:', caught)
+  })
+}
+
+async function loadPatch(patchId: SynthPatchId) {
+  await ensureStarted()
+
+  if (usesToneOnly(patchId)) {
+    if (!patchCache[patchId]?.tone) {
+      patchCache[patchId] = { tone: createTonePatch(patchId) }
+    }
+    return patchCache[patchId]
+  }
+
+  const ready = ensureToneFallback(patchId)
+  startSmplrLoad(patchId)
+  return ready
 }
 
 async function playNote(pitch: number, velocity = 100, duration?: number) {
@@ -212,7 +311,6 @@ async function playNote(pitch: number, velocity = 100, duration?: number) {
     const requestedPatch = snapshot.currentPatch
     let patch = await loadPatch(requestedPatch)
 
-    // Patch may have changed while the soundfont was loading.
     if (snapshot.isMuted) {
       return
     }
@@ -276,10 +374,27 @@ async function stopAll() {
   playbackTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId))
   playbackTimeouts.length = 0
 
-  for (const patch of Object.values(patchCache)) {
+  try {
+    const transport = Tone.getTransport()
+    transport.stop()
+    transport.cancel(0)
+  } catch (caught) {
+    console.warn('Tone.Transport stop/cancel failed:', caught)
+  }
+
+  for (const [patchId, patch] of Object.entries(patchCache) as Array<
+    [SynthPatchId, LoadedPatch | undefined]
+  >) {
     try {
       patch?.smplr?.stop()
-      patch?.tone?.releaseAll()
+
+      if (patch?.tone) {
+        // releaseAll alone lets envelopes ring; dispose kills scheduled
+        // triggerAttackRelease events that would still fire after stop.
+        patch.tone.releaseAll(Tone.now())
+        patch.tone.dispose()
+        patch.tone = createTonePatch(patchId)
+      }
     } catch (caught) {
       console.warn('stopAll failed for patch:', caught)
     }
@@ -313,27 +428,44 @@ async function playNoteSequence(
         return
       }
 
+      const inFlight = patchLoads[targetPatch]
+      if (inFlight && !patchCache[targetPatch]?.smplr) {
+        await Promise.race([inFlight, sleep(50)])
+      }
+
       const patch = await loadPatch(targetPatch)
-      const startTime = Tone.now() + 0.05
+      if (token !== sequenceLoopToken) {
+        return
+      }
 
+      // Schedule with cancellable timeouts so stopAll can cut notes immediately
+      // instead of letting Web-Audio-scheduled attacks ring out.
       for (const note of notes) {
-        const velocity = note.velocity / 127
+        const timeoutId = window.setTimeout(() => {
+          if (token !== sequenceLoopToken || snapshot.isMuted) {
+            return
+          }
 
-        if (patch?.smplr) {
-          patch.smplr.start({
-            note: note.pitch,
-            velocity: note.velocity,
-            time: startTime + note.startTime,
-            duration: note.duration,
-          })
-        } else if (patch?.tone) {
-          patch.tone.triggerAttackRelease(
-            midiToNoteName(note.pitch),
-            note.duration,
-            startTime + note.startTime,
-            velocity,
-          )
-        }
+          const livePatch = patchCache[targetPatch] ?? patch
+          const velocity = note.velocity / 127
+
+          if (livePatch?.smplr) {
+            livePatch.smplr.start({
+              note: note.pitch,
+              velocity: note.velocity,
+              duration: note.duration,
+            })
+          } else if (livePatch?.tone) {
+            livePatch.tone.triggerAttackRelease(
+              midiToNoteName(note.pitch),
+              note.duration,
+              Tone.now(),
+              velocity,
+            )
+          }
+        }, Math.max(0, note.startTime * 1000))
+
+        playbackTimeouts.push(timeoutId)
       }
 
       const durationMs =
@@ -346,9 +478,17 @@ async function playNoteSequence(
 
       await sleep(durationMs)
 
+      if (token !== sequenceLoopToken) {
+        return
+      }
+
       if (!loop) {
         break
       }
+
+      // Clear spent timeouts before the next loop iteration
+      playbackTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId))
+      playbackTimeouts.length = 0
     } while (token === sequenceLoopToken)
   } catch (caught) {
     console.warn('playNoteSequence failed:', caught)
@@ -381,7 +521,26 @@ async function setPatch(patchId: SynthPatchId | 'muted') {
   if (epoch !== patchEpoch) {
     return
   }
-  await loadPatch(patchId)
+
+  await ensureStarted()
+  if (epoch !== patchEpoch) {
+    return
+  }
+
+  // Instant Tone fallback; soundfont swaps in when ready
+  if (usesToneOnly(patchId)) {
+    if (!patchCache[patchId]?.tone) {
+      patchCache[patchId] = { tone: createTonePatch(patchId) }
+    }
+  } else {
+    ensureToneFallback(patchId)
+    startSmplrLoad(patchId)
+  }
+
+  const synthSource = syncSynthSource(patchId)
+  console.log(
+    `Patch switched to ${getSynthPatchLabel(patchId)} via ${synthSource}`,
+  )
 }
 
 export function useSynth() {
@@ -392,6 +551,7 @@ export function useSynth() {
       currentPatch: state.currentPatch,
       isMuted: state.isMuted,
       isLoadingPatch: state.isLoadingPatch,
+      synthSource: state.synthSource,
       error: state.error,
       setPatch,
       ensureStarted,
@@ -405,6 +565,7 @@ export function useSynth() {
       state.currentPatch,
       state.isMuted,
       state.isLoadingPatch,
+      state.synthSource,
       state.error,
     ],
   )

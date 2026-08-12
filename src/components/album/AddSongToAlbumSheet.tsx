@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Sheet,
   SheetContent,
@@ -26,11 +27,23 @@ export function AddSongToAlbumSheet({
   const allSongs = useAllSongs()
   const [isCreating, setIsCreating] = useState(false)
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const availableSongs = useMemo(
     () => (allSongs ?? []).filter((song) => !existingSongIds.includes(song.id)),
     [allSongs, existingSongIds],
   )
+
+  const filteredSongs = useMemo(() => {
+    const query = search.trim().toLowerCase()
+    if (!query) {
+      return availableSongs
+    }
+
+    return availableSongs.filter((song) =>
+      song.title.toLowerCase().includes(query),
+    )
+  }, [availableSongs, search])
 
   async function handleCreateNew() {
     setIsCreating(true)
@@ -91,15 +104,24 @@ export function AddSongToAlbumSheet({
 
           <div className="space-y-3">
             <p className="text-sm font-medium">Add Existing Song</p>
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search songs..."
+            />
             {allSongs === undefined ? (
               <p className="text-sm text-muted-foreground">Loading songs...</p>
             ) : availableSongs.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No songs available to add.
               </p>
+            ) : filteredSongs.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No songs match your search.
+              </p>
             ) : (
               <ul className="space-y-2">
-                {availableSongs.map((song) => (
+                {filteredSongs.map((song) => (
                   <li
                     key={song.id}
                     className="flex items-center justify-between gap-2 rounded-md border px-3 py-2"

@@ -70,6 +70,64 @@ export async function removeVersion(id: string): Promise<void> {
   }
 }
 
+export async function getPlaybackVersionForSong(
+  songId: string,
+): Promise<SongVersion | null> {
+  const versions = await getVersionsForSong(songId)
+  if (versions.length === 0) {
+    return null
+  }
+
+  return versions.find((version) => version.isMain) ?? versions[0]
+}
+
+export function usePlaybackVersionsIndex() {
+  return useLiveQuery(async () => {
+    try {
+      const allVersions = await db.songVersions.toArray()
+      const bySong = new Map<string, SongVersion[]>()
+
+      for (const version of allVersions) {
+        const versions = bySong.get(version.songId) ?? []
+        versions.push(version)
+        bySong.set(version.songId, versions)
+      }
+
+      const index: Record<string, SongVersion> = {}
+      for (const [songId, versions] of bySong) {
+        versions.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        index[songId] = versions.find((version) => version.isMain) ?? versions[0]
+      }
+
+      return index
+    } catch (error) {
+      console.warn('usePlaybackVersionsIndex failed:', error)
+      throw error
+    }
+  }, [])
+}
+
+export async function updateVersion(
+  input: Partial<Pick<SongVersion, 'label'>> & { id: string },
+): Promise<SongVersion> {
+  try {
+    const existing = await db.songVersions.get(input.id)
+    if (!existing) {
+      throw new Error(`Version not found: ${input.id}`)
+    }
+
+    const updated: SongVersion = { ...existing, ...input }
+    await db.songVersions.put(updated)
+    return updated
+  } catch (error) {
+    console.warn('updateVersion failed:', error)
+    throw error
+  }
+}
+
 export async function setMainVersion(
   id: string,
   songId: string,

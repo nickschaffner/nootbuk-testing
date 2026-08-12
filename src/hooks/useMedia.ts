@@ -2,13 +2,28 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 import { getAudioMimeType, normalizeAudioBlob } from '@/lib/audio'
 import { db } from '@/lib/db'
-import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { getMidiDuration, midiBlobToNoteEvents, noteEventsToMidiBlob } from '@/lib/midi'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
 import { toStorageError } from '@/lib/storage'
 import type { IdeaMedia, NoteEvent, SequenceNote } from '@/types/idea'
 
 type AddMediaInput = Omit<IdeaMedia, 'id' | 'createdAt' | 'sortOrder'> & {
   sortOrder?: number
+}
+
+function sanitizeNoteData(
+  noteData: NoteEvent[] | null | undefined,
+): NoteEvent[] | null {
+  if (!noteData || noteData.length === 0) {
+    return null
+  }
+
+  return noteData.map((note) => ({
+    pitch: Number(note.pitch),
+    startTime: Number(note.startTime),
+    duration: Number(note.duration),
+    velocity: Number(note.velocity),
+  }))
 }
 
 async function nextMediaSortOrder(ideaId: string): Promise<number> {
@@ -48,15 +63,38 @@ export function useMediaForIdea(ideaId: string | undefined) {
 
 export async function getMediaForIdea(ideaId: string): Promise<IdeaMedia[]> {
   try {
-    const media = await db.ideaMedia.where('ideaId').equals(ideaId).sortBy('sortOrder')
-    return Promise.all(media.map((item) => rehydrateMediaBlob(item)))
+    const media = await db.ideaMedia.where('ideaId').equals(ideaId).toArray()
+    media.sort((a, b) => a.sortOrder - b.sortOrder)
+    return Promise.all(media.map((item) => rehydrateMedia(item)))
   } catch (error) {
     console.warn('getMediaForIdea failed:', error)
     throw error
   }
 }
 
-async function rehydrateMediaBlob(item: IdeaMedia): Promise<IdeaMedia> {
+async function rehydrateMedia(item: IdeaMedia): Promise<IdeaMedia> {
+  if (item.type === 'midi') {
+    if (item.noteData && item.noteData.length > 0) {
+      return item
+    }
+
+    try {
+      const noteData = await midiBlobToNoteEvents(item.blob)
+      if (noteData.length === 0) {
+        return item
+      }
+
+      void db.ideaMedia.update(item.id, { noteData }).catch((error) => {
+        console.warn('rehydrateMedia midi noteData update failed:', error)
+      })
+
+      return { ...item, noteData }
+    } catch (error) {
+      console.warn('rehydrateMedia midi failed:', error)
+      return item
+    }
+  }
+
   if (item.type !== 'audio') {
     return item
   }
@@ -71,7 +109,7 @@ async function rehydrateMediaBlob(item: IdeaMedia): Promise<IdeaMedia> {
 
     if (item.mimeType !== mimeType || item.blob.type !== mimeType) {
       void db.ideaMedia.update(item.id, { mimeType, blob }).catch((error) => {
-        console.warn('rehydrateMediaBlob update failed:', error)
+        console.warn('rehydrateMedia audio update failed:', error)
       })
     }
 
@@ -81,7 +119,7 @@ async function rehydrateMediaBlob(item: IdeaMedia): Promise<IdeaMedia> {
       blob,
     }
   } catch (error) {
-    console.warn('rehydrateMediaBlob failed:', error)
+    console.warn('rehydrateMedia audio failed:', error)
     return item
   }
 }
@@ -96,6 +134,8 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
       input.type === 'audio'
         ? await normalizeAudioBlob(input.blob, mimeType, input.filename)
         : input.blob
+    const noteData =
+      input.type === 'midi' ? sanitizeNoteData(input.noteData) : input.noteData ?? null
 
     if (input.type === 'audio' || input.type === 'midi') {
       await removeExistingExclusiveMedia(input.ideaId, input.type)
@@ -109,7 +149,7 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
       mimeType,
       blob,
       duration: input.duration ?? null,
-      noteData: input.noteData ?? null,
+      noteData,
       sortOrder: input.sortOrder ?? (await nextMediaSortOrder(input.ideaId)),
       createdAt: new Date().toISOString(),
     }

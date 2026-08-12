@@ -91,3 +91,15 @@ export function parseAlbumTrackSortableId(id: string): string | undefined {
 
   return undefined
 }
+
+export function songTodoSortableId(todoId: string): string {
+  return `song-todo:${todoId}`
+}
+
+export function parseSongTodoSortableId(id: string): string | undefined {
+  if (id.startsWith('song-todo:')) {
+    return id.slice('song-todo:'.length)
+  }
+
+  return undefined
+}

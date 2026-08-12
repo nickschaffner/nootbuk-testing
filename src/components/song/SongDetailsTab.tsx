@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { SongAlbumMembership } from '@/components/song/SongAlbumMembership'
 import { updateSong } from '@/hooks/useSongs'
 import type { Song } from '@/types/song'
 
@@ -69,8 +70,11 @@ export function SongDetailsTab({ song }: SongDetailsTabProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {DETAIL_FIELDS.map((field) => (
+    <div className="space-y-6">
+      <SongAlbumMembership songId={song.id} />
+
+      <div className="space-y-4">
+        {DETAIL_FIELDS.map((field) => (
         <div key={field.key} className="space-y-2">
           <Label htmlFor={`detail-${field.key}`}>{field.label}</Label>
           {field.multiline ? (
@@ -101,6 +105,7 @@ export function SongDetailsTab({ song }: SongDetailsTabProps) {
           )}
         </div>
       ))}
+      </div>
     </div>
   )
 }

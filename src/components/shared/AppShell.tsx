@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Disc3, Guitar, Home, Lightbulb, Music2 } from 'lucide-react'
 
@@ -8,6 +9,7 @@ import { MobileTabBar } from '@/components/shared/MobileTabBar'
 import { StorageWarningBanner } from '@/components/shared/StorageWarningBanner'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { preloadCommonPatches } from '@/hooks/useSynth'
 import { QuickCaptureProvider } from '@/stores/quickCapture'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +22,22 @@ const navItems = [
 ] as const
 
 export function AppShell() {
+  useEffect(() => {
+    function unlockAudio() {
+      preloadCommonPatches()
+      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('keydown', unlockAudio)
+    }
+
+    window.addEventListener('pointerdown', unlockAudio)
+    window.addEventListener('keydown', unlockAudio)
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('keydown', unlockAudio)
+    }
+  }, [])
+
   return (
     <QuickCaptureProvider>
       <TooltipProvider>

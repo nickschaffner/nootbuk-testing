@@ -3,6 +3,8 @@ import { SongDetailsTab } from '@/components/song/SongDetailsTab'
 import { SongJournalTab } from '@/components/song/SongJournalTab'
 import { SongLyricsTab } from '@/components/song/SongLyricsTab'
 import { SongReferencesTab } from '@/components/song/SongReferencesTab'
+import { SongTodosTab } from '@/components/song/SongTodosTab'
+import { SongVersionsTab } from '@/components/song/SongVersionsTab'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Song } from '@/types/song'
 
@@ -20,6 +22,8 @@ export function SongSidebar({ song }: SongSidebarProps) {
             <TabsTrigger value="journal">Journal</TabsTrigger>
             <TabsTrigger value="references">References</TabsTrigger>
             <TabsTrigger value="assets">Assets</TabsTrigger>
+            <TabsTrigger value="todos">Todos</TabsTrigger>
+            <TabsTrigger value="versions">Versions</TabsTrigger>
             <TabsTrigger value="details">Details</TabsTrigger>
           </TabsList>
         </div>
@@ -39,6 +43,14 @@ export function SongSidebar({ song }: SongSidebarProps) {
 
           <TabsContent value="assets" className="mt-0">
             <SongAssetsTab songId={song.id} />
+          </TabsContent>
+
+          <TabsContent value="todos" className="mt-0">
+            <SongTodosTab songId={song.id} />
+          </TabsContent>
+
+          <TabsContent value="versions" className="mt-0">
+            <SongVersionsTab songId={song.id} />
           </TabsContent>
 
           <TabsContent value="details" className="mt-0">

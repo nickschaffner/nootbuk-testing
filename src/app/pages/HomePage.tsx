@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 
 import { IdeaCard } from '@/components/pool/IdeaCard'
 import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
+import { AudioPlayButton } from '@/components/player/AudioPlayButton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,8 @@ import {
   useIdeaMediaFlagsMap,
 } from '@/hooks/useIdeaMediaIndex'
 import { createSong, useAllSongs } from '@/hooks/useSongs'
+import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
+import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
 import { formatRelativeTime } from '@/lib/format'
 import { formatRoleLabel, ideaMatchesSearch, IDEA_ROLES } from '@/lib/idea-label'
 import { useQuickCapture } from '@/stores/quickCapture'
@@ -38,6 +41,8 @@ export function HomePage() {
   const albums = useAllAlbums()
   const ideas = useIdeasInPool()
   const mediaMap = useIdeaMediaFlagsMap()
+  const todoCounts = useIncompleteTodoCountsBySong()
+  const playbackVersions = usePlaybackVersionsIndex()
 
   const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
   const [roleFilter, setRoleFilter] = useState<IdeaRole | 'all'>('all')
@@ -155,11 +160,20 @@ export function HomePage() {
                 </div>
               ) : (
                 <ul className="space-y-1">
-                  {recentSongs.map((song) => (
-                    <li key={song.id}>
+                  {recentSongs.map((song) => {
+                    const incompleteCount = todoCounts?.[song.id] ?? 0
+                    const playbackVersion = playbackVersions?.[song.id]
+
+                    return (
+                    <li key={song.id} className="flex items-center gap-1">
+                      {playbackVersion ? (
+                        <AudioPlayButton blob={playbackVersion.blob} />
+                      ) : (
+                        <div className="size-8 shrink-0" />
+                      )}
                       <Link
                         to={`/song/${song.id}`}
-                        className="flex items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/40"
+                        className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md px-2 py-2 transition-colors hover:bg-muted/40"
                       >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium">
@@ -169,12 +183,21 @@ export function HomePage() {
                             {formatRelativeTime(song.updatedAt)}
                           </p>
                         </div>
-                        <Badge variant="outline" className="shrink-0 capitalize">
-                          {formatSongStatus(song.status)}
-                        </Badge>
+                        <div className="flex shrink-0 items-center gap-2">
+                          {incompleteCount > 0 ? (
+                            <Badge variant="secondary" className="tabular-nums">
+                              {incompleteCount} todo
+                              {incompleteCount === 1 ? '' : 's'}
+                            </Badge>
+                          ) : null}
+                          <Badge variant="outline" className="capitalize">
+                            {formatSongStatus(song.status)}
+                          </Badge>
+                        </div>
                       </Link>
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               )}
             </div>

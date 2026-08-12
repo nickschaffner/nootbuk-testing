@@ -4,6 +4,7 @@ import {
   Music2,
   Paperclip,
   Piano,
+  Upload,
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
@@ -12,15 +13,19 @@ import { AudioRecorder } from '@/components/capture/AudioRecorder'
 import { MidiRecorder } from '@/components/capture/MidiRecorder'
 import { NotePicker } from '@/components/capture/NotePicker'
 import {
-  BLOCK_LABELS,
   blockHasContent,
+  createAudioImportBlock,
   createEmptyBlock,
+  getBlockLabel,
   type QuickCaptureBlock,
   type QuickCaptureBlockType,
 } from '@/components/capture/quickCaptureTypes'
 import { RolePillSelector } from '@/components/pool/RolePillSelector'
 import { SectionIntentPillSelector } from '@/components/pool/SectionIntentPillSelector'
 import { InstrumentSelector } from '@/components/instruments/InstrumentSelector'
+import { AudioPlayer } from '@/components/player/AudioPlayer'
+import { ExtractMidiFromAudio } from '@/components/player/ExtractMidiFromAudio'
+import { MidiPlayer } from '@/components/player/MidiPlayer'
 import { KeySelector } from '@/components/shared/KeySelector'
 import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
 import { Button } from '@/components/ui/button'
@@ -46,17 +51,26 @@ import { createIdea } from '@/hooks/useIdeas'
 import { addMediaToIdea, addMidiFromSequenceNotes } from '@/hooks/useMedia'
 import { useSectionsForSong } from '@/hooks/useSections'
 import { useAllSongs } from '@/hooks/useSongs'
-import { getAudioDuration, getAudioMimeType } from '@/lib/audio'
+import { useSynth } from '@/hooks/useSynth'
+import {
+  getAudioDuration,
+  getAudioMimeType,
+  isAcceptedAudioFile,
+  normalizeAudioBlob,
+} from '@/lib/audio'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
 import { useQuickCapture } from '@/stores/quickCapture'
-import type { IdeaRole, SectionIntent } from '@/types/idea'
+import type { IdeaRole, NoteEvent, SectionIntent } from '@/types/idea'
+
+type ToolbarAction = Exclude<QuickCaptureBlockType, 'audio-import'> | 'audio-import'
 
 const TOOLBAR_ITEMS: Array<{
-  type: QuickCaptureBlockType
+  type: ToolbarAction
   label: string
   icon: typeof Mic
 }> = [
   { type: 'audio', label: 'Record Audio', icon: Mic },
+  { type: 'audio-import', label: 'Import Audio', icon: Upload },
   { type: 'midi', label: 'Record MIDI', icon: Piano },
   { type: 'notes', label: 'Note Picker', icon: Music2 },
   { type: 'image', label: 'Photo / Image', icon: ImageIcon },
@@ -218,6 +232,10 @@ function FileCaptureBlock({
 export function QuickCaptureModal() {
   const { isOpen, target, close } = useQuickCapture()
   const songs = useAllSongs()
+  const { currentPatch, isMuted } = useSynth()
+  const playbackPatch = isMuted ? 'muted' : currentPatch
+  const audioImportInputRef = useRef<HTMLInputElement>(null)
+  const [audioImportError, setAudioImportError] = useState<string | null>(null)
 
   const [blocks, setBlocks] = useState<QuickCaptureBlock[]>([])
   const [role, setRole] = useState<IdeaRole>('melody')
@@ -271,6 +289,7 @@ export function QuickCaptureModal() {
     setLyrics('')
     setNotes('')
     setSaveError(null)
+    setAudioImportError(null)
     setShowSongSave(false)
     setSelectedSongId('')
     setSelectedSectionId('unassigned')
@@ -283,7 +302,7 @@ export function QuickCaptureModal() {
     }
   }
 
-  function addBlock(type: QuickCaptureBlockType) {
+  function addBlock(type: Exclude<QuickCaptureBlockType, 'audio-import'>) {
     setBlocks((current) => {
       if (type === 'audio') {
         const withoutAudio = current.filter((block) => block.type !== 'audio')
@@ -299,6 +318,60 @@ export function QuickCaptureModal() {
 
       return [...current, createEmptyBlock(type)]
     })
+  }
+
+  function replaceAudioWithImport(blob: Blob, filename: string) {
+    setBlocks((current) => {
+      const withoutAudio = current.filter((block) => block.type !== 'audio')
+      return [...withoutAudio, createAudioImportBlock(blob, filename)]
+    })
+  }
+
+  function applyExtractedMidi(noteEvents: NoteEvent[]) {
+    setBlocks((current) => {
+      const withoutMidiSource = current.filter(
+        (block) => block.type !== 'midi' && block.type !== 'notes',
+      )
+      return [
+        ...withoutMidiSource,
+        {
+          id: crypto.randomUUID(),
+          type: 'midi' as const,
+          noteEvents,
+          bpm: 120,
+        },
+      ]
+    })
+  }
+
+  async function handleImportAudioFiles(files: FileList | null) {
+    const file = files?.[0]
+    if (!file) {
+      return
+    }
+
+    if (!isAcceptedAudioFile(file)) {
+      setAudioImportError('Only .wav, .mp3, and .aiff files are supported.')
+      return
+    }
+
+    setAudioImportError(null)
+    try {
+      const mimeType = getAudioMimeType(file.name, file.type)
+      const blob = await normalizeAudioBlob(file, mimeType, file.name)
+      replaceAudioWithImport(blob, file.name)
+    } catch {
+      setAudioImportError('Failed to import audio file.')
+    }
+  }
+
+  function handleToolbarAction(type: ToolbarAction) {
+    if (type === 'audio-import') {
+      audioImportInputRef.current?.click()
+      return
+    }
+
+    addBlock(type)
   }
 
   function removeBlock(id: string) {
@@ -477,20 +550,76 @@ export function QuickCaptureModal() {
     switch (block.type) {
       case 'audio':
         return (
-          <AudioRecorder
-            draft
-            embedded
-            onDraftChange={(blob) =>
-              updateBlock(block.id, (current) =>
-                current.type === 'audio' &&
-                (current.blob !== blob || current.filename !== null)
-                  ? { ...current, blob, filename: null }
-                  : current,
+          <div className="space-y-4">
+            {block.source === 'import' ? (
+              block.blob ? (
+                <div className="space-y-3">
+                  <AudioPlayer
+                    blob={block.blob}
+                    mimeType={getAudioMimeType(
+                      block.filename ?? '',
+                      block.blob.type,
+                    )}
+                    filename={block.filename ?? undefined}
+                  />
+                  {block.filename ? (
+                    <p className="truncate text-xs text-muted-foreground">
+                      {block.filename}
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No audio imported yet.
+                </p>
               )
-            }
-          />
+            ) : (
+              <AudioRecorder
+                draft
+                embedded
+                onDraftChange={(blob) =>
+                  updateBlock(block.id, (current) =>
+                    current.type === 'audio' && current.blob !== blob
+                      ? { ...current, blob, filename: null }
+                      : current,
+                  )
+                }
+              />
+            )}
+
+            {block.blob ? (
+              <ExtractMidiFromAudio
+                audioBlob={block.blob}
+                onConfirm={(notes) => {
+                  applyExtractedMidi(notes)
+                }}
+              />
+            ) : null}
+          </div>
         )
       case 'midi':
+        if (block.noteEvents.length > 0) {
+          return (
+            <div className="space-y-3">
+              <MidiPlayer notes={block.noteEvents} patchId={playbackPatch} />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  updateBlock(block.id, (current) =>
+                    current.type === 'midi'
+                      ? { ...current, noteEvents: [] }
+                      : current,
+                  )
+                }
+              >
+                Discard MIDI
+              </Button>
+            </div>
+          )
+        }
+
         return (
           <MidiRecorder
             draft
@@ -609,13 +738,27 @@ export function QuickCaptureModal() {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => addBlock(type)}
+                onClick={() => handleToolbarAction(type)}
               >
                 <Icon className="size-4" />
                 {label}
               </Button>
             ))}
+            <input
+              ref={audioImportInputRef}
+              type="file"
+              accept=".wav,.mp3,.aiff,.aif,audio/wav,audio/mpeg,audio/aiff"
+              className="hidden"
+              onChange={(event) => {
+                void handleImportAudioFiles(event.target.files)
+                event.target.value = ''
+              }}
+            />
           </div>
+
+          {audioImportError ? (
+            <p className="text-xs text-destructive">{audioImportError}</p>
+          ) : null}
 
           {blocks.length === 0 ? (
             <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
@@ -627,7 +770,7 @@ export function QuickCaptureModal() {
               {blocks.map((block) => (
                 <CaptureBlockShell
                   key={block.id}
-                  label={BLOCK_LABELS[block.type]}
+                  label={getBlockLabel(block)}
                   onRemove={() => removeBlock(block.id)}
                 >
                   {renderBlock(block)}

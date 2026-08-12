@@ -13,19 +13,17 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { StatusStepIndicator } from '@/components/shared/StatusStepIndicator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { deleteAlbum, updateAlbum } from '@/hooks/useAlbums'
 import type { Album, AlbumStatus } from '@/types/album'
 
-const ALBUM_STATUSES: AlbumStatus[] = ['draft', 'in-progress', 'released']
+const ALBUM_STATUSES = [
+  'draft',
+  'in-progress',
+  'released',
+] as const satisfies readonly AlbumStatus[]
 
 interface AlbumHeaderProps {
   album: Album
@@ -85,109 +83,100 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
   }
 
   return (
-    <div className="flex flex-wrap gap-4 rounded-lg border bg-card p-4">
-      <button
-        type="button"
-        className="relative flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/40 hover:bg-muted/60"
-        onClick={() => artworkInputRef.current?.click()}
-      >
-        {artworkUrl ? (
-          <img
-            src={artworkUrl}
-            alt={`${album.title} artwork`}
-            className="size-full object-cover"
-          />
-        ) : (
-          <div className="flex flex-col items-center gap-1 text-muted-foreground">
-            <ImageIcon className="size-8" />
-            <span className="text-xs">Upload artwork</span>
+    <div className="space-y-3 rounded-lg border bg-card p-4">
+      <div className="flex flex-wrap gap-4">
+        <button
+          type="button"
+          className="relative flex size-32 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-muted/40 hover:bg-muted/60"
+          onClick={() => artworkInputRef.current?.click()}
+        >
+          {artworkUrl ? (
+            <img
+              src={artworkUrl}
+              alt={`${album.title} artwork`}
+              className="size-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-muted-foreground">
+              <ImageIcon className="size-8" />
+              <span className="text-xs">Upload artwork</span>
+            </div>
+          )}
+        </button>
+        <input
+          ref={artworkInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(event) => {
+            void handleArtworkUpload(event.target.files)
+            event.target.value = ''
+          }}
+        />
+
+        <div className="flex min-w-[240px] flex-1 flex-wrap items-end gap-3">
+          <div className="min-w-[200px] flex-1 space-y-1">
+            <label className="text-xs text-muted-foreground">Title</label>
+            <Input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              onBlur={() => {
+                if (title.trim() && title !== album.title) {
+                  void persist({ id: album.id, title: title.trim() })
+                }
+              }}
+              className="text-lg font-semibold"
+            />
           </div>
-        )}
-      </button>
-      <input
-        ref={artworkInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={(event) => {
-          void handleArtworkUpload(event.target.files)
-          event.target.value = ''
-        }}
-      />
 
-      <div className="flex min-w-[240px] flex-1 flex-wrap items-end gap-3">
-        <div className="min-w-[200px] flex-1 space-y-1">
-          <label className="text-xs text-muted-foreground">Title</label>
-          <Input
-            value={title}
-            onChange={(event) => setTitle(event.target.value)}
-            onBlur={() => {
-              if (title.trim() && title !== album.title) {
-                void persist({ id: album.id, title: title.trim() })
-              }
-            }}
-            className="text-lg font-semibold"
-          />
-        </div>
-
-        <div className="w-40 space-y-1">
-          <label className="text-xs text-muted-foreground">Status</label>
-          <Select
-            value={status}
-            onValueChange={(value) => {
-              const nextStatus = value as AlbumStatus
-              setStatus(nextStatus)
-              void persist({ id: album.id, status: nextStatus })
-            }}
-          >
-            <SelectTrigger className="w-full capitalize">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ALBUM_STATUSES.map((item) => (
-                <SelectItem key={item} value={item} className="capitalize">
-                  {item.replace('-', ' ')}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              type="button"
-              variant="destructive"
-              size="icon"
-              disabled={isDeleting}
-              aria-label="Delete album"
-            >
-              <Trash2 />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this album?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This removes the album and its track listing links. Songs on
-                this album will not be deleted. This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                type="button"
                 variant="destructive"
+                size="icon"
                 disabled={isDeleting}
-                onClick={(event) => {
-                  event.preventDefault()
-                  void handleDelete()
-                }}
+                aria-label="Delete album"
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <Trash2 />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this album?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This removes the album and its track listing links. Songs on
+                  this album will not be deleted. This cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  disabled={isDeleting}
+                  onClick={(event) => {
+                    event.preventDefault()
+                    void handleDelete()
+                  }}
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Status</label>
+        <StatusStepIndicator
+          stages={ALBUM_STATUSES}
+          value={status}
+          onChange={(nextStatus) => {
+            setStatus(nextStatus)
+            void persist({ id: album.id, status: nextStatus })
+          }}
+        />
       </div>
     </div>
   )

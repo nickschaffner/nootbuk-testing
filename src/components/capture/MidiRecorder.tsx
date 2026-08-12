@@ -52,8 +52,9 @@ export function MidiRecorder({
   const [isSaving, setIsSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const clickSynthRef = useRef<Tone.MembraneSynth | null>(null)
-  const metronomeIdRef = useRef<number | null>(null)
+  const metronomeIntervalRef = useRef<number | null>(null)
   const onDraftChangeRef = useRef(onDraftChange)
+  const hasReportedNotesRef = useRef(false)
 
   useEffect(() => {
     onDraftChangeRef.current = onDraftChange
@@ -65,10 +66,15 @@ export function MidiRecorder({
     }
 
     if (midi.noteEvents.length === 0) {
-      onDraftChangeRef.current?.(null)
+      // Don't notify null on mount — that wipes parent draft state (e.g. extracted MIDI).
+      // Only clear the parent after this recorder has previously reported notes.
+      if (hasReportedNotesRef.current) {
+        onDraftChangeRef.current?.(null)
+      }
       return
     }
 
+    hasReportedNotesRef.current = true
     const parsedBpm = Number.parseInt(bpm, 10)
     onDraftChangeRef.current?.({
       noteEvents: midi.noteEvents,
@@ -79,18 +85,21 @@ export function MidiRecorder({
   useEffect(() => {
     let cancelled = false
 
+    function clearMetronomeInterval() {
+      if (metronomeIntervalRef.current !== null) {
+        window.clearInterval(metronomeIntervalRef.current)
+        metronomeIntervalRef.current = null
+      }
+    }
+
     void (async () => {
+      clearMetronomeInterval()
+
       if (!metronomeEnabled) {
-        if (metronomeIdRef.current !== null) {
-          Tone.Transport.clear(metronomeIdRef.current)
-          metronomeIdRef.current = null
-        }
-        Tone.Transport.stop()
         return
       }
 
       await synth.ensureStarted()
-
       if (cancelled) {
         return
       }
@@ -104,35 +113,39 @@ export function MidiRecorder({
       }
 
       const parsedBpm = Number.parseInt(bpm, 10)
-      Tone.Transport.bpm.value = Number.isFinite(parsedBpm) ? parsedBpm : 120
+      const safeBpm = Number.isFinite(parsedBpm) && parsedBpm > 0 ? parsedBpm : 120
+      const intervalMs = (60 / safeBpm) * 1000
 
-      if (metronomeIdRef.current !== null) {
-        Tone.Transport.clear(metronomeIdRef.current)
+      const click = () => {
+        clickSynthRef.current?.triggerAttackRelease('C5', '32n', Tone.now(), 0.9)
       }
 
-      metronomeIdRef.current = Tone.Transport.scheduleRepeat((time) => {
-        clickSynthRef.current?.triggerAttackRelease('C5', '32n', time, 0.9)
-      }, '4n')
-
-      Tone.Transport.start()
+      // Independent of Tone.Transport so MIDI recording / patch loads can't stop it
+      click()
+      metronomeIntervalRef.current = window.setInterval(click, intervalMs)
     })()
 
     return () => {
       cancelled = true
+      clearMetronomeInterval()
     }
-  }, [bpm, metronomeEnabled, synth.ensureStarted])
+    // ensureStarted is a stable module fn; omit synth to avoid restarting on patch loads
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bpm, metronomeEnabled])
 
   useEffect(() => {
     return () => {
-      if (metronomeIdRef.current !== null) {
-        Tone.Transport.clear(metronomeIdRef.current)
+      if (metronomeIntervalRef.current !== null) {
+        window.clearInterval(metronomeIntervalRef.current)
+        metronomeIntervalRef.current = null
       }
-      Tone.Transport.stop()
       clickSynthRef.current?.dispose()
       clickSynthRef.current = null
       void synth.stopAll()
     }
-  }, [synth.stopAll])
+    // Intentionally only on unmount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleStartRecording() {
     await synth.ensureStarted()

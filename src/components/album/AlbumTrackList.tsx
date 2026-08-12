@@ -18,6 +18,7 @@ import { AddSongToAlbumSheet } from '@/components/album/AddSongToAlbumSheet'
 import { SortableTrackRow } from '@/components/album/SortableTrackRow'
 import { Button } from '@/components/ui/button'
 import { reorderTracks, type getSongsForAlbum } from '@/hooks/useAlbumSongs'
+import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
 import { albumTrackSortableId } from '@/lib/dnd-ids'
 
 type AlbumTrackEntry = Awaited<ReturnType<typeof getSongsForAlbum>>[number]
@@ -29,6 +30,7 @@ interface AlbumTrackListProps {
 
 export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
   const [addOpen, setAddOpen] = useState(false)
+  const playbackVersions = usePlaybackVersionsIndex()
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -97,8 +99,10 @@ export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
                 {tracks.map((track, index) => (
                   <SortableTrackRow
                     key={track.songId}
+                    albumId={albumId}
                     song={track.song}
                     trackNumber={index + 1}
+                    playbackVersion={playbackVersions?.[track.songId]}
                   />
                 ))}
               </div>

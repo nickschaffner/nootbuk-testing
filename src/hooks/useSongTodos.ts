@@ -10,9 +10,30 @@ export function useTodosForSong(songId: string | undefined) {
   )
 }
 
+export function useIncompleteTodoCountsBySong() {
+  return useLiveQuery(async () => {
+    try {
+      const todos = await db.songTodos.toArray()
+      const counts: Record<string, number> = {}
+
+      for (const todo of todos) {
+        if (!todo.completed) {
+          counts[todo.songId] = (counts[todo.songId] ?? 0) + 1
+        }
+      }
+
+      return counts
+    } catch (error) {
+      console.warn('useIncompleteTodoCountsBySong failed:', error)
+      throw error
+    }
+  }, [])
+}
+
 export async function getTodosForSong(songId: string): Promise<SongTodo[]> {
   try {
-    return await db.songTodos.where('songId').equals(songId).sortBy('sortOrder')
+    const todos = await db.songTodos.where('songId').equals(songId).toArray()
+    return todos.sort((a, b) => a.sortOrder - b.sortOrder)
   } catch (error) {
     console.warn('getTodosForSong failed:', error)
     throw error

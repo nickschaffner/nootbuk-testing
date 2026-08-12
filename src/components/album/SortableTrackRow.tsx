@@ -1,24 +1,36 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, X } from 'lucide-react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+import { AudioPlayButton } from '@/components/player/AudioPlayButton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { removeSongFromAlbum } from '@/hooks/useAlbumSongs'
 import { albumTrackSortableId } from '@/lib/dnd-ids'
 import { cn } from '@/lib/utils'
-import type { Song, SongStatus } from '@/types/song'
+import type { Song, SongStatus, SongVersion } from '@/types/song'
 
 function formatSongStatus(status: SongStatus): string {
   return status.charAt(0).toUpperCase() + status.slice(1)
 }
 
 interface SortableTrackRowProps {
+  albumId: string
   song: Song
   trackNumber: number
+  playbackVersion?: SongVersion
 }
 
-export function SortableTrackRow({ song, trackNumber }: SortableTrackRowProps) {
+export function SortableTrackRow({
+  albumId,
+  song,
+  trackNumber,
+  playbackVersion,
+}: SortableTrackRowProps) {
   const navigate = useNavigate()
+  const [isRemoving, setIsRemoving] = useState(false)
   const {
     attributes,
     listeners,
@@ -34,6 +46,18 @@ export function SortableTrackRow({ song, trackNumber }: SortableTrackRowProps) {
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
+  }
+
+  async function handleRemove(event: React.MouseEvent) {
+    event.stopPropagation()
+    setIsRemoving(true)
+    try {
+      await removeSongFromAlbum(albumId, song.id)
+    } catch {
+      // removeSongFromAlbum already logs the error
+    } finally {
+      setIsRemoving(false)
+    }
   }
 
   return (
@@ -58,6 +82,12 @@ export function SortableTrackRow({ song, trackNumber }: SortableTrackRowProps) {
         {trackNumber}
       </span>
 
+      {playbackVersion ? (
+        <AudioPlayButton blob={playbackVersion.blob} />
+      ) : (
+        <div className="size-8 shrink-0" />
+      )}
+
       <button
         type="button"
         className="grid min-w-0 flex-1 grid-cols-[1fr_auto_auto_auto] items-center gap-3 text-left"
@@ -74,6 +104,18 @@ export function SortableTrackRow({ song, trackNumber }: SortableTrackRowProps) {
           {song.tempo ?? '—'}
         </span>
       </button>
+
+      <Button
+        type="button"
+        size="icon-sm"
+        variant="ghost"
+        className="shrink-0 text-muted-foreground hover:text-destructive"
+        disabled={isRemoving}
+        onClick={(event) => void handleRemove(event)}
+        aria-label={`Remove ${song.title} from album`}
+      >
+        <X className="size-3.5" />
+      </Button>
     </div>
   )
 }

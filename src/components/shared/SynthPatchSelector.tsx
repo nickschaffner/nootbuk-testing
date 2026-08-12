@@ -26,16 +26,28 @@ export function SynthPatchSelector({
   value,
   onChange,
 }: SynthPatchSelectorProps) {
-  const { setPatch, isLoadingPatch } = useSynth()
+  const { setPatch, isLoadingPatch, synthSource, isMuted } = useSynth()
   const resolved: PlaybackPatchId = parsePlaybackPatch(value) ?? 'piano'
 
   useEffect(() => {
     void setPatch(resolved)
   }, [resolved, setPatch])
 
+  const sourceLabel =
+    isMuted || resolved === 'muted'
+      ? null
+      : synthSource === 'smplr'
+        ? '(soundfont)'
+        : '(synth)'
+
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>Patch</Label>
+      <div className="flex items-baseline gap-2">
+        <Label htmlFor={id}>Patch</Label>
+        {sourceLabel ? (
+          <span className="text-xs text-muted-foreground">{sourceLabel}</span>
+        ) : null}
+      </div>
       <Select
         value={resolved}
         onValueChange={(next) => {

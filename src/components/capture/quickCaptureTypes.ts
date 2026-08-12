@@ -2,6 +2,7 @@ import type { NoteEvent, SequenceNote } from '@/types/idea'
 
 export type QuickCaptureBlockType =
   | 'audio'
+  | 'audio-import'
   | 'midi'
   | 'notes'
   | 'image'
@@ -11,6 +12,7 @@ export type QuickCaptureBlock =
   | {
       id: string
       type: 'audio'
+      source: 'record' | 'import'
       blob: Blob | null
       filename: string | null
     }
@@ -38,12 +40,14 @@ export type QuickCaptureBlock =
       file: File | null
     }
 
-export function createEmptyBlock(type: QuickCaptureBlockType): QuickCaptureBlock {
+export function createEmptyBlock(
+  type: Exclude<QuickCaptureBlockType, 'audio-import'>,
+): QuickCaptureBlock {
   const id = crypto.randomUUID()
 
   switch (type) {
     case 'audio':
-      return { id, type: 'audio', blob: null, filename: null }
+      return { id, type: 'audio', source: 'record', blob: null, filename: null }
     case 'midi':
       return { id, type: 'midi', noteEvents: [], bpm: 120 }
     case 'notes':
@@ -52,6 +56,19 @@ export function createEmptyBlock(type: QuickCaptureBlockType): QuickCaptureBlock
       return { id, type: 'image', file: null, previewUrl: null }
     case 'file':
       return { id, type: 'file', file: null }
+  }
+}
+
+export function createAudioImportBlock(
+  blob: Blob,
+  filename: string,
+): QuickCaptureBlock {
+  return {
+    id: crypto.randomUUID(),
+    type: 'audio',
+    source: 'import',
+    blob,
+    filename,
   }
 }
 
@@ -69,10 +86,17 @@ export function blockHasContent(block: QuickCaptureBlock): boolean {
   }
 }
 
-export const BLOCK_LABELS: Record<QuickCaptureBlockType, string> = {
+export const BLOCK_LABELS: Record<'audio' | 'midi' | 'notes' | 'image' | 'file', string> = {
   audio: 'Record Audio',
   midi: 'MIDI',
   notes: 'Note Picker',
   image: 'Photo / Image',
   file: 'File',
+}
+
+export function getBlockLabel(block: QuickCaptureBlock): string {
+  if (block.type === 'audio' && block.source === 'import') {
+    return 'Import Audio'
+  }
+  return BLOCK_LABELS[block.type]
 }

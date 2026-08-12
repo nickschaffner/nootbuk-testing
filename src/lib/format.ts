@@ -1,3 +1,23 @@
+export function parseMmSs(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) {
+    return null
+  }
+
+  const match = /^(\d+):(\d{1,2})$/.exec(trimmed)
+  if (!match) {
+    return null
+  }
+
+  const minutes = Number.parseInt(match[1], 10)
+  const seconds = Number.parseInt(match[2], 10)
+  if (Number.isNaN(minutes) || Number.isNaN(seconds) || seconds >= 60) {
+    return null
+  }
+
+  return minutes * 60 + seconds
+}
+
 export function formatRelativeTime(iso: string): string {
   const date = new Date(iso)
   const now = new Date()

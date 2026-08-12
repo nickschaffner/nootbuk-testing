@@ -1,7 +1,7 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
-import type { AlbumSong } from '@/types/album'
+import type { Album, AlbumSong } from '@/types/album'
 import type { Song } from '@/types/song'
 
 export function useAlbumSongs(albumId: string | undefined) {
@@ -14,6 +14,13 @@ export function useAlbumSongs(albumId: string | undefined) {
 export function useAlbumsForSong(songId: string | undefined) {
   return useLiveQuery(
     () => (songId ? getAlbumsForSong(songId) : Promise.resolve([])),
+    [songId],
+  )
+}
+
+export function useAlbumsWithTitlesForSong(songId: string | undefined) {
+  return useLiveQuery(
+    () => (songId ? getAlbumsWithTitlesForSong(songId) : Promise.resolve([])),
     [songId],
   )
 }
@@ -51,6 +58,27 @@ export async function getAlbumsForSong(
     return await db.albumSongs.where('songId').equals(songId).toArray()
   } catch (error) {
     console.warn('getAlbumsForSong failed:', error)
+    throw error
+  }
+}
+
+export async function getAlbumsWithTitlesForSong(
+  songId: string,
+): Promise<Array<AlbumSong & { album: Album }>> {
+  try {
+    const albumSongs = await getAlbumsForSong(songId)
+    const results: Array<AlbumSong & { album: Album }> = []
+
+    for (const albumSong of albumSongs) {
+      const album = await db.albums.get(albumSong.albumId)
+      if (album) {
+        results.push({ ...albumSong, album })
+      }
+    }
+
+    return results
+  } catch (error) {
+    console.warn('getAlbumsWithTitlesForSong failed:', error)
     throw error
   }
 }

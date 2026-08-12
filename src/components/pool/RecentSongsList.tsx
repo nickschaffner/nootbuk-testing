@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
+import { AudioPlayButton } from '@/components/player/AudioPlayButton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,6 +12,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { createSong, useAllSongs } from '@/hooks/useSongs'
+import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
+import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
 import { formatRelativeTime } from '@/lib/format'
 import type { SongStatus } from '@/types/song'
 
@@ -20,6 +23,8 @@ function formatSongStatus(status: SongStatus): string {
 
 export function RecentSongsList() {
   const songs = useAllSongs()
+  const todoCounts = useIncompleteTodoCountsBySong()
+  const playbackVersions = usePlaybackVersionsIndex()
   const navigate = useNavigate()
   const [isCreating, setIsCreating] = useState(false)
 
@@ -68,11 +73,20 @@ export function RecentSongsList() {
           </p>
         ) : (
           <ul className="space-y-2">
-            {songs.map((song) => (
-              <li key={song.id}>
+            {songs.map((song) => {
+              const incompleteCount = todoCounts?.[song.id] ?? 0
+              const playbackVersion = playbackVersions?.[song.id]
+
+              return (
+              <li key={song.id} className="flex items-center gap-1">
+                {playbackVersion ? (
+                  <AudioPlayButton blob={playbackVersion.blob} />
+                ) : (
+                  <div className="size-8 shrink-0" />
+                )}
                 <Link
                   to={`/song/${song.id}`}
-                  className="flex items-center justify-between gap-2 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-border hover:bg-muted/40"
+                  className="flex min-w-0 flex-1 items-center justify-between gap-2 rounded-md border border-transparent px-2 py-2 transition-colors hover:border-border hover:bg-muted/40"
                 >
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{song.title}</p>
@@ -80,12 +94,20 @@ export function RecentSongsList() {
                       {formatRelativeTime(song.updatedAt)}
                     </p>
                   </div>
-                  <Badge variant="outline" className="shrink-0 capitalize">
-                    {formatSongStatus(song.status)}
-                  </Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {incompleteCount > 0 ? (
+                      <Badge variant="secondary" className="tabular-nums">
+                        {incompleteCount} todo{incompleteCount === 1 ? '' : 's'}
+                      </Badge>
+                    ) : null}
+                    <Badge variant="outline" className="capitalize">
+                      {formatSongStatus(song.status)}
+                    </Badge>
+                  </div>
                 </Link>
               </li>
-            ))}
+              )
+            })}
           </ul>
         )}
       </CardContent>
