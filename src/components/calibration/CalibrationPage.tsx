@@ -1,12 +1,21 @@
+import { useState } from 'react'
+
 import { DatabaseStatsTool } from '@/components/calibration/DatabaseStatsTool'
 import { ExportImportDatabaseTool } from '@/components/calibration/ExportImportDatabaseTool'
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { SeedSampleDataTool } from '@/components/calibration/SeedSampleDataTool'
+import { SelectiveWipeTool } from '@/components/calibration/SelectiveWipeTool'
 import { WipeAllDataTool } from '@/components/calibration/WipeAllDataTool'
 
 export function CalibrationPage() {
+  const [statsRefreshToken, setStatsRefreshToken] = useState(0)
+
   if (!isDevMode()) {
     return null
+  }
+
+  function refreshStats() {
+    setStatsRefreshToken((token) => token + 1)
   }
 
   return (
@@ -22,10 +31,11 @@ export function CalibrationPage() {
         </p>
       </div>
 
-      <WipeAllDataTool />
-      <DatabaseStatsTool />
-      <ExportImportDatabaseTool />
-      <SeedSampleDataTool />
+      <WipeAllDataTool onComplete={refreshStats} />
+      <SelectiveWipeTool onComplete={refreshStats} />
+      <DatabaseStatsTool refreshToken={statsRefreshToken} />
+      <ExportImportDatabaseTool onComplete={refreshStats} />
+      <SeedSampleDataTool onComplete={refreshStats} />
     </div>
   )
 }

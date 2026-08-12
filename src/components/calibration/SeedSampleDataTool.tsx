@@ -3,7 +3,11 @@ import { useState } from 'react'
 import { seedSampleData } from '@/components/calibration/seedSampleData'
 import { Button } from '@/components/ui/button'
 
-export function SeedSampleDataTool() {
+interface SeedSampleDataToolProps {
+  onComplete?: () => void
+}
+
+export function SeedSampleDataTool({ onComplete }: SeedSampleDataToolProps) {
   const [isSeeding, setIsSeeding] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -15,6 +19,7 @@ export function SeedSampleDataTool() {
       setMessage(
         'Seeded 3 instruments, 8 pool ideas, 2 songs (with sections/ideas/journal/todos), and 1 album.',
       )
+      onComplete?.()
     } catch (error) {
       console.warn('seedSampleData failed:', error)
       setMessage(

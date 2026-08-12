@@ -14,7 +14,12 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-export function WipeAllDataTool() {
+interface WipeAllDataToolProps {
+  onComplete?: () => void
+}
+
+export function WipeAllDataTool({ onComplete }: WipeAllDataToolProps) {
+  const [open, setOpen] = useState(false)
   const [isWiping, setIsWiping] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -23,7 +28,9 @@ export function WipeAllDataTool() {
     setMessage(null)
     try {
       await wipeAllData()
+      setOpen(false)
       setMessage('All Dexie tables cleared.')
+      onComplete?.()
     } catch (error) {
       console.warn('wipeAllData failed:', error)
       setMessage(
@@ -43,7 +50,7 @@ export function WipeAllDataTool() {
         </p>
       </div>
 
-      <AlertDialog>
+      <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger asChild>
           <Button variant="destructive" disabled={isWiping}>
             {isWiping ? 'Wiping...' : 'Wipe All Data'}
@@ -58,7 +65,7 @@ export function WipeAllDataTool() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isWiping}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
               disabled={isWiping}

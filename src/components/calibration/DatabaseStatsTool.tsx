@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { db } from '@/lib/db'
 import { Button } from '@/components/ui/button'
@@ -37,14 +37,19 @@ function formatBytes(bytes: number | undefined): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-export function DatabaseStatsTool() {
+interface DatabaseStatsToolProps {
+  /** Bump this after wipe / seed / import to reload counts. */
+  refreshToken?: number
+}
+
+export function DatabaseStatsTool({ refreshToken = 0 }: DatabaseStatsToolProps) {
   const [counts, setCounts] = useState<TableCounts | null>(null)
   const [usage, setUsage] = useState<number | null>(null)
   const [quota, setQuota] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -70,11 +75,11 @@ export function DatabaseStatsTool() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     void refresh()
-  }, [])
+  }, [refresh, refreshToken])
 
   return (
     <section className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">

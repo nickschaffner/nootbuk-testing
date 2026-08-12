@@ -29,7 +29,13 @@ function downloadBlob(blob: Blob, filename: string) {
   URL.revokeObjectURL(url)
 }
 
-export function ExportImportDatabaseTool() {
+interface ExportImportDatabaseToolProps {
+  onComplete?: () => void
+}
+
+export function ExportImportDatabaseTool({
+  onComplete,
+}: ExportImportDatabaseToolProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [pendingFile, setPendingFile] = useState<File | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -72,7 +78,10 @@ export function ExportImportDatabaseTool() {
     try {
       await wipeAllData()
       await importDB(pendingFile)
+      setConfirmOpen(false)
+      setPendingFile(null)
       setMessage('Import complete. Reloading…')
+      onComplete?.()
       window.location.reload()
     } catch (error) {
       console.warn('importDB failed:', error)
@@ -134,7 +143,9 @@ export function ExportImportDatabaseTool() {
             <AlertDialogTitle>Overwrite all current data?</AlertDialogTitle>
             <AlertDialogDescription>
               Importing clears the database and restores from{' '}
-              <span className="font-medium">{pendingFile?.name ?? 'this file'}</span>
+              <span className="font-medium">
+                {pendingFile?.name ?? 'this file'}
+              </span>
               . Everything currently stored will be replaced.
             </AlertDialogDescription>
           </AlertDialogHeader>
