@@ -236,6 +236,7 @@ export function QuickCaptureModal() {
   const playbackPatch = isMuted ? 'muted' : currentPatch
   const audioImportInputRef = useRef<HTMLInputElement>(null)
   const [audioImportError, setAudioImportError] = useState<string | null>(null)
+  const [isMidiRecording, setIsMidiRecording] = useState(false)
 
   const [blocks, setBlocks] = useState<QuickCaptureBlock[]>([])
   const [role, setRole] = useState<IdeaRole>('melody')
@@ -290,6 +291,7 @@ export function QuickCaptureModal() {
     setNotes('')
     setSaveError(null)
     setAudioImportError(null)
+    setIsMidiRecording(false)
     setShowSongSave(false)
     setSelectedSongId('')
     setSelectedSectionId('unassigned')
@@ -303,6 +305,10 @@ export function QuickCaptureModal() {
   }
 
   function addBlock(type: Exclude<QuickCaptureBlockType, 'audio-import'>) {
+    if (type === 'midi' || type === 'notes') {
+      setIsMidiRecording(false)
+    }
+
     setBlocks((current) => {
       if (type === 'audio') {
         const withoutAudio = current.filter((block) => block.type !== 'audio')
@@ -328,6 +334,7 @@ export function QuickCaptureModal() {
   }
 
   function applyExtractedMidi(noteEvents: NoteEvent[]) {
+    setIsMidiRecording(false)
     setBlocks((current) => {
       const withoutMidiSource = current.filter(
         (block) => block.type !== 'midi' && block.type !== 'notes',
@@ -375,13 +382,14 @@ export function QuickCaptureModal() {
   }
 
   function removeBlock(id: string) {
-    setBlocks((current) => {
-      const block = current.find((item) => item.id === id)
-      if (block?.type === 'image' && block.previewUrl) {
-        URL.revokeObjectURL(block.previewUrl)
-      }
-      return current.filter((item) => item.id !== id)
-    })
+    const block = blocks.find((item) => item.id === id)
+    if (block?.type === 'image' && block.previewUrl) {
+      URL.revokeObjectURL(block.previewUrl)
+    }
+    if (block?.type === 'midi') {
+      setIsMidiRecording(false)
+    }
+    setBlocks((current) => current.filter((item) => item.id !== id))
   }
 
   function updateBlock(
@@ -598,51 +606,53 @@ export function QuickCaptureModal() {
           </div>
         )
       case 'midi':
-        if (block.noteEvents.length > 0) {
+        // Keep MidiRecorder mounted while recording so the Web MIDI handler survives.
+        if (isMidiRecording || block.noteEvents.length === 0) {
           return (
-            <div className="space-y-3">
-              <MidiPlayer notes={block.noteEvents} patchId={playbackPatch} />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  updateBlock(block.id, (current) =>
-                    current.type === 'midi'
-                      ? { ...current, noteEvents: [] }
-                      : current,
-                  )
-                }
-              >
-                Discard MIDI
-              </Button>
-            </div>
+            <MidiRecorder
+              draft
+              embedded
+              onRecordingChange={setIsMidiRecording}
+              onDraftChange={(data) =>
+                updateBlock(block.id, (current) => {
+                  if (current.type !== 'midi') {
+                    return current
+                  }
+
+                  const noteEvents = data?.noteEvents ?? []
+                  const bpm = data?.bpm ?? current.bpm
+                  if (
+                    current.noteEvents === noteEvents &&
+                    current.bpm === bpm
+                  ) {
+                    return current
+                  }
+
+                  return { ...current, noteEvents, bpm }
+                })
+              }
+            />
           )
         }
 
         return (
-          <MidiRecorder
-            draft
-            embedded
-            onDraftChange={(data) =>
-              updateBlock(block.id, (current) => {
-                if (current.type !== 'midi') {
-                  return current
-                }
-
-                const noteEvents = data?.noteEvents ?? []
-                const bpm = data?.bpm ?? current.bpm
-                if (
-                  current.noteEvents === noteEvents &&
-                  current.bpm === bpm
-                ) {
-                  return current
-                }
-
-                return { ...current, noteEvents, bpm }
-              })
-            }
-          />
+          <div className="space-y-3">
+            <MidiPlayer notes={block.noteEvents} patchId={playbackPatch} />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                updateBlock(block.id, (current) =>
+                  current.type === 'midi'
+                    ? { ...current, noteEvents: [] }
+                    : current,
+                )
+              }
+            >
+              Discard MIDI
+            </Button>
+          </div>
         )
       case 'notes':
         return (

@@ -24,6 +24,7 @@ interface MidiRecorderProps {
   ideaId?: string
   draft?: boolean
   onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number } | null) => void
+  onRecordingChange?: (isRecording: boolean) => void
   onSaved?: () => void
   embedded?: boolean
   className?: string
@@ -33,6 +34,7 @@ export function MidiRecorder({
   ideaId,
   draft = false,
   onDraftChange,
+  onRecordingChange,
   onSaved,
   embedded = false,
   className,
@@ -54,6 +56,7 @@ export function MidiRecorder({
   const clickSynthRef = useRef<Tone.MembraneSynth | null>(null)
   const metronomeIntervalRef = useRef<number | null>(null)
   const onDraftChangeRef = useRef(onDraftChange)
+  const onRecordingChangeRef = useRef(onRecordingChange)
   const hasReportedNotesRef = useRef(false)
 
   useEffect(() => {
@@ -61,7 +64,21 @@ export function MidiRecorder({
   }, [onDraftChange])
 
   useEffect(() => {
+    onRecordingChangeRef.current = onRecordingChange
+  }, [onRecordingChange])
+
+  useEffect(() => {
+    onRecordingChangeRef.current?.(midi.isRecording)
+  }, [midi.isRecording])
+
+  useEffect(() => {
     if (!draft) {
+      return
+    }
+
+    // Don't push mid-recording — parent re-renders can unmount this recorder
+    // and kill the Web MIDI handler.
+    if (midi.isRecording) {
       return
     }
 
@@ -80,7 +97,7 @@ export function MidiRecorder({
       noteEvents: midi.noteEvents,
       bpm: Number.isFinite(parsedBpm) ? parsedBpm : 120,
     })
-  }, [bpm, draft, midi.noteEvents])
+  }, [bpm, draft, midi.isRecording, midi.noteEvents])
 
   useEffect(() => {
     let cancelled = false
