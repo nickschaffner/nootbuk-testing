@@ -2,7 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
-import type { Album, AlbumReferenceFile, AlbumSong } from '@/types/album'
+import type { Album, AlbumReference, AlbumSong } from '@/types/album'
 import type { Idea, IdeaMedia, SequenceNote } from '@/types/idea'
 import type { Instrument } from '@/types/instrument'
 import type {
@@ -27,7 +27,7 @@ export class NootbukDatabase extends Dexie {
   songVersions!: EntityTable<SongVersion, 'id'>
   albums!: EntityTable<Album, 'id'>
   albumSongs!: EntityTable<AlbumSong, 'id'>
-  albumReferenceFiles!: EntityTable<AlbumReferenceFile, 'id'>
+  albumReferences!: EntityTable<AlbumReference, 'id'>
   instruments!: EntityTable<Instrument, 'id'>
 
   constructor() {
@@ -283,6 +283,124 @@ export class NootbukDatabase extends Dexie {
             version.duration = null
           }
         })
+      })
+
+    // Album references: text / link / audio (mirror song references)
+    this.version(7)
+      .stores({
+        ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: 'id, ideaId, type',
+        songs: 'id, status, createdAt, updatedAt',
+        songSections: 'id, songId, sortOrder',
+        songJournalEntries: 'id, songId, topic',
+        songReferences: 'id, songId',
+        songAssets: 'id, songId',
+        songTodos: 'id, songId, completed',
+        songVersions: 'id, songId, isMain',
+        albums: 'id, format, createdAt, updatedAt',
+        albumSongs: 'id, albumId, songId',
+        albumReferences: 'id, albumId',
+        albumReferenceFiles: null,
+        instruments: 'id, type, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const albumReferences = tx.table('albumReferences')
+        const albums = await tx.table('albums').toArray()
+        const legacyFiles = await tx.table('albumReferenceFiles').toArray()
+
+        const filesByAlbum = new Map<
+          string,
+          Array<{
+            id: string
+            albumId: string
+            filename: string
+            mimeType: string
+            blob: Blob
+            createdAt: string
+          }>
+        >()
+
+        for (const file of legacyFiles) {
+          const albumId = file.albumId as string
+          const list = filesByAlbum.get(albumId) ?? []
+          list.push(file as {
+            id: string
+            albumId: string
+            filename: string
+            mimeType: string
+            blob: Blob
+            createdAt: string
+          })
+          filesByAlbum.set(albumId, list)
+        }
+
+        function isAudioFile(filename: string, mimeType: string): boolean {
+          if (mimeType.startsWith('audio/')) {
+            return true
+          }
+          const lower = filename.toLowerCase()
+          return (
+            lower.endsWith('.wav') ||
+            lower.endsWith('.mp3') ||
+            lower.endsWith('.aiff') ||
+            lower.endsWith('.aif')
+          )
+        }
+
+        for (const album of albums) {
+          const albumId = album.id as string
+          let sortOrder = 0
+
+          const material = album.referenceMaterial as string | null | undefined
+          if (material && material.trim()) {
+            await albumReferences.add({
+              id: crypto.randomUUID(),
+              albumId,
+              text: material,
+              url: null,
+              audioBlob: null,
+              attachmentBlob: null,
+              attachmentFilename: null,
+              attachmentMimeType: null,
+              sortOrder: sortOrder++,
+              createdAt: (album.createdAt as string) ?? new Date().toISOString(),
+            })
+          }
+
+          const files = (filesByAlbum.get(albumId) ?? []).sort((a, b) =>
+            a.createdAt.localeCompare(b.createdAt),
+          )
+
+          for (const file of files) {
+            if (isAudioFile(file.filename, file.mimeType)) {
+              await albumReferences.add({
+                id: crypto.randomUUID(),
+                albumId,
+                text: file.filename,
+                url: null,
+                audioBlob: file.blob,
+                attachmentBlob: null,
+                attachmentFilename: null,
+                attachmentMimeType: null,
+                sortOrder: sortOrder++,
+                createdAt: file.createdAt,
+              })
+            } else {
+              await albumReferences.add({
+                id: crypto.randomUUID(),
+                albumId,
+                text: file.filename,
+                url: null,
+                audioBlob: null,
+                attachmentBlob: file.blob,
+                attachmentFilename: file.filename,
+                attachmentMimeType: file.mimeType,
+                sortOrder: sortOrder++,
+                createdAt: file.createdAt,
+              })
+            }
+          }
+        }
       })
   }
 }

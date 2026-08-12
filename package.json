@@ -23,6 +23,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.4.4",
+    "dexie-export-import": "^4.4.0",
     "dexie-react-hooks": "^4.4.0",
     "jszip": "^3.10.1",
     "lightningcss-win32-x64-msvc": "^1.33.0",

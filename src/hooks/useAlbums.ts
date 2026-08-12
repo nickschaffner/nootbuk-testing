@@ -46,7 +46,6 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
       releaseDate: input.releaseDate ?? null,
       credits: input.credits ?? null,
       label: input.label ?? null,
-      catalogNumber: input.catalogNumber ?? null,
       globalNotes: input.globalNotes ?? null,
       referenceMaterial: input.referenceMaterial ?? null,
       notes: input.notes ?? null,
@@ -87,10 +86,10 @@ export async function deleteAlbum(id: string): Promise<void> {
   try {
     await db.transaction(
       'rw',
-      [db.albums, db.albumSongs, db.albumReferenceFiles],
+      [db.albums, db.albumSongs, db.albumReferences],
       async () => {
         await db.albumSongs.where('albumId').equals(id).delete()
-        await db.albumReferenceFiles.where('albumId').equals(id).delete()
+        await db.albumReferences.where('albumId').equals(id).delete()
         await db.albums.delete(id)
       },
     )

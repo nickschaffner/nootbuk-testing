@@ -20,7 +20,6 @@ export function AlbumsPage() {
         releaseDate: null,
         credits: null,
         label: null,
-        catalogNumber: null,
         globalNotes: null,
         referenceMaterial: null,
         notes: null,

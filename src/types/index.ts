@@ -1,7 +1,7 @@
 export type {
   Album,
   AlbumFormat,
-  AlbumReferenceFile,
+  AlbumReference,
   AlbumSong,
   AlbumStatus,
 } from './album'

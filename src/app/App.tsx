@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
+import { CalibrationPage } from '@/components/calibration/CalibrationPage'
 import { AppShell } from '@/components/shared/AppShell'
 import { AlbumPage } from '@/app/pages/AlbumPage'
 import { AlbumsPage } from '@/app/pages/AlbumsPage'
@@ -23,6 +24,7 @@ export function App() {
           <Route path="album/:id" element={<AlbumPage />} />
           <Route path="instruments" element={<InstrumentsPage />} />
           <Route path="instruments/:id" element={<InstrumentEditPage />} />
+          <Route path="calibration" element={<CalibrationPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

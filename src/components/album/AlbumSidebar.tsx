@@ -26,7 +26,7 @@ export function AlbumSidebar({ album }: AlbumSidebarProps) {
           </TabsContent>
 
           <TabsContent value="reference" className="mt-0">
-            <AlbumReferenceTab album={album} />
+            <AlbumReferenceTab albumId={album.id} />
           </TabsContent>
 
           <TabsContent value="credits" className="mt-0">

@@ -11,7 +11,6 @@ export interface Album {
   releaseDate: string | null
   credits: string | null
   label: string | null
-  catalogNumber: string | null
   globalNotes: string | null
   referenceMaterial: string | null
   notes: string | null
@@ -26,11 +25,16 @@ export interface AlbumSong {
   trackNumber: number
 }
 
-export interface AlbumReferenceFile {
+/** Discrete album reference item — mirrors SongReference (text / link / audio). */
+export interface AlbumReference {
   id: string
   albumId: string
-  filename: string
-  mimeType: string
-  blob: Blob
+  text: string | null
+  url: string | null
+  audioBlob: Blob | null
+  attachmentBlob: Blob | null
+  attachmentFilename: string | null
+  attachmentMimeType: string | null
+  sortOrder: number
   createdAt: string
 }

@@ -8,7 +8,7 @@ interface AlbumCreditsTabProps {
   album: Album
 }
 
-type CreditField = 'credits' | 'releaseDate' | 'label' | 'catalogNumber'
+type CreditField = 'credits' | 'releaseDate' | 'label'
 
 export function AlbumCreditsTab({ album }: AlbumCreditsTabProps) {
   async function handleFieldSave(field: CreditField, value: string) {
@@ -39,14 +39,18 @@ export function AlbumCreditsTab({ album }: AlbumCreditsTabProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="album-release-date">Release Date</Label>
+        <Label htmlFor="album-release-date">
+          {album.status === 'released'
+            ? 'Release Date'
+            : 'Planned Release Date'}
+        </Label>
         <Input
           id="album-release-date"
-          defaultValue={album.releaseDate ?? ''}
-          onBlur={(event) =>
+          type="date"
+          value={album.releaseDate ?? ''}
+          onChange={(event) =>
             void handleFieldSave('releaseDate', event.target.value)
           }
-          placeholder="2026-08-10"
         />
       </div>
 
@@ -59,18 +63,6 @@ export function AlbumCreditsTab({ album }: AlbumCreditsTabProps) {
             void handleFieldSave('label', event.target.value)
           }
           placeholder="Record label"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="album-catalog">Catalog Number</Label>
-        <Input
-          id="album-catalog"
-          defaultValue={album.catalogNumber ?? ''}
-          onBlur={(event) =>
-            void handleFieldSave('catalogNumber', event.target.value)
-          }
-          placeholder="CAT-001"
         />
       </div>
     </div>

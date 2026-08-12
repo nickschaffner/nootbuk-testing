@@ -38,10 +38,10 @@ function SongRow({
 }) {
   const [isDeleting, setIsDeleting] = useState(false)
 
-  async function handleDelete() {
+  async function handleDelete(deleteIdeas: boolean) {
     setIsDeleting(true)
     try {
-      await deleteSong(song.id)
+      await deleteSong(song.id, { deleteIdeas })
     } catch {
       // deleteSong already logs the error
     } finally {
@@ -101,21 +101,30 @@ function SongRow({
             <AlertDialogTitle>Delete “{song.title}”?</AlertDialogTitle>
             <AlertDialogDescription>
               This removes the song and its sections, journal, references,
-              assets, todos, and versions. Ideas in this song will be moved back
-              to the pool. This cannot be undone.
+              assets, todos, versions, and album links. Choose what happens to
+              ideas that belong to this song.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleDelete(false)
+              }}
+            >
+              {isDeleting ? 'Deleting...' : 'Keep Ideas (move to pool)'}
+            </AlertDialogAction>
             <AlertDialogAction
               variant="destructive"
               disabled={isDeleting}
               onClick={(event) => {
                 event.preventDefault()
-                void handleDelete()
+                void handleDelete(true)
               }}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              {isDeleting ? 'Deleting...' : 'Delete Everything'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

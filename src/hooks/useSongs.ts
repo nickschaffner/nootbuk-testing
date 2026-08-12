@@ -109,7 +109,12 @@ export async function updateSong(input: UpdateSongInput): Promise<Song> {
   }
 }
 
-export async function deleteSong(id: string): Promise<void> {
+export async function deleteSong(
+  id: string,
+  options?: { deleteIdeas?: boolean },
+): Promise<void> {
+  const deleteIdeas = options?.deleteIdeas === true
+
   try {
     await db.transaction(
       'rw',
@@ -123,16 +128,26 @@ export async function deleteSong(id: string): Promise<void> {
         db.songVersions,
         db.albumSongs,
         db.ideas,
+        db.ideaMedia,
       ],
       async () => {
-        const now = new Date().toISOString()
+        const songIdeas = await db.ideas.where('songId').equals(id).toArray()
 
-        // Move ideas back to the pool — do not delete them
-        await db.ideas.where('songId').equals(id).modify({
-          songId: null,
-          sectionId: null,
-          updatedAt: now,
-        })
+        if (deleteIdeas) {
+          const ideaIds = songIdeas.map((idea) => idea.id)
+          if (ideaIds.length > 0) {
+            await db.ideaMedia.where('ideaId').anyOf(ideaIds).delete()
+            await db.ideas.bulkDelete(ideaIds)
+          }
+        } else {
+          const now = new Date().toISOString()
+          // Move ideas back to the pool — do not delete them
+          await db.ideas.where('songId').equals(id).modify({
+            songId: null,
+            sectionId: null,
+            updatedAt: now,
+          })
+        }
 
         await db.songSections.where('songId').equals(id).delete()
         await db.songJournalEntries.where('songId').equals(id).delete()
