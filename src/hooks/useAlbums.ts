@@ -1,9 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { db } from '@/lib/db'
-import type { Album } from '@/types/album'
+import type { Album, AlbumFormat } from '@/types/album'
 
-type CreateAlbumInput = Omit<Album, 'id' | 'createdAt' | 'updatedAt'>
+type CreateAlbumInput = Omit<Album, 'id' | 'createdAt' | 'updatedAt' | 'format'> & {
+  format?: AlbumFormat
+}
 
 type UpdateAlbumInput = Partial<Omit<Album, 'id' | 'createdAt'>> & {
   id: string
@@ -39,6 +41,7 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
       id: crypto.randomUUID(),
       title: input.title,
       status: input.status ?? 'draft',
+      format: input.format ?? 'ep',
       artworkBlob: input.artworkBlob ?? null,
       releaseDate: input.releaseDate ?? null,
       credits: input.credits ?? null,

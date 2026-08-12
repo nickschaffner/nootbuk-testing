@@ -1,9 +1,12 @@
 export type AlbumStatus = 'draft' | 'in-progress' | 'released'
 
+export type AlbumFormat = 'single' | 'ep' | 'lp'
+
 export interface Album {
   id: string
   title: string
   status: AlbumStatus
+  format: AlbumFormat
   artworkBlob: Blob | null
   releaseDate: string | null
   credits: string | null

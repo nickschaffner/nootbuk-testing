@@ -18,6 +18,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { deleteAlbum } from '@/hooks/useAlbums'
 import { useAlbumSongs } from '@/hooks/useAlbumSongs'
+import { useAlbumTotalDurationSeconds } from '@/hooks/useSongVersions'
+import { formatAlbumFormat, formatAlbumLength } from '@/lib/album-display'
 import { formatRelativeTime } from '@/lib/format'
 import type { Album, AlbumStatus } from '@/types/album'
 
@@ -31,6 +33,8 @@ interface AlbumCardProps {
 
 export function AlbumCard({ album }: AlbumCardProps) {
   const tracks = useAlbumSongs(album.id)
+  const songIds = (tracks ?? []).map((track) => track.songId)
+  const totalDuration = useAlbumTotalDurationSeconds(songIds)
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -82,7 +86,11 @@ export function AlbumCard({ album }: AlbumCardProps) {
         </CardHeader>
         <CardContent className="pt-0">
           <p className="text-xs text-muted-foreground">
-            {tracks?.length ?? 0} tracks · {formatRelativeTime(album.updatedAt)}
+            {formatAlbumFormat(album.format)} · {tracks?.length ?? 0} tracks ·{' '}
+            {totalDuration === undefined
+              ? '…'
+              : formatAlbumLength(totalDuration)}{' '}
+            · {formatRelativeTime(album.updatedAt)}
           </p>
         </CardContent>
       </Link>

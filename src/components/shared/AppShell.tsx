@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Disc3, Guitar, Home, Lightbulb, Music2 } from 'lucide-react'
 
-import { QuickCaptureModal } from '@/components/capture/QuickCaptureModal'
+import { IdeaEditor } from '@/components/capture/IdeaEditor'
 import { BrowserSupportNotice } from '@/components/shared/BrowserSupportNotice'
 import { CaptureButton } from '@/components/shared/CaptureButton'
 import { MobileTabBar } from '@/components/shared/MobileTabBar'
@@ -77,7 +77,7 @@ export function AppShell() {
           </main>
           <CaptureButton />
           <MobileTabBar />
-          <QuickCaptureModal />
+          <IdeaEditor />
         </div>
       </div>
       </TooltipProvider>

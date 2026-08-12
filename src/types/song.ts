@@ -86,6 +86,8 @@ export interface SongVersion {
   filename: string
   mimeType: string
   blob: Blob
+  /** Duration in seconds; null if unknown / undecodable. */
+  duration: number | null
   isMain: boolean
   createdAt: string
 }

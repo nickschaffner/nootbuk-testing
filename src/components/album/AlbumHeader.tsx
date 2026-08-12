@@ -17,13 +17,20 @@ import { StatusStepIndicator } from '@/components/shared/StatusStepIndicator'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { deleteAlbum, updateAlbum } from '@/hooks/useAlbums'
-import type { Album, AlbumStatus } from '@/types/album'
+import { cn } from '@/lib/utils'
+import type { Album, AlbumFormat, AlbumStatus } from '@/types/album'
 
 const ALBUM_STATUSES = [
   'draft',
   'in-progress',
   'released',
 ] as const satisfies readonly AlbumStatus[]
+
+const ALBUM_FORMATS = [
+  { value: 'single', label: 'Single' },
+  { value: 'lp', label: 'LP' },
+  { value: 'ep', label: 'EP' },
+] as const satisfies ReadonlyArray<{ value: AlbumFormat; label: string }>
 
 interface AlbumHeaderProps {
   album: Album
@@ -34,12 +41,14 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
   const artworkInputRef = useRef<HTMLInputElement>(null)
   const [title, setTitle] = useState(album.title)
   const [status, setStatus] = useState(album.status)
+  const [format, setFormat] = useState<AlbumFormat>(album.format ?? 'ep')
   const [artworkUrl, setArtworkUrl] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     setTitle(album.title)
     setStatus(album.status)
+    setFormat(album.format ?? 'ep')
   }, [album])
 
   useEffect(() => {
@@ -164,6 +173,37 @@ export function AlbumHeader({ album }: AlbumHeaderProps) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs text-muted-foreground">Format</label>
+        <div
+          className="inline-flex rounded-md border p-0.5"
+          role="group"
+          aria-label="Album format"
+        >
+          {ALBUM_FORMATS.map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              className={cn(
+                'rounded-sm px-3 py-1.5 text-sm transition-colors',
+                format === value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              aria-pressed={format === value}
+              onClick={() => {
+                setFormat(value)
+                if (value !== album.format) {
+                  void persist({ id: album.id, format: value })
+                }
+              }}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 

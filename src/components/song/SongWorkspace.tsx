@@ -17,7 +17,6 @@ import { Download, FolderOutput } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
 import { ExportDialog } from '@/components/export/ExportDialog'
-import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
 import { AddSectionForm } from '@/components/song/AddSectionForm'
 import { ImportFromPoolSheet } from '@/components/song/ImportFromPoolSheet'
 import { SectionContainer } from '@/components/song/SectionContainer'
@@ -53,8 +52,7 @@ interface SongWorkspaceProps {
 export function SongWorkspace({ songId }: SongWorkspaceProps) {
   const songData = useSongWithSections(songId)
   const songIdeas = useIdeasForSong(songId)
-  const { open: openQuickCapture } = useQuickCapture()
-  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
+  const { open: openQuickCapture, openIdea } = useQuickCapture()
   const [importOpen, setImportOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
@@ -282,7 +280,7 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
                         sectionLabel: label,
                       })
                     }
-                    onIdeaClick={setSelectedIdeaId}
+                    onIdeaClick={openIdea}
                   />
                 ))}
               </SortableContext>
@@ -299,7 +297,7 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
                     sectionLabel: 'Unassigned',
                   })
                 }
-                onIdeaClick={setSelectedIdeaId}
+                onIdeaClick={openIdea}
               />
             </div>
 
@@ -332,11 +330,6 @@ export function SongWorkspace({ songId }: SongWorkspaceProps) {
         songTitle={songData.song.title}
         open={exportOpen}
         onOpenChange={setExportOpen}
-      />
-
-      <IdeaDetailSheet
-        ideaId={selectedIdeaId}
-        onClose={() => setSelectedIdeaId(null)}
       />
     </>
   )

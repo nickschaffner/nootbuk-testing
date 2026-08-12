@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 
 import { IdeaCard } from '@/components/pool/IdeaCard'
-import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -19,6 +18,7 @@ import {
   useUniqueInstrumentNames,
 } from '@/hooks/useIdeaMediaIndex'
 import { formatRoleLabel, ideaMatchesSearch, IDEA_ROLES } from '@/lib/idea-label'
+import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole, IdeaStatus } from '@/types/idea'
 
 const IDEA_STATUSES: IdeaStatus[] = ['raw', 'developed', 'used', 'archived']
@@ -26,12 +26,12 @@ const IDEA_STATUSES: IdeaStatus[] = ['raw', 'developed', 'used', 'archived']
 type MediaPresenceFilter = 'any' | 'audio' | 'midi' | 'image'
 
 export function IdeasPage() {
+  const { openIdea } = useQuickCapture()
   const ideas = useAllIdeas()
   const mediaMap = useIdeaMediaFlagsMap()
   const songTitles = useSongTitleMap()
   const instruments = useUniqueInstrumentNames(ideas)
 
-  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<IdeaRole | 'all'>('all')
   const [statusFilter, setStatusFilter] = useState<IdeaStatus | 'all'>('all')
@@ -203,17 +203,12 @@ export function IdeasPage() {
                     : null
                 }
                 mediaFlags={mediaFlagsFor(mediaMap, idea.id)}
-                onClick={() => setSelectedIdeaId(idea.id)}
+                onClick={() => openIdea(idea.id)}
               />
             ))}
           </div>
         )}
       </div>
-
-      <IdeaDetailSheet
-        ideaId={selectedIdeaId}
-        onClose={() => setSelectedIdeaId(null)}
-      />
     </>
   )
 }

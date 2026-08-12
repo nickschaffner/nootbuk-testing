@@ -253,6 +253,37 @@ export class NootbukDatabase extends Dexie {
           await mediaTable.bulkDelete(deleteIds)
         }
       })
+
+    // Album format + song version duration
+    this.version(6)
+      .stores({
+        ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: 'id, ideaId, type',
+        songs: 'id, status, createdAt, updatedAt',
+        songSections: 'id, songId, sortOrder',
+        songJournalEntries: 'id, songId, topic',
+        songReferences: 'id, songId',
+        songAssets: 'id, songId',
+        songTodos: 'id, songId, completed',
+        songVersions: 'id, songId, isMain',
+        albums: 'id, format, createdAt, updatedAt',
+        albumSongs: 'id, albumId, songId',
+        albumReferenceFiles: 'id, albumId',
+        instruments: 'id, type, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('albums').toCollection().modify((album) => {
+          if (album.format === undefined) {
+            album.format = 'ep'
+          }
+        })
+
+        await tx.table('songVersions').toCollection().modify((version) => {
+          if (version.duration === undefined) {
+            version.duration = null
+          }
+        })
+      })
   }
 }
 

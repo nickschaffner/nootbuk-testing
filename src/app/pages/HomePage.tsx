@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useMemo, useState } from 'react'
 
 import { IdeaCard } from '@/components/pool/IdeaCard'
-import { IdeaDetailSheet } from '@/components/pool/IdeaDetailSheet'
 import { AudioPlayButton } from '@/components/player/AudioPlayButton'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -15,6 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { createAlbum, useAllAlbums } from '@/hooks/useAlbums'
+import { useAlbumSongs } from '@/hooks/useAlbumSongs'
 import { useIdeasInPool } from '@/hooks/useIdeas'
 import {
   mediaFlagsFor,
@@ -22,7 +22,11 @@ import {
 } from '@/hooks/useIdeaMediaIndex'
 import { createSong, useAllSongs } from '@/hooks/useSongs'
 import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
-import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
+import {
+  useAlbumTotalDurationSeconds,
+  usePlaybackVersionsIndex,
+} from '@/hooks/useSongVersions'
+import { formatAlbumFormat, formatAlbumLength } from '@/lib/album-display'
 import { formatRelativeTime } from '@/lib/format'
 import { formatRoleLabel, ideaMatchesSearch, IDEA_ROLES } from '@/lib/idea-label'
 import { useQuickCapture } from '@/stores/quickCapture'
@@ -34,7 +38,7 @@ function formatSongStatus(status: SongStatus): string {
 }
 
 export function HomePage() {
-  const { open: openCapture } = useQuickCapture()
+  const { open: openCapture, openIdea } = useQuickCapture()
   const navigate = useNavigate()
 
   const songs = useAllSongs()
@@ -44,7 +48,6 @@ export function HomePage() {
   const todoCounts = useIncompleteTodoCountsBySong()
   const playbackVersions = usePlaybackVersionsIndex()
 
-  const [selectedIdeaId, setSelectedIdeaId] = useState<string | null>(null)
   const [roleFilter, setRoleFilter] = useState<IdeaRole | 'all'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [creatingSong, setCreatingSong] = useState(false)
@@ -52,6 +55,12 @@ export function HomePage() {
 
   const recentSongs = useMemo(() => (songs ?? []).slice(0, 3), [songs])
   const recentAlbum = albums?.[0] ?? null
+  const recentAlbumTracks = useAlbumSongs(recentAlbum?.id)
+  const recentAlbumSongIds = useMemo(
+    () => (recentAlbumTracks ?? []).map((track) => track.songId),
+    [recentAlbumTracks],
+  )
+  const recentAlbumDuration = useAlbumTotalDurationSeconds(recentAlbumSongIds)
 
   const filteredIdeas = useMemo(() => {
     if (!ideas) {
@@ -241,7 +250,11 @@ export function HomePage() {
                       {recentAlbum.title}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatRelativeTime(recentAlbum.updatedAt)}
+                      {formatAlbumFormat(recentAlbum.format)} ·{' '}
+                      {recentAlbumDuration === undefined
+                        ? '…'
+                        : formatAlbumLength(recentAlbumDuration)}{' '}
+                      · {formatRelativeTime(recentAlbum.updatedAt)}
                     </p>
                   </div>
                   <Badge variant="outline" className="shrink-0 capitalize">
@@ -309,18 +322,13 @@ export function HomePage() {
                   idea={idea}
                   songTitle={null}
                   mediaFlags={mediaFlagsFor(mediaMap, idea.id)}
-                  onClick={() => setSelectedIdeaId(idea.id)}
+                  onClick={() => openIdea(idea.id)}
                 />
               ))}
             </div>
           )}
         </section>
       </div>
-
-      <IdeaDetailSheet
-        ideaId={selectedIdeaId}
-        onClose={() => setSelectedIdeaId(null)}
-      />
     </>
   )
 }

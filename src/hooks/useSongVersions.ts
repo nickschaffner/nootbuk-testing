@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks'
 
+import { getAudioDuration } from '@/lib/audio'
 import { db } from '@/lib/db'
 import type { SongVersion } from '@/types/song'
 
@@ -28,6 +29,25 @@ export async function getVersionsForSong(
   }
 }
 
+async function resolveVersionDuration(
+  version: SongVersion,
+): Promise<number | null> {
+  if (version.duration != null && Number.isFinite(version.duration)) {
+    return version.duration
+  }
+
+  try {
+    const duration = await getAudioDuration(version.blob)
+    void db.songVersions.update(version.id, { duration }).catch((error) => {
+      console.warn('resolveVersionDuration update failed:', error)
+    })
+    return duration
+  } catch (error) {
+    console.warn('resolveVersionDuration failed:', error)
+    return null
+  }
+}
+
 export async function addVersion(
   songId: string,
   file: File,
@@ -42,6 +62,13 @@ export async function addVersion(
         .modify({ isMain: false })
     }
 
+    let duration: number | null = null
+    try {
+      duration = await getAudioDuration(file)
+    } catch (error) {
+      console.warn('addVersion duration decode failed:', error)
+    }
+
     const version: SongVersion = {
       id: crypto.randomUUID(),
       songId,
@@ -49,6 +76,7 @@ export async function addVersion(
       filename: file.name,
       mimeType: file.type || 'application/octet-stream',
       blob: file,
+      duration,
       isMain,
       createdAt: new Date().toISOString(),
     }
@@ -79,6 +107,38 @@ export async function getPlaybackVersionForSong(
   }
 
   return versions.find((version) => version.isMain) ?? versions[0]
+}
+
+/** Sum main (or most recent) version durations for the given song IDs. */
+export async function getAlbumTotalDurationSeconds(
+  songIds: string[],
+): Promise<number> {
+  let total = 0
+
+  for (const songId of songIds) {
+    const version = await getPlaybackVersionForSong(songId)
+    if (!version) {
+      continue
+    }
+
+    const duration = await resolveVersionDuration(version)
+    if (duration != null && Number.isFinite(duration)) {
+      total += duration
+    }
+  }
+
+  return total
+}
+
+export function useAlbumTotalDurationSeconds(songIds: string[]) {
+  const songIdsKey = songIds.join(',')
+  return useLiveQuery(
+    () =>
+      songIds.length === 0
+        ? Promise.resolve(0)
+        : getAlbumTotalDurationSeconds(songIds),
+    [songIdsKey],
+  )
 }
 
 export function usePlaybackVersionsIndex() {

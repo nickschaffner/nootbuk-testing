@@ -16,10 +16,17 @@ export type QuickCaptureTarget = {
   sectionLabel?: string
 }
 
+export type IdeaEditorMode = 'new' | 'edit'
+
 type QuickCaptureContextValue = {
   isOpen: boolean
+  mode: IdeaEditorMode
   target: QuickCaptureTarget | null
+  ideaId: string | null
+  /** Open IdeaEditor in new/create mode (optional song/section target). */
   open: (target?: QuickCaptureTarget) => void
+  /** Open IdeaEditor in edit mode for an existing idea. */
+  openIdea: (ideaId: string) => void
   close: () => void
 }
 
@@ -27,16 +34,29 @@ const QuickCaptureContext = createContext<QuickCaptureContextValue | null>(null)
 
 export function QuickCaptureProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false)
+  const [mode, setMode] = useState<IdeaEditorMode>('new')
   const [target, setTarget] = useState<QuickCaptureTarget | null>(null)
+  const [ideaId, setIdeaId] = useState<string | null>(null)
 
   const open = useCallback((nextTarget?: QuickCaptureTarget) => {
+    setMode('new')
+    setIdeaId(null)
     setTarget(nextTarget ?? null)
+    setIsOpen(true)
+  }, [])
+
+  const openIdea = useCallback((nextIdeaId: string) => {
+    setMode('edit')
+    setIdeaId(nextIdeaId)
+    setTarget(null)
     setIsOpen(true)
   }, [])
 
   const close = useCallback(() => {
     setIsOpen(false)
+    setMode('new')
     setTarget(null)
+    setIdeaId(null)
   }, [])
 
   useEffect(() => {
@@ -61,8 +81,8 @@ export function QuickCaptureProvider({ children }: { children: ReactNode }) {
   }, [close, isOpen, open])
 
   const value = useMemo(
-    () => ({ isOpen, target, open, close }),
-    [close, isOpen, open, target],
+    () => ({ isOpen, mode, target, ideaId, open, openIdea, close }),
+    [close, ideaId, isOpen, mode, open, openIdea, target],
   )
 
   return (
@@ -79,3 +99,6 @@ export function useQuickCapture() {
   }
   return context
 }
+
+/** Alias — same store as Quick Capture / IdeaEditor. */
+export const useIdeaEditor = useQuickCapture

@@ -1,5 +1,6 @@
 export type {
   Album,
+  AlbumFormat,
   AlbumReferenceFile,
   AlbumSong,
   AlbumStatus,

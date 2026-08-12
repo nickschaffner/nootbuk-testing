@@ -18,7 +18,11 @@ import { AddSongToAlbumSheet } from '@/components/album/AddSongToAlbumSheet'
 import { SortableTrackRow } from '@/components/album/SortableTrackRow'
 import { Button } from '@/components/ui/button'
 import { reorderTracks, type getSongsForAlbum } from '@/hooks/useAlbumSongs'
-import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
+import {
+  useAlbumTotalDurationSeconds,
+  usePlaybackVersionsIndex,
+} from '@/hooks/useSongVersions'
+import { formatAlbumLength } from '@/lib/album-display'
 import { albumTrackSortableId } from '@/lib/dnd-ids'
 
 type AlbumTrackEntry = Awaited<ReturnType<typeof getSongsForAlbum>>[number]
@@ -31,6 +35,8 @@ interface AlbumTrackListProps {
 export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
   const [addOpen, setAddOpen] = useState(false)
   const playbackVersions = usePlaybackVersionsIndex()
+  const songIds = useMemo(() => tracks.map((t) => t.songId), [tracks])
+  const totalDuration = useAlbumTotalDurationSeconds(songIds)
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -42,10 +48,7 @@ export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
     [tracks],
   )
 
-  const existingSongIds = useMemo(
-    () => tracks.map((t) => t.songId),
-    [tracks],
-  )
+  const existingSongIds = songIds
 
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event
@@ -62,7 +65,6 @@ export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
       return
     }
 
-    const songIds = tracks.map((t) => t.songId)
     try {
       await reorderTracks(albumId, arrayMove(songIds, oldIndex, newIndex))
     } catch {
@@ -74,7 +76,15 @@ export function AlbumTrackList({ albumId, tracks }: AlbumTrackListProps) {
     <>
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-lg font-semibold">Track Listing</h2>
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold">Track Listing</h2>
+            <p className="text-sm text-muted-foreground">
+              Total length:{' '}
+              {totalDuration === undefined
+                ? '…'
+                : formatAlbumLength(totalDuration)}
+            </p>
+          </div>
           <Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>
             <Plus className="size-4" />
             Add Song
