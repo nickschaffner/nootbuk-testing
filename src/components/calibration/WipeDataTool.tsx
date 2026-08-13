@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 import {
   wipeAllAlbums,
+  wipeAllData,
   wipeAllInstruments,
   wipeAllSongs,
   wipePoolIdeas,
@@ -19,74 +20,69 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 
-type SelectiveWipeKind = 'pool' | 'songs' | 'albums' | 'instruments'
+type WipeKind = 'all' | 'pool' | 'songs' | 'albums' | 'instruments'
 
-const WIPE_ACTIONS: Array<{
-  kind: SelectiveWipeKind
+const SELECTIVE_ACTIONS: Array<{
+  kind: Exclude<WipeKind, 'all'>
   label: string
-  description: string
   confirmTitle: string
   confirmBody: string
   run: () => Promise<void>
 }> = [
   {
     kind: 'pool',
-    label: 'Wipe Pool Ideas',
-    description: 'Deletes ideas in the pool (not attached to a song) and their media.',
-    confirmTitle: 'Wipe all pool ideas?',
+    label: 'Wipe Idea Pool',
+    confirmTitle: 'Wipe the idea pool?',
     confirmBody:
-      'This permanently deletes every idea with no song, plus their IdeaMedia. Song ideas are left alone.',
+      'Deletes every pool idea (not attached to a song) and their media. Song ideas stay.',
     run: wipePoolIdeas,
   },
   {
     kind: 'songs',
-    label: 'Wipe All Songs',
-    description:
-      'Deletes every song, related song data, and ideas that belong to songs.',
-    confirmTitle: 'Wipe all songs and their ideas?',
+    label: 'Wipe Songs',
+    confirmTitle: 'Wipe all songs?',
     confirmBody:
-      'This permanently deletes all songs, sections, journals, references, assets, todos, versions, album track links, and every idea attached to a song (with media). Pool ideas are left alone.',
+      'Deletes every song, related song data, and ideas that belong to songs (with media). Pool ideas stay.',
     run: wipeAllSongs,
   },
   {
     kind: 'albums',
-    label: 'Wipe All Albums',
-    description: 'Deletes every album, track listing, and album references.',
+    label: 'Wipe Albums',
     confirmTitle: 'Wipe all albums?',
     confirmBody:
-      'This permanently deletes all albums, album–song links, and album references. Songs themselves are left alone.',
+      'Deletes every album, track listing, and album references. Songs stay.',
     run: wipeAllAlbums,
   },
   {
     kind: 'instruments',
-    label: 'Wipe All Instruments',
-    description: 'Deletes every instrument record.',
+    label: 'Wipe Instruments',
     confirmTitle: 'Wipe all instruments?',
-    confirmBody:
-      'This permanently deletes every instrument. Ideas that referenced them keep their other data.',
+    confirmBody: 'Deletes every instrument record.',
     run: wipeAllInstruments,
   },
 ]
 
-interface SelectiveWipeToolProps {
+interface WipeDataToolProps {
   onComplete?: () => void
 }
 
-export function SelectiveWipeTool({ onComplete }: SelectiveWipeToolProps) {
-  const [busyKind, setBusyKind] = useState<SelectiveWipeKind | null>(null)
-  const [openKind, setOpenKind] = useState<SelectiveWipeKind | null>(null)
+export function WipeDataTool({ onComplete }: WipeDataToolProps) {
+  const [busyKind, setBusyKind] = useState<WipeKind | null>(null)
+  const [openKind, setOpenKind] = useState<WipeKind | null>(null)
   const [message, setMessage] = useState<string | null>(null)
 
-  async function handleWipe(kind: SelectiveWipeKind, run: () => Promise<void>) {
+  async function handleWipe(kind: WipeKind, run: () => Promise<void>) {
     setBusyKind(kind)
     setMessage(null)
     try {
       await run()
       setOpenKind(null)
-      setMessage(`Done: ${kind} wipe.`)
+      setMessage(
+        kind === 'all' ? 'All Dexie tables cleared.' : `Done: ${kind} wipe.`,
+      )
       onComplete?.()
     } catch (error) {
-      console.warn(`selective wipe (${kind}) failed:`, error)
+      console.warn(`wipe (${kind}) failed:`, error)
       setMessage(
         error instanceof Error ? error.message : `Failed to wipe ${kind}.`,
       )
@@ -98,14 +94,49 @@ export function SelectiveWipeTool({ onComplete }: SelectiveWipeToolProps) {
   return (
     <section className="space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-4">
       <div>
-        <h2 className="text-base font-semibold">Selective Wipe</h2>
+        <h2 className="text-base font-semibold">Wipe Data</h2>
         <p className="text-sm text-muted-foreground">
-          Clear one slice of the database without a full wipe.
+          Clear the whole database or one slice of it.
         </p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
-        {WIPE_ACTIONS.map((action) => (
+      <AlertDialog
+        open={openKind === 'all'}
+        onOpenChange={(open) => setOpenKind(open ? 'all' : null)}
+      >
+        <AlertDialogTrigger asChild>
+          <Button variant="destructive" disabled={busyKind !== null}>
+            {busyKind === 'all' ? 'Wiping...' : 'Wipe All Data'}
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Wipe the entire database?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all ideas, songs, albums, instruments,
+              media, and related data. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={busyKind !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={busyKind !== null}
+              onClick={(event) => {
+                event.preventDefault()
+                void handleWipe('all', wipeAllData)
+              }}
+            >
+              {busyKind === 'all' ? 'Wiping...' : 'Wipe Everything'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <div className="flex flex-wrap gap-2">
+        {SELECTIVE_ACTIONS.map((action) => (
           <AlertDialog
             key={action.kind}
             open={openKind === action.kind}
@@ -117,13 +148,10 @@ export function SelectiveWipeTool({ onComplete }: SelectiveWipeToolProps) {
               <Button
                 type="button"
                 variant="outline"
-                className="h-auto flex-col items-start gap-1 px-3 py-2 text-left"
+                size="sm"
                 disabled={busyKind !== null}
               >
-                <span className="font-medium">{action.label}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {action.description}
-                </span>
+                {busyKind === action.kind ? 'Wiping...' : action.label}
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
