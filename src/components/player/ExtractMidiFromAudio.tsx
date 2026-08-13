@@ -10,11 +10,17 @@ import type { NoteEvent } from '@/types/idea'
 interface ExtractMidiFromAudioProps {
   audioBlob: Blob
   onConfirm: (notes: NoteEvent[]) => void | Promise<void>
+  confirmLabel?: string
+  confirmHint?: string
+  previewHint?: string
 }
 
 export function ExtractMidiFromAudio({
   audioBlob,
   onConfirm,
+  confirmLabel = 'Save MIDI',
+  confirmHint,
+  previewHint = 'Preview the transcription before saving it to this idea.',
 }: ExtractMidiFromAudioProps) {
   const {
     convert,
@@ -103,9 +109,10 @@ export function ExtractMidiFromAudio({
         <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
           <div>
             <p className="text-sm font-medium">Extracted MIDI</p>
-            <p className="text-xs text-muted-foreground">
-              Preview the transcription before saving it to this idea.
-            </p>
+            <p className="text-xs text-muted-foreground">{previewHint}</p>
+            {confirmHint ? (
+              <p className="mt-1 text-xs text-muted-foreground">{confirmHint}</p>
+            ) : null}
           </div>
 
           <MidiPlayer notes={result} patchId={previewPatch} />
@@ -117,7 +124,7 @@ export function ExtractMidiFromAudio({
               disabled={isSaving || result.length === 0}
               onClick={() => void handleConfirm()}
             >
-              {isSaving ? 'Saving...' : 'Save MIDI'}
+              {isSaving ? 'Saving...' : confirmLabel}
             </Button>
             <Button
               type="button"

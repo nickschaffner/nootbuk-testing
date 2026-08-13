@@ -1,4 +1,4 @@
-import type { IdeaMedia, NoteEvent, SequenceNote } from '@/types/idea'
+import type { IdeaMedia, NoteEvent } from '@/types/idea'
 
 export type QuickCaptureBlockType =
   | 'audio'
@@ -29,8 +29,8 @@ export type QuickCaptureBlock =
   | {
       id: string
       type: 'notes'
-      notes: SequenceNote[]
-      label: string | null
+      noteEvents: NoteEvent[]
+      bpm: number
       mediaId?: string
       dirty?: boolean
     }
@@ -68,7 +68,7 @@ export function createEmptyBlock(
     case 'midi':
       return { id, type: 'midi', noteEvents: [], bpm: 120, dirty: true }
     case 'notes':
-      return { id, type: 'notes', notes: [], label: null, dirty: true }
+      return { id, type: 'notes', noteEvents: [], bpm: 120, dirty: true }
     case 'image':
       return { id, type: 'image', file: null, previewUrl: null, dirty: true }
     case 'file':
@@ -95,9 +95,8 @@ export function blockHasContent(block: QuickCaptureBlock): boolean {
     case 'audio':
       return block.blob !== null
     case 'midi':
-      return block.noteEvents.length > 0
     case 'notes':
-      return block.notes.length > 0
+      return block.noteEvents.length > 0
     case 'image':
     case 'file':
       return block.file !== null
@@ -145,9 +144,10 @@ export function mediaItemsToBlocks(media: IdeaMedia[]): QuickCaptureBlock[] {
     }
 
     if (item.type === 'midi') {
+      // Open MIDI on the note-picker timeline (same NoteEvent storage).
       blocks.push({
         id: crypto.randomUUID(),
-        type: 'midi',
+        type: 'notes',
         noteEvents: item.noteData ?? [],
         bpm: 120,
         mediaId: item.id,

@@ -13,6 +13,17 @@ const NOTE_NAMES = [
   'B',
 ] as const
 
+/** Chromatic pitch-class offsets for natural note letters. */
+const LETTER_TO_PITCH_CLASS: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+}
+
 const NOTE_NAME_PATTERN = /^([A-G])(#|b)?(-?\d+)$/
 
 export function midiToNoteName(midi: number): string {
@@ -32,9 +43,9 @@ export function noteNameToMidi(noteName: string): number {
   }
 
   const [, letter, accidental, octaveStr] = match
-  let noteIndex = 'CDEFGAB'.indexOf(letter)
+  let noteIndex = LETTER_TO_PITCH_CLASS[letter]
 
-  if (noteIndex === -1) {
+  if (noteIndex === undefined) {
     throw new Error(`Invalid note letter: "${letter}"`)
   }
 
