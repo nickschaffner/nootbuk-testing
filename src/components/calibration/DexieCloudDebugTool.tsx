@@ -79,11 +79,6 @@ export function DexieCloudDebugTool() {
       return
     }
     console.log('[dexie-cloud syncState]', {
-      phase: syncState.phase,
-      status: syncState.status,
-      error: syncState.error,
-      license: syncState.license,
-      progress: syncState.progress,
       ...syncState,
     })
   }, [syncState])
@@ -227,7 +222,7 @@ export function DexieCloudDebugTool() {
           variant="outline"
           disabled={busyAction !== null}
           onClick={() =>
-            void runSync('push', () => db.cloud.sync({ purpose: 'push' }))
+            void runSync('push', () => db.cloud.sync({ purpose: 'push', wait: true }))
           }
         >
           {busyAction === 'push' ? 'Pushing...' : 'Force Push'}
@@ -238,7 +233,7 @@ export function DexieCloudDebugTool() {
           variant="outline"
           disabled={busyAction !== null}
           onClick={() =>
-            void runSync('pull', () => db.cloud.sync({ purpose: 'pull' }))
+            void runSync('pull', () => db.cloud.sync({ purpose: 'pull', wait: true }))
           }
         >
           {busyAction === 'pull' ? 'Pulling...' : 'Force Pull'}
