@@ -473,5 +473,7 @@ export const db = new NootbukDatabase()
 db.cloud.configure({
   databaseUrl: import.meta.env.VITE_DEXIE_CLOUD_URL,
   requireAuth: true,
-  tryUseServiceWorker: true,
+  // PWA sw.js is a cache worker, not Dexie Cloud's sync worker. If this is true,
+  // Dexie posts sync to that SW and never starts LocalSyncWorker — push/pull hang.
+  tryUseServiceWorker: false,
 })

@@ -1,5 +1,3 @@
-importScripts('/dexie-cloud-sw.js')
-
 const CACHE_NAME = 'nootbuk-v1'
 
 const PRECACHE_URLS = [
