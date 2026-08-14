@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import { DatabaseStatsTool } from '@/components/calibration/DatabaseStatsTool'
+import { DexieCloudDebugTool } from '@/components/calibration/DexieCloudDebugTool'
 import { ExportImportDatabaseTool } from '@/components/calibration/ExportImportDatabaseTool'
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { SeedSampleDataTool } from '@/components/calibration/SeedSampleDataTool'
@@ -30,6 +31,7 @@ export function CalibrationPage() {
         </p>
       </div>
 
+      <DexieCloudDebugTool />
       <WipeDataTool onComplete={refreshStats} />
       <DatabaseStatsTool refreshToken={statsRefreshToken} />
       <ExportImportDatabaseTool onComplete={refreshStats} />

@@ -2,6 +2,9 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  VITE_DEXIE_CLOUD_URL = "https://zbod7olnw.dexie.cloud"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
