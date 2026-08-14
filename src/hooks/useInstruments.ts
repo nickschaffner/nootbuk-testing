@@ -67,8 +67,7 @@ export async function createInstrument(
 ): Promise<Instrument> {
   try {
     const now = new Date().toISOString()
-    const instrument: Instrument = {
-      id: crypto.randomUUID(),
+    const instrument = {
       name: input.name,
       type: input.type,
       defaultPatch: input.defaultPatch ?? null,
@@ -76,8 +75,8 @@ export async function createInstrument(
       updatedAt: now,
     }
 
-    await db.instruments.add(instrument)
-    return instrument
+    const id = await db.instruments.add(instrument)
+    return { ...instrument, id }
   } catch (error) {
     console.warn('createInstrument failed:', error)
     throw error

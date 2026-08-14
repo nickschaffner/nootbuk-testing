@@ -186,8 +186,7 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
       await removeExistingExclusiveMedia(input.ideaId, 'midi', source)
     }
 
-    const media: IdeaMedia = {
-      id: crypto.randomUUID(),
+    const media = {
       ideaId: input.ideaId,
       type: input.type,
       source,
@@ -200,8 +199,8 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
       createdAt: new Date().toISOString(),
     }
 
-    await db.ideaMedia.add(media)
-    return media
+    const id = await db.ideaMedia.add(media)
+    return { ...media, id }
   } catch (error) {
     console.warn('addMediaToIdea failed:', error)
     throw toStorageError(error)

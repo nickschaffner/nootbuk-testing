@@ -52,8 +52,7 @@ export async function createTodo(
         ? 0
         : Math.max(...existing.map((t) => t.sortOrder)) + 1
 
-    const todo: SongTodo = {
-      id: crypto.randomUUID(),
+    const todo = {
       songId,
       text,
       timestamp,
@@ -62,8 +61,8 @@ export async function createTodo(
       createdAt: new Date().toISOString(),
     }
 
-    await db.songTodos.add(todo)
-    return todo
+    const id = await db.songTodos.add(todo)
+    return { ...todo, id }
   } catch (error) {
     console.warn('createTodo failed:', error)
     throw error

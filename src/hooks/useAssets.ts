@@ -32,8 +32,7 @@ export async function addAssetToSong(
       ? 'artwork'
       : 'file'
 
-    const asset: SongAsset = {
-      id: crypto.randomUUID(),
+    const asset = {
       songId,
       type,
       filename: file.name,
@@ -42,8 +41,8 @@ export async function addAssetToSong(
       createdAt: new Date().toISOString(),
     }
 
-    await db.songAssets.add(asset)
-    return asset
+    const id = await db.songAssets.add(asset)
+    return { ...asset, id }
   } catch (error) {
     console.warn('addAssetToSong failed:', error)
     throw toStorageError(error)

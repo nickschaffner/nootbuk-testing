@@ -69,8 +69,7 @@ export async function addVersion(
       console.warn('addVersion duration decode failed:', error)
     }
 
-    const version: SongVersion = {
-      id: crypto.randomUUID(),
+    const version = {
       songId,
       label,
       filename: file.name,
@@ -81,8 +80,8 @@ export async function addVersion(
       createdAt: new Date().toISOString(),
     }
 
-    await db.songVersions.add(version)
-    return version
+    const id = await db.songVersions.add(version)
+    return { ...version, id }
   } catch (error) {
     console.warn('addVersion failed:', error)
     throw error

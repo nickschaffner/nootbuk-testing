@@ -54,8 +54,7 @@ export async function createAlbumReference(
   input: CreateAlbumReferenceInput,
 ): Promise<AlbumReference> {
   try {
-    const reference: AlbumReference = {
-      id: crypto.randomUUID(),
+    const reference = {
       albumId: input.albumId,
       text: input.text ?? null,
       url: input.url ?? null,
@@ -68,8 +67,8 @@ export async function createAlbumReference(
       createdAt: new Date().toISOString(),
     }
 
-    await db.albumReferences.add(reference)
-    return reference
+    const id = await db.albumReferences.add(reference)
+    return { ...reference, id }
   } catch (error) {
     console.warn('createAlbumReference failed:', error)
     throw error

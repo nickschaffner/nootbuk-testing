@@ -103,8 +103,7 @@ export async function getIdeasForSection(sectionId: string): Promise<Idea[]> {
 export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
   try {
     const now = new Date().toISOString()
-    const idea: Idea = {
-      id: crypto.randomUUID(),
+    const idea = {
       songId: input.songId ?? null,
       sectionId: input.sectionId ?? null,
       sortOrder:
@@ -126,8 +125,8 @@ export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
       updatedAt: now,
     }
 
-    await db.ideas.add(idea)
-    return idea
+    const id = await db.ideas.add(idea)
+    return { ...idea, id }
   } catch (error) {
     console.warn('createIdea failed:', error)
     throw toStorageError(error)
@@ -214,9 +213,9 @@ export async function reorderIdeas(orderedIds: string[]): Promise<void> {
 async function duplicateIdeaMedia(sourceIdeaId: string, targetIdeaId: string) {
   const mediaItems = await db.ideaMedia.where('ideaId').equals(sourceIdeaId).toArray()
   for (const item of mediaItems) {
+    const { id: _id, ...rest } = item
     await db.ideaMedia.add({
-      ...item,
-      id: crypto.randomUUID(),
+      ...rest,
       ideaId: targetIdeaId,
       createdAt: new Date().toISOString(),
     })
@@ -232,20 +231,22 @@ export async function copyIdea(ideaId: string): Promise<Idea> {
 
     const now = new Date().toISOString()
     const sortOrder = await nextIdeaSortOrder(existing.songId, existing.sectionId)
-    const newIdea: Idea = {
-      ...existing,
-      id: crypto.randomUUID(),
+    const { id: _id, ...rest } = existing
+    const newIdea = {
+      ...rest,
       sortOrder,
       createdAt: now,
       updatedAt: now,
     }
 
+    let created: Idea
     await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
-      await db.ideas.add(newIdea)
-      await duplicateIdeaMedia(ideaId, newIdea.id)
+      const id = await db.ideas.add(newIdea)
+      created = { ...newIdea, id }
+      await duplicateIdeaMedia(ideaId, id)
     })
 
-    return newIdea
+    return created!
   } catch (error) {
     console.warn('copyIdea failed:', error)
     throw error
@@ -265,9 +266,9 @@ export async function copyIdeaToSong(
 
     const now = new Date().toISOString()
     const sortOrder = await nextIdeaSortOrder(songId, sectionId)
-    const newIdea: Idea = {
-      ...existing,
-      id: crypto.randomUUID(),
+    const { id: _id, ...rest } = existing
+    const newIdea = {
+      ...rest,
       songId,
       sectionId,
       sortOrder,
@@ -275,12 +276,14 @@ export async function copyIdeaToSong(
       updatedAt: now,
     }
 
+    let created: Idea
     await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
-      await db.ideas.add(newIdea)
-      await duplicateIdeaMedia(ideaId, newIdea.id)
+      const id = await db.ideas.add(newIdea)
+      created = { ...newIdea, id }
+      await duplicateIdeaMedia(ideaId, id)
     })
 
-    return newIdea
+    return created!
   } catch (error) {
     console.warn('copyIdeaToSong failed:', error)
     throw error
@@ -296,9 +299,9 @@ export async function copyIdeaToPool(ideaId: string): Promise<Idea> {
 
     const now = new Date().toISOString()
     const sortOrder = await nextIdeaSortOrder(null, null)
-    const newIdea: Idea = {
-      ...existing,
-      id: crypto.randomUUID(),
+    const { id: _id, ...rest } = existing
+    const newIdea = {
+      ...rest,
       songId: null,
       sectionId: null,
       sortOrder,
@@ -306,12 +309,14 @@ export async function copyIdeaToPool(ideaId: string): Promise<Idea> {
       updatedAt: now,
     }
 
+    let created: Idea
     await db.transaction('rw', [db.ideas, db.ideaMedia], async () => {
-      await db.ideas.add(newIdea)
-      await duplicateIdeaMedia(ideaId, newIdea.id)
+      const id = await db.ideas.add(newIdea)
+      created = { ...newIdea, id }
+      await duplicateIdeaMedia(ideaId, id)
     })
 
-    return newIdea
+    return created!
   } catch (error) {
     console.warn('copyIdeaToPool failed:', error)
     throw error

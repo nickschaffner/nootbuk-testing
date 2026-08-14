@@ -41,8 +41,7 @@ export async function createSection(
   input: CreateSectionInput,
 ): Promise<SongSection> {
   try {
-    const section: SongSection = {
-      id: crypto.randomUUID(),
+    const section = {
       songId: input.songId,
       name: input.name,
       sortOrder:
@@ -50,8 +49,8 @@ export async function createSection(
       createdAt: new Date().toISOString(),
     }
 
-    await db.songSections.add(section)
-    return section
+    const id = await db.songSections.add(section)
+    return { ...section, id }
   } catch (error) {
     console.warn('createSection failed:', error)
     throw error

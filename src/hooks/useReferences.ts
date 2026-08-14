@@ -46,8 +46,7 @@ export async function createReference(
   input: CreateReferenceInput,
 ): Promise<SongReference> {
   try {
-    const reference: SongReference = {
-      id: crypto.randomUUID(),
+    const reference = {
       songId: input.songId,
       text: input.text ?? null,
       url: input.url ?? null,
@@ -60,8 +59,8 @@ export async function createReference(
       createdAt: new Date().toISOString(),
     }
 
-    await db.songReferences.add(reference)
-    return reference
+    const id = await db.songReferences.add(reference)
+    return { ...reference, id }
   } catch (error) {
     console.warn('createReference failed:', error)
     throw error

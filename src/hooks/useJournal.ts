@@ -53,8 +53,7 @@ export async function createEntry(
 ): Promise<SongJournalEntry> {
   try {
     const now = new Date().toISOString()
-    const entry: SongJournalEntry = {
-      id: crypto.randomUUID(),
+    const entry = {
       songId: input.songId,
       topic: input.topic ?? null,
       content: input.content,
@@ -64,8 +63,8 @@ export async function createEntry(
       updatedAt: now,
     }
 
-    await db.songJournalEntries.add(entry)
-    return entry
+    const id = await db.songJournalEntries.add(entry)
+    return { ...entry, id }
   } catch (error) {
     console.warn('createEntry failed:', error)
     throw error

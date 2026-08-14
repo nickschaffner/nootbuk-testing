@@ -37,8 +37,7 @@ export async function getAllAlbums(): Promise<Album[]> {
 export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
   try {
     const now = new Date().toISOString()
-    const album: Album = {
-      id: crypto.randomUUID(),
+    const album = {
       title: input.title,
       status: input.status ?? 'draft',
       format: input.format ?? 'ep',
@@ -53,8 +52,8 @@ export async function createAlbum(input: CreateAlbumInput): Promise<Album> {
       updatedAt: now,
     }
 
-    await db.albums.add(album)
-    return album
+    const id = await db.albums.add(album)
+    return { ...album, id }
   } catch (error) {
     console.warn('createAlbum failed:', error)
     throw error

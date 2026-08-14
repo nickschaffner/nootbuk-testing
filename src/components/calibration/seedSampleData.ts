@@ -1,13 +1,5 @@
 import { db } from '@/lib/db'
-import type { Album } from '@/types/album'
-import type { Idea, IdeaRole } from '@/types/idea'
-import type { Instrument } from '@/types/instrument'
-import type {
-  Song,
-  SongJournalEntry,
-  SongSection,
-  SongTodo,
-} from '@/types/song'
+import type { IdeaRole } from '@/types/idea'
 
 function nowIso(): string {
   return new Date().toISOString()
@@ -23,32 +15,32 @@ function daysAgo(days: number): string {
 export async function seedSampleData(): Promise<void> {
   const now = nowIso()
 
-  const bass: Instrument = {
-    id: crypto.randomUUID(),
+  const bassFields = {
     name: 'Fender Jazz Bass',
-    type: 'bass',
+    type: 'bass' as const,
     defaultPatch: 'Bass',
     createdAt: now,
     updatedAt: now,
   }
-  const keys: Instrument = {
-    id: crypto.randomUUID(),
+  const bass = { ...bassFields, id: await db.instruments.add(bassFields) }
+
+  const keysFields = {
     name: 'Rhodes Mark I',
-    type: 'keys',
+    type: 'keys' as const,
     defaultPatch: 'E. Piano',
     createdAt: now,
     updatedAt: now,
   }
-  const synth: Instrument = {
-    id: crypto.randomUUID(),
+  const keys = { ...keysFields, id: await db.instruments.add(keysFields) }
+
+  const synthFields = {
     name: 'Serum Pad Rack',
-    type: 'synth-vst',
+    type: 'synth-vst' as const,
     defaultPatch: 'Synth Pad',
     createdAt: now,
     updatedAt: now,
   }
-
-  await db.instruments.bulkAdd([bass, keys, synth])
+  const synth = { ...synthFields, id: await db.instruments.add(synthFields) }
 
   const poolRoles: IdeaRole[] = [
     'melody',
@@ -61,65 +53,63 @@ export async function seedSampleData(): Promise<void> {
     'texture',
   ]
 
-  const poolIdeas: Idea[] = poolRoles.map((role, index) => {
-    const created = daysAgo(index + 1)
-    const withWords = index % 2 === 0
-    return {
-      id: crypto.randomUUID(),
-      songId: null,
-      sectionId: null,
-      sortOrder: index,
-      role,
-      sectionIntent: index % 3 === 0 ? 'chorus' : index % 3 === 1 ? 'verse' : null,
-      key: index % 2 === 0 ? 'Am' : 'C',
-      tempo: 90 + index * 5,
-      timeSignature: '4/4',
-      instrumentId:
-        role === 'bassline'
-          ? bass.id
-          : role === 'chords' || role === 'melody'
-            ? keys.id
-            : role === 'synth' || role === 'texture'
-              ? synth.id
-              : null,
-      instrumentName:
-        role === 'bassline'
-          ? bass.name
-          : role === 'chords' || role === 'melody'
-            ? keys.name
-            : role === 'synth' || role === 'texture'
-              ? synth.name
-              : null,
-      patchName:
-        role === 'bassline'
-          ? bass.defaultPatch
-          : role === 'chords' || role === 'melody'
-            ? keys.defaultPatch
-            : role === 'synth' || role === 'texture'
-              ? synth.defaultPatch
-              : null,
-      patchSettings: null,
-      lyrics: withWords
-        ? `Sample lyrics for ${role} idea ${index + 1}`
-        : null,
-      notes: withWords
-        ? `Production note: try this ${role} idea mid-tempo.`
-        : null,
-      status: index < 2 ? 'developed' : 'raw',
-      createdAt: created,
-      updatedAt: created,
-    }
-  })
+  await db.ideas.bulkAdd(
+    poolRoles.map((role, index) => {
+      const created = daysAgo(index + 1)
+      const withWords = index % 2 === 0
+      return {
+        songId: null,
+        sectionId: null,
+        sortOrder: index,
+        role,
+        sectionIntent: index % 3 === 0 ? 'chorus' : index % 3 === 1 ? 'verse' : null,
+        key: index % 2 === 0 ? 'Am' : 'C',
+        tempo: 90 + index * 5,
+        timeSignature: '4/4',
+        instrumentId:
+          role === 'bassline'
+            ? bass.id
+            : role === 'chords' || role === 'melody'
+              ? keys.id
+              : role === 'synth' || role === 'texture'
+                ? synth.id
+                : null,
+        instrumentName:
+          role === 'bassline'
+            ? bass.name
+            : role === 'chords' || role === 'melody'
+              ? keys.name
+              : role === 'synth' || role === 'texture'
+                ? synth.name
+                : null,
+        patchName:
+          role === 'bassline'
+            ? bass.defaultPatch
+            : role === 'chords' || role === 'melody'
+              ? keys.defaultPatch
+              : role === 'synth' || role === 'texture'
+                ? synth.defaultPatch
+                : null,
+        patchSettings: null,
+        lyrics: withWords
+          ? `Sample lyrics for ${role} idea ${index + 1}`
+          : null,
+        notes: withWords
+          ? `Production note: try this ${role} idea mid-tempo.`
+          : null,
+        status: index < 2 ? 'developed' : 'raw',
+        createdAt: created,
+        updatedAt: created,
+      }
+    }),
+  )
 
-  await db.ideas.bulkAdd(poolIdeas)
-
-  const song1: Song = {
-    id: crypto.randomUUID(),
+  const song1Fields = {
     title: 'Midnight Signal',
     key: 'Am',
     tempo: 118,
     timeSignature: '4/4',
-    status: 'writing',
+    status: 'writing' as const,
     genre: 'Indie',
     lyrics: 'Walking through the static night\nLooking for a signal light',
     songwriter: null,
@@ -131,14 +121,14 @@ export async function seedSampleData(): Promise<void> {
     createdAt: daysAgo(10),
     updatedAt: daysAgo(1),
   }
+  const song1 = { ...song1Fields, id: await db.songs.add(song1Fields) }
 
-  const song2: Song = {
-    id: crypto.randomUUID(),
+  const song2Fields = {
     title: 'Glass Highway',
     key: 'D',
     tempo: 96,
     timeSignature: '4/4',
-    status: 'arranging',
+    status: 'arranging' as const,
     genre: 'Electronic',
     lyrics: 'Glass highway under violet sky',
     songwriter: null,
@@ -150,64 +140,56 @@ export async function seedSampleData(): Promise<void> {
     createdAt: daysAgo(8),
     updatedAt: daysAgo(2),
   }
+  const song2 = { ...song2Fields, id: await db.songs.add(song2Fields) }
 
-  await db.songs.bulkAdd([song1, song2])
+  const song1Intro = {
+    songId: song1.id,
+    name: 'Intro',
+    sortOrder: 0,
+    createdAt: now,
+  }
+  const song1Verse = {
+    songId: song1.id,
+    name: 'Verse',
+    sortOrder: 1,
+    createdAt: now,
+  }
+  const song1Chorus = {
+    songId: song1.id,
+    name: 'Chorus',
+    sortOrder: 2,
+    createdAt: now,
+  }
+  const song1IntroId = await db.songSections.add(song1Intro)
+  const song1VerseId = await db.songSections.add(song1Verse)
+  const song1ChorusId = await db.songSections.add(song1Chorus)
 
-  const song1Sections: SongSection[] = [
+  const song2Verse = {
+    songId: song2.id,
+    name: 'Verse',
+    sortOrder: 0,
+    createdAt: now,
+  }
+  const song2Bridge = {
+    songId: song2.id,
+    name: 'Bridge',
+    sortOrder: 1,
+    createdAt: now,
+  }
+  const song2Outro = {
+    songId: song2.id,
+    name: 'Outro',
+    sortOrder: 2,
+    createdAt: now,
+  }
+  const song2VerseId = await db.songSections.add(song2Verse)
+  const song2BridgeId = await db.songSections.add(song2Bridge)
+  await db.songSections.add(song2Outro)
+
+  await db.ideas.bulkAdd([
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
-      name: 'Intro',
-      sortOrder: 0,
-      createdAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      songId: song1.id,
-      name: 'Verse',
-      sortOrder: 1,
-      createdAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      songId: song1.id,
-      name: 'Chorus',
-      sortOrder: 2,
-      createdAt: now,
-    },
-  ]
-
-  const song2Sections: SongSection[] = [
-    {
-      id: crypto.randomUUID(),
-      songId: song2.id,
-      name: 'Verse',
-      sortOrder: 0,
-      createdAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      songId: song2.id,
-      name: 'Bridge',
-      sortOrder: 1,
-      createdAt: now,
-    },
-    {
-      id: crypto.randomUUID(),
-      songId: song2.id,
-      name: 'Outro',
-      sortOrder: 2,
-      createdAt: now,
-    },
-  ]
-
-  await db.songSections.bulkAdd([...song1Sections, ...song2Sections])
-
-  const songIdeas: Idea[] = [
-    {
-      id: crypto.randomUUID(),
-      songId: song1.id,
-      sectionId: song1Sections[0].id,
+      sectionId: song1IntroId,
       sortOrder: 0,
       role: 'texture',
       sectionIntent: 'intro',
@@ -225,9 +207,8 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(3),
     },
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
-      sectionId: song1Sections[1].id,
+      sectionId: song1VerseId,
       sortOrder: 0,
       role: 'bassline',
       sectionIntent: 'verse',
@@ -245,9 +226,8 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(3),
     },
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
-      sectionId: song1Sections[2].id,
+      sectionId: song1ChorusId,
       sortOrder: 0,
       role: 'melody',
       sectionIntent: 'chorus',
@@ -265,9 +245,8 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(2),
     },
     {
-      id: crypto.randomUUID(),
       songId: song2.id,
-      sectionId: song2Sections[0].id,
+      sectionId: song2VerseId,
       sortOrder: 0,
       role: 'chords',
       sectionIntent: 'verse',
@@ -285,9 +264,8 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(2),
     },
     {
-      id: crypto.randomUUID(),
       songId: song2.id,
-      sectionId: song2Sections[1].id,
+      sectionId: song2BridgeId,
       sortOrder: 0,
       role: 'synth',
       sectionIntent: 'bridge',
@@ -304,13 +282,10 @@ export async function seedSampleData(): Promise<void> {
       createdAt: daysAgo(5),
       updatedAt: daysAgo(1),
     },
-  ]
+  ])
 
-  await db.ideas.bulkAdd(songIdeas)
-
-  const journals: SongJournalEntry[] = [
+  await db.songJournalEntries.bulkAdd([
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
       topic: 'Arrangement',
       content: 'Keep intro sparse; drop drums until chorus.',
@@ -319,7 +294,6 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(4),
     },
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
       topic: 'Mix Notes',
       content: 'Bass needs more mid presence around 800Hz.',
@@ -328,7 +302,6 @@ export async function seedSampleData(): Promise<void> {
       updatedAt: daysAgo(3),
     },
     {
-      id: crypto.randomUUID(),
       songId: song2.id,
       topic: 'Production',
       content: 'Try sidechain pad to kick in the bridge.',
@@ -336,13 +309,10 @@ export async function seedSampleData(): Promise<void> {
       createdAt: daysAgo(2),
       updatedAt: daysAgo(2),
     },
-  ]
+  ])
 
-  await db.songJournalEntries.bulkAdd(journals)
-
-  const todos: SongTodo[] = [
+  await db.songTodos.bulkAdd([
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
       text: 'Record final vocal pass',
       timestamp: null,
@@ -351,7 +321,6 @@ export async function seedSampleData(): Promise<void> {
       createdAt: daysAgo(3),
     },
     {
-      id: crypto.randomUUID(),
       songId: song1.id,
       text: 'Lock chorus melody',
       timestamp: 45,
@@ -360,7 +329,6 @@ export async function seedSampleData(): Promise<void> {
       createdAt: daysAgo(5),
     },
     {
-      id: crypto.randomUUID(),
       songId: song2.id,
       text: 'Write bridge lyrics',
       timestamp: null,
@@ -368,15 +336,12 @@ export async function seedSampleData(): Promise<void> {
       sortOrder: 0,
       createdAt: daysAgo(2),
     },
-  ]
+  ])
 
-  await db.songTodos.bulkAdd(todos)
-
-  const album: Album = {
-    id: crypto.randomUUID(),
+  const albumFields = {
     title: 'Night Circuits EP',
-    status: 'in-progress',
-    format: 'ep',
+    status: 'in-progress' as const,
+    format: 'ep' as const,
     artworkBlob: null,
     releaseDate: '2026-11-01',
     credits: 'Seeded sample album for calibration',
@@ -387,18 +352,16 @@ export async function seedSampleData(): Promise<void> {
     createdAt: daysAgo(12),
     updatedAt: daysAgo(1),
   }
+  const albumId = await db.albums.add(albumFields)
 
-  await db.albums.add(album)
   await db.albumSongs.bulkAdd([
     {
-      id: crypto.randomUUID(),
-      albumId: album.id,
+      albumId,
       songId: song1.id,
       trackNumber: 0,
     },
     {
-      id: crypto.randomUUID(),
-      albumId: album.id,
+      albumId,
       songId: song2.id,
       trackNumber: 1,
     },

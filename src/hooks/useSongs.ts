@@ -61,8 +61,7 @@ export async function getSongWithSections(
 export async function createSong(input: CreateSongInput): Promise<Song> {
   try {
     const now = new Date().toISOString()
-    const song: Song = {
-      id: crypto.randomUUID(),
+    const song = {
       title: input.title,
       key: input.key ?? null,
       tempo: input.tempo ?? null,
@@ -80,8 +79,8 @@ export async function createSong(input: CreateSongInput): Promise<Song> {
       updatedAt: now,
     }
 
-    await db.songs.add(song)
-    return song
+    const id = await db.songs.add(song)
+    return { ...song, id }
   } catch (error) {
     console.warn('createSong failed:', error)
     throw error

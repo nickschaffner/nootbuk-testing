@@ -103,15 +103,14 @@ export async function addSongToAlbum(
         ? 1
         : Math.max(...existing.map((as) => as.trackNumber)) + 1
 
-    const albumSong: AlbumSong = {
-      id: crypto.randomUUID(),
+    const albumSong = {
       albumId,
       songId,
       trackNumber,
     }
 
-    await db.albumSongs.add(albumSong)
-    return albumSong
+    const id = await db.albumSongs.add(albumSong)
+    return { ...albumSong, id }
   } catch (error) {
     console.warn('addSongToAlbum failed:', error)
     throw error
