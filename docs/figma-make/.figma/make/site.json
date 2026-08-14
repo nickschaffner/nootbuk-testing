@@ -1,0 +1,10 @@
+{
+  "description": "This design system streamlines the creation of music software prototypes, offering visually striking components in both dark and light modes, tailored for developers.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
