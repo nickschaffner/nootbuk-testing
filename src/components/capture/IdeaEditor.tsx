@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
+import { useMatch } from 'react-router-dom'
 
 import { AudioRecorder } from '@/components/capture/AudioRecorder'
 import { MidiRecord } from '@/components/capture/MidiRecord'
@@ -31,6 +32,7 @@ import { AudioPlayer } from '@/components/player/AudioPlayer'
 import { MidiPlayer } from '@/components/player/MidiPlayer'
 import { ExtractMidiFromAudio } from '@/components/player/ExtractMidiFromAudio'
 import { KeySelector } from '@/components/shared/KeySelector'
+import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,6 +79,7 @@ import {
 } from '@/lib/audio'
 import { db } from '@/lib/db'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { timeSignatureFromSong } from '@/lib/time-signature'
 import {
   barCountForBlocks,
   noteEventsToTimelineBlocks,
@@ -305,6 +308,8 @@ function FileCaptureBlock({
 export function IdeaEditor() {
   const { isOpen, mode, target, ideaId, close } = useQuickCapture()
   const isEdit = mode === 'edit' && ideaId !== null
+  const songRoute = useMatch('/song/:id')
+  const routeSongId = songRoute?.params.id
 
   const idea = useLiveQuery(
     () => (isEdit && ideaId ? db.ideas.get(ideaId) : undefined),
@@ -338,6 +343,7 @@ export function IdeaEditor() {
   const [showSongSave, setShowSongSave] = useState(false)
   const [selectedSongId, setSelectedSongId] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState('unassigned')
+  const tempoSeededRef = useRef(false)
 
   const sections = useSectionsForSong(selectedSongId || undefined)
 
@@ -389,6 +395,30 @@ export function IdeaEditor() {
   }, [isOpen, isEdit, target])
 
   useEffect(() => {
+    if (!isOpen) {
+      tempoSeededRef.current = false
+      return
+    }
+    if (isEdit || tempoSeededRef.current) {
+      return
+    }
+
+    const songId = target?.songId ?? routeSongId
+    if (!songId) {
+      return
+    }
+    if (!songs) {
+      return
+    }
+
+    const song = songs.find((item) => item.id === songId)
+    const bpm = song?.tempo && song.tempo > 0 ? song.tempo : 120
+    setTempo(String(bpm))
+    setTimeSignature(timeSignatureFromSong(song?.timeSignature))
+    tempoSeededRef.current = true
+  }, [isOpen, isEdit, target, routeSongId, songs])
+
+  useEffect(() => {
     if (!isOpen || !isEdit || !ideaId || !idea) {
       return
     }
@@ -418,7 +448,7 @@ export function IdeaEditor() {
         setPatchName(idea!.patchName ?? null)
         setKey(idea!.key ?? null)
         setTempo(idea!.tempo?.toString() ?? '')
-        setTimeSignature(idea!.timeSignature ?? '4/4')
+        setTimeSignature(idea!.timeSignature ?? '')
         setLyrics(idea!.lyrics ?? '')
         setNotes(idea!.notes ?? '')
         setRemovedMediaIds([])
@@ -796,7 +826,7 @@ export function IdeaEditor() {
       sectionIntent,
       key,
       tempo: tempo ? Number.parseInt(tempo, 10) : null,
-      timeSignature: timeSignature.trim() || '4/4',
+      timeSignature: timeSignature.trim() || null,
       instrumentId,
       instrumentName,
       patchName,
@@ -867,7 +897,7 @@ export function IdeaEditor() {
         sectionIntent,
         key,
         tempo: tempo ? Number.parseInt(tempo, 10) : null,
-        timeSignature: timeSignature.trim() || '4/4',
+        timeSignature: timeSignature.trim() || null,
         instrumentId,
         instrumentName,
         patchName,
@@ -968,6 +998,9 @@ export function IdeaEditor() {
             tempo={tempo ? Number.parseInt(tempo, 10) : null}
             timeSignature={timeSignature}
             onTimeSignatureChange={setTimeSignature}
+            onTempoChange={(next) =>
+              setTempo(next && next > 0 ? String(next) : '')
+            }
             patchName={patchName}
             onPatchChange={setPatchName}
             onDraftChange={(data) =>
@@ -1000,6 +1033,9 @@ export function IdeaEditor() {
             tempo={tempo ? Number.parseInt(tempo, 10) : null}
             timeSignature={timeSignature}
             onTimeSignatureChange={setTimeSignature}
+            onTempoChange={(next) =>
+              setTempo(next && next > 0 ? String(next) : '')
+            }
             patchName={patchName}
             onPatchChange={setPatchName}
             onCopyToMidiRecord={(data) =>
@@ -1210,15 +1246,11 @@ export function IdeaEditor() {
                     onChange={(event) => setTempo(event.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="idea-editor-time">Time</Label>
-                  <Input
-                    id="idea-editor-time"
-                    placeholder="4/4"
-                    value={timeSignature}
-                    onChange={(event) => setTimeSignature(event.target.value)}
-                  />
-                </div>
+                <TimeSignatureSelector
+                  id="idea-editor-time"
+                  value={timeSignature}
+                  onChange={setTimeSignature}
+                />
               </div>
 
               <div className="space-y-2">

@@ -4,7 +4,9 @@ import * as Tone from 'tone'
 
 import { FoldedPianoRoll } from '@/components/capture/note-picker/FoldedPianoRoll'
 import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
+import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useMidi } from '@/hooks/useMidi'
 import { useSynth } from '@/hooks/useSynth'
@@ -50,30 +52,28 @@ interface MidiRecordProps {
   tempo?: number | null
   timeSignature?: string | null
   onTimeSignatureChange?: (value: string) => void
+  onTempoChange?: (bpm: number | null) => void
   patchName?: string | null
   onPatchChange?: (value: string | null) => void
   onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
 }
 
-const TIME_SIGNATURE_OPTIONS = ['4/4', '3/4', '2/4', '6/8', '5/4', '7/8'] as const
 const MAX_HISTORY = 50
 /** Default loop length when Loop is enabled (or Record-mode default). */
 const DEFAULT_LOOP_BARS = 4
 
-function defaultLoopRegion(
-  mode: RecordMode,
+function initialLoopRegion(
   blocks: TimelineBlock[],
   beatsPerBar: number,
 ): { start: number; end: number } {
-  const oneBar = Math.max(1, beatsPerBar)
-  const fourBars = oneBar * DEFAULT_LOOP_BARS
-  if (mode === 'overdub') {
-    const contentEnd = timelineEndBeat(blocks)
-    if (contentEnd > fourBars + 1e-9) {
-      return { start: 0, end: contentEnd }
-    }
+  const bpb = Math.max(1, beatsPerBar)
+  const fourBars = bpb * DEFAULT_LOOP_BARS
+  if (blocks.length === 0) {
+    return { start: 0, end: fourBars }
   }
-  return { start: 0, end: fourBars }
+  const contentEnd = timelineEndBeat(blocks)
+  const lastBar = Math.max(1, Math.ceil(contentEnd / bpb - 1e-9) || 1)
+  return { start: 0, end: lastBar * bpb }
 }
 
 export function MidiRecord({
@@ -84,6 +84,7 @@ export function MidiRecord({
   tempo,
   timeSignature,
   onTimeSignatureChange,
+  onTempoChange,
   patchName = null,
   onPatchChange,
   onDraftChange,
@@ -155,6 +156,7 @@ export function MidiRecord({
   loopStartRef.current = loopStartBeat
   const loopEndRef = useRef(loopEndBeat)
   loopEndRef.current = loopEndBeat
+  const loopRegionInitializedRef = useRef(false)
   const metronomeEnabledRef = useRef(metronomeEnabled)
   metronomeEnabledRef.current = metronomeEnabled
   const countInCancelledRef = useRef(false)
@@ -487,6 +489,16 @@ export function MidiRecord({
     setLoopStartBeat(nextStart)
     setLoopEndBeat(nextEnd)
     ensureBarsCoverBeat(nextEnd)
+  }
+
+  function applyInitialLoopRegion() {
+    const region = initialLoopRegion(
+      snapshotRef.current.blocks,
+      beatsPerBarRef.current,
+    )
+    setLoopStartBeat(region.start)
+    setLoopEndBeat(region.end)
+    ensureBarsCoverBeat(region.end)
   }
 
   function extendBarsForPlayhead(playhead: number) {
@@ -1117,19 +1129,6 @@ export function MidiRecord({
     await startPlayback(loopEnabledRef.current ? activeLoopStart() : 0)
   }
 
-  function syncLoopRegionToMode(mode: RecordMode) {
-    const region = defaultLoopRegion(
-      mode,
-      snapshotRef.current.blocks,
-      beatsPerBarRef.current,
-    )
-    setLoopStartBeat(region.start)
-    setLoopEndBeat(region.end)
-    setBarCount((bars) =>
-      Math.max(bars, DEFAULT_LOOP_BARS, Math.ceil(region.end / beatsPerBarRef.current - 1e-9) || 1),
-    )
-  }
-
   function handlePlayheadMove(beat: number) {
     if (recordingRef.current || countingInRef.current) {
       return
@@ -1154,17 +1153,39 @@ export function MidiRecord({
     >
       <div className="flex flex-wrap items-center gap-2">
         <Label className="text-xs text-muted-foreground">TIME</Label>
-        {TIME_SIGNATURE_OPTIONS.map((value) => (
-          <Button
-            key={value}
-            type="button"
-            size="sm"
-            variant={activeTimeSignature === value ? 'default' : 'outline'}
-            onClick={() => onTimeSignatureChange?.(value)}
-          >
-            {value}
-          </Button>
-        ))}
+        <TimeSignatureSelector
+          compact
+          hideLabel
+          id="midi-record-time"
+          value={timeSignature}
+          onChange={(next) => onTimeSignatureChange?.(next)}
+        />
+        <Label
+          htmlFor="midi-record-tempo"
+          className="ml-2 text-xs text-muted-foreground"
+        >
+          TEMPO
+        </Label>
+        <Input
+          id="midi-record-tempo"
+          type="number"
+          min={1}
+          placeholder="120"
+          className="h-8 w-20"
+          value={tempo && tempo > 0 ? tempo : ''}
+          onChange={(event) => {
+            const raw = event.target.value
+            if (raw === '') {
+              onTempoChange?.(null)
+              return
+            }
+            const next = Number.parseInt(raw, 10)
+            if (!Number.isFinite(next) || next < 1) {
+              return
+            }
+            onTempoChange?.(next)
+          }}
+        />
       </div>
 
       <div className="max-w-xs">
@@ -1210,8 +1231,9 @@ export function MidiRecord({
           onClick={() => {
             setLoopEnabled((value) => {
               const next = !value
-              if (next) {
-                syncLoopRegionToMode(recordModeRef.current)
+              if (next && !loopRegionInitializedRef.current) {
+                applyInitialLoopRegion()
+                loopRegionInitializedRef.current = true
               }
               return next
             })
@@ -1235,9 +1257,6 @@ export function MidiRecord({
           disabled={isRecording || isCountingIn}
           onClick={() => {
             setRecordMode('record')
-            if (loopEnabledRef.current) {
-              syncLoopRegionToMode('record')
-            }
           }}
         >
           Record
@@ -1249,9 +1268,6 @@ export function MidiRecord({
           disabled={isRecording || isCountingIn}
           onClick={() => {
             setRecordMode('overdub')
-            if (loopEnabledRef.current) {
-              syncLoopRegionToMode('overdub')
-            }
           }}
         >
           Overdub

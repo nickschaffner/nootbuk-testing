@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Trash2 } from 'lucide-react'
 
 import { KeySelector } from '@/components/shared/KeySelector'
+import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import { StatusStepIndicator } from '@/components/shared/StatusStepIndicator'
 import {
   AlertDialog,
@@ -38,14 +39,12 @@ export function SongHeader({ song }: SongHeaderProps) {
   const navigate = useNavigate()
   const [title, setTitle] = useState(song.title)
   const [tempo, setTempo] = useState(song.tempo?.toString() ?? '')
-  const [timeSignature, setTimeSignature] = useState(song.timeSignature ?? '')
   const [status, setStatus] = useState(song.status)
   const [isDeleting, setIsDeleting] = useState(false)
 
   useEffect(() => {
     setTitle(song.title)
     setTempo(song.tempo?.toString() ?? '')
-    setTimeSignature(song.timeSignature ?? '')
     setStatus(song.status)
   }, [song])
 
@@ -115,20 +114,16 @@ export function SongHeader({ song }: SongHeaderProps) {
           />
         </div>
 
-        <div className="w-24 space-y-1">
-          <label className="text-xs text-muted-foreground">Time</label>
-          <Input
-            value={timeSignature}
-            placeholder="4/4"
-            onChange={(event) => setTimeSignature(event.target.value)}
-            onBlur={() => {
-              void persist({
-                id: song.id,
-                timeSignature: timeSignature.trim() || null,
-              })
-            }}
-          />
-        </div>
+        <TimeSignatureSelector
+          compact
+          id="song-header-time"
+          value={song.timeSignature}
+          onChange={(next) => {
+            if (next !== song.timeSignature) {
+              void persist({ id: song.id, timeSignature: next })
+            }
+          }}
+        />
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

@@ -5,7 +5,9 @@ import * as Tone from 'tone'
 import { BeatTimeline } from '@/components/capture/note-picker/BeatTimeline'
 import { PianoKeyboard } from '@/components/capture/note-picker/PianoKeyboard'
 import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
+import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSynth } from '@/hooks/useSynth'
 import { shouldIgnoreGlobalShortcut } from '@/lib/browser-capabilities'
@@ -56,13 +58,13 @@ interface NotePickerProps {
   tempo?: number | null
   timeSignature?: string | null
   onTimeSignatureChange?: (value: string) => void
+  onTempoChange?: (bpm: number | null) => void
   patchName?: string | null
   onPatchChange?: (value: string | null) => void
   onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
   onCopyToMidiRecord?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
 }
 
-const TIME_SIGNATURE_OPTIONS = ['4/4', '3/4', '2/4', '6/8', '5/4', '7/8'] as const
 const MAX_HISTORY = 50
 
 function useIsMd() {
@@ -93,6 +95,7 @@ export function NotePicker({
   tempo,
   timeSignature,
   onTimeSignatureChange,
+  onTempoChange,
   patchName = null,
   onPatchChange,
   onDraftChange,
@@ -883,17 +886,39 @@ export function NotePicker({
 
       <div className="flex flex-wrap items-center gap-2">
         <Label className="text-xs text-muted-foreground">TIME</Label>
-        {TIME_SIGNATURE_OPTIONS.map((value) => (
-          <Button
-            key={value}
-            type="button"
-            size="sm"
-            variant={activeTimeSignature === value ? 'default' : 'outline'}
-            onClick={() => onTimeSignatureChange?.(value)}
-          >
-            {value}
-          </Button>
-        ))}
+        <TimeSignatureSelector
+          compact
+          hideLabel
+          id="note-picker-time"
+          value={timeSignature}
+          onChange={(next) => onTimeSignatureChange?.(next)}
+        />
+        <Label
+          htmlFor="note-picker-tempo"
+          className="ml-2 text-xs text-muted-foreground"
+        >
+          TEMPO
+        </Label>
+        <Input
+          id="note-picker-tempo"
+          type="number"
+          min={1}
+          placeholder="120"
+          className="h-8 w-20"
+          value={tempo && tempo > 0 ? tempo : ''}
+          onChange={(event) => {
+            const raw = event.target.value
+            if (raw === '') {
+              onTempoChange?.(null)
+              return
+            }
+            const next = Number.parseInt(raw, 10)
+            if (!Number.isFinite(next) || next < 1) {
+              return
+            }
+            onTempoChange?.(next)
+          }}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
