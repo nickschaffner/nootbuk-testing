@@ -37,7 +37,7 @@ export function SynthPatchSelector({
     isMuted || resolved === 'muted'
       ? null
       : synthSource === 'smplr'
-        ? '(soundfont)'
+        ? '(sampler)'
         : '(synth)'
 
   return (
@@ -49,7 +49,7 @@ export function SynthPatchSelector({
         ) : null}
       </div>
       <Select
-        value={resolved}
+        value={resolved === 'muted' ? 'piano' : resolved}
         onValueChange={(next) => {
           const patch = next as PlaybackPatchId
           onChange(patch)
@@ -65,11 +65,10 @@ export function SynthPatchSelector({
               {patch.label}
             </SelectItem>
           ))}
-          <SelectItem value="muted">Muted</SelectItem>
         </SelectContent>
       </Select>
       {isLoadingPatch ? (
-        <p className="text-xs text-muted-foreground">Loading soundfont...</p>
+        <p className="text-xs text-muted-foreground">Loading patch...</p>
       ) : null}
     </div>
   )

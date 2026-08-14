@@ -26,13 +26,13 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
         audioBlob={media.blob}
         onConfirm={async (notes) => {
           const blob = noteEventsToMidiBlob(notes)
-          const baseName = media.filename.replace(/\.[^.]+$/, '')
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
 
           await addMediaToIdea({
             ideaId,
             type: 'midi',
-            filename: `${baseName}-extracted-${timestamp}.mid`,
+            source: 'extraction',
+            filename: `extraction-${timestamp}.mid`,
             mimeType: 'audio/midi',
             blob,
             duration: getMidiDuration(notes),

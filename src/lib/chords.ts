@@ -77,18 +77,18 @@ export function getChordPitches(
     .filter((pitch) => pitch >= 0 && pitch <= 127)
 }
 
-/** Label like Am3 from root midi + chord type. */
+/** Label like Bmaj / Bm7 from root midi + chord type (no octave suffix). */
 export function formatChordBlockLabel(
   rootPitch: number,
   type: ChordType,
 ): string {
   const name = midiToNoteName(rootPitch)
   const match = /^([A-G]#?)(-?\d+)$/.exec(name)
-  if (!match) {
-    return buildChordName(name, type)
+  const letter = match ? match[1] : name
+  if (type === 'major') {
+    return `${letter}maj`
   }
-  const [, letter, octave] = match
-  return `${buildChordName(letter, type)}${octave}`
+  return buildChordName(letter, type)
 }
 
 /** Infer a chord type from simultaneous pitches sharing a start time. */

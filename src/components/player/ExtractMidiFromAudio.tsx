@@ -1,10 +1,15 @@
 import { Loader2, Wand2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { FoldedPianoRoll } from '@/components/capture/note-picker/FoldedPianoRoll'
 import { MidiPlayer } from '@/components/player/MidiPlayer'
 import { Button } from '@/components/ui/button'
 import { useAudioToMidi } from '@/hooks/useAudioToMidi'
 import { useSynth } from '@/hooks/useSynth'
+import {
+  barCountForBlocks,
+  noteEventsToTimelineBlocks,
+} from '@/lib/timeline-notes'
 import type { NoteEvent } from '@/types/idea'
 
 interface ExtractMidiFromAudioProps {
@@ -43,6 +48,15 @@ export function ExtractMidiFromAudio({
   const isBusy = isLoading || isConverting || isSaving
   const showPreview = result !== null && !error
   const previewPatch = isMuted ? 'muted' : currentPatch
+  const beatsPerBar = 4
+  const bpm = 120
+  const previewBlocks = result
+    ? noteEventsToTimelineBlocks(result, bpm)
+    : []
+  const barCount = Math.max(
+    1,
+    barCountForBlocks(previewBlocks, beatsPerBar, 1),
+  )
 
   async function handleExtract() {
     try {
@@ -114,6 +128,17 @@ export function ExtractMidiFromAudio({
               <p className="mt-1 text-xs text-muted-foreground">{confirmHint}</p>
             ) : null}
           </div>
+
+          <FoldedPianoRoll
+            noteEvents={result}
+            bpm={bpm}
+            beatsPerBar={beatsPerBar}
+            barCount={barCount}
+            gridBeat={0.25}
+            playheadBeat={0}
+            title="Extracted MIDI"
+            emptyMessage="No notes extracted"
+          />
 
           <MidiPlayer notes={result} patchId={previewPatch} />
 

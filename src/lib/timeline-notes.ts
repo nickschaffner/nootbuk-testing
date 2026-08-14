@@ -44,6 +44,8 @@ export interface TimelineBlock {
   pitches: number[]
   label: string
   chordType: ChordType | null
+  /** MIDI velocity 1–127 (controller / extraction dynamics). */
+  velocity: number
 }
 
 export interface TimelineSnapshot {
@@ -124,6 +126,7 @@ export function createNoteBlock(
   pitch: number,
   startBeat: number,
   durationBeats: number,
+  velocity = 96,
 ): TimelineBlock {
   return {
     id: crypto.randomUUID(),
@@ -132,6 +135,7 @@ export function createNoteBlock(
     pitches: [pitch],
     label: midiToNoteName(pitch),
     chordType: null,
+    velocity: clampVelocity(velocity),
   }
 }
 
@@ -141,6 +145,7 @@ export function createChordBlock(
   pitches: number[],
   startBeat: number,
   durationBeats: number,
+  velocity = 96,
 ): TimelineBlock {
   return {
     id: crypto.randomUUID(),
@@ -149,7 +154,15 @@ export function createChordBlock(
     pitches,
     label: formatChordBlockLabel(rootPitch, chordType),
     chordType,
+    velocity: clampVelocity(velocity),
   }
+}
+
+function clampVelocity(velocity: number): number {
+  if (!Number.isFinite(velocity)) {
+    return 96
+  }
+  return Math.max(1, Math.min(127, Math.round(velocity)))
 }
 
 function rangesOverlap(
@@ -468,12 +481,13 @@ export function timelineBlocksToNoteEvents(
   for (const block of sortBlocks(blocks)) {
     const startTime = block.startBeat * spb
     const duration = block.durationBeats * spb
+    const velocity = clampVelocity(block.velocity ?? 96)
     for (const pitch of block.pitches) {
       events.push({
         pitch,
         startTime,
         duration,
-        velocity: 96,
+        velocity,
       })
     }
   }
@@ -523,6 +537,10 @@ export function noteEventsToTimelineBlocks(
     const rootPitch = pitches[0]
     const chordType =
       pitches.length > 1 ? inferChordTypeFromPitches(rootPitch, pitches) : null
+    const velocity = clampVelocity(
+      group.reduce((sum, event) => sum + (event.velocity || 96), 0) /
+        group.length,
+    )
 
     blocks.push({
       id: crypto.randomUUID(),
@@ -534,6 +552,7 @@ export function noteEventsToTimelineBlocks(
           ? formatChordBlockLabel(rootPitch, chordType)
           : midiToNoteName(rootPitch),
       chordType,
+      velocity,
     })
   }
 

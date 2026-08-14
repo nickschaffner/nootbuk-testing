@@ -121,18 +121,4 @@
   }
 }
 
-@keyframes timeline-cursor-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-.timeline-cursor {
-  animation-name: timeline-cursor-pulse;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
+/* Playhead beat pulse is driven from Tone.Transport via opacity state. */

@@ -249,8 +249,14 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
               : null
 
         if (blob) {
+          const midiSource =
+            media.source === 'recording' ||
+            media.source === 'extraction' ||
+            media.source === 'notepicker'
+              ? media.source
+              : 'notepicker'
           files.push({
-            path: `midi/${allocator.nextMediaFilename(prefix, '.mid')}`,
+            path: `midi/${allocator.nextMediaFilename(`${prefix}-${midiSource}`, '.mid')}`,
             content: blob,
             category: 'midi',
           })

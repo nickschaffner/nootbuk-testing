@@ -5,6 +5,7 @@ export type QuickCaptureBlockType =
   | 'audio-import'
   | 'midi'
   | 'notes'
+  | 'extraction'
   | 'image'
   | 'file'
 
@@ -29,6 +30,14 @@ export type QuickCaptureBlock =
   | {
       id: string
       type: 'notes'
+      noteEvents: NoteEvent[]
+      bpm: number
+      mediaId?: string
+      dirty?: boolean
+    }
+  | {
+      id: string
+      type: 'extraction'
       noteEvents: NoteEvent[]
       bpm: number
       mediaId?: string
@@ -69,6 +78,8 @@ export function createEmptyBlock(
       return { id, type: 'midi', noteEvents: [], bpm: 120, dirty: true }
     case 'notes':
       return { id, type: 'notes', noteEvents: [], bpm: 120, dirty: true }
+    case 'extraction':
+      return { id, type: 'extraction', noteEvents: [], bpm: 120, dirty: true }
     case 'image':
       return { id, type: 'image', file: null, previewUrl: null, dirty: true }
     case 'file':
@@ -96,6 +107,7 @@ export function blockHasContent(block: QuickCaptureBlock): boolean {
       return block.blob !== null
     case 'midi':
     case 'notes':
+    case 'extraction':
       return block.noteEvents.length > 0
     case 'image':
     case 'file':
@@ -104,12 +116,13 @@ export function blockHasContent(block: QuickCaptureBlock): boolean {
 }
 
 export const BLOCK_LABELS: Record<
-  'audio' | 'midi' | 'notes' | 'image' | 'file',
+  'audio' | 'midi' | 'notes' | 'extraction' | 'image' | 'file',
   string
 > = {
   audio: 'Record Audio',
-  midi: 'MIDI',
+  midi: 'MIDI Record',
   notes: 'Note Picker',
+  extraction: 'Extracted MIDI',
   image: 'Photo / Image',
   file: 'File',
 }
@@ -123,6 +136,30 @@ export function getBlockLabel(block: QuickCaptureBlock): string {
 
 function blobToFile(blob: Blob, filename: string, mimeType: string): File {
   return new File([blob], filename, { type: mimeType || blob.type })
+}
+
+function midiSourceToBlockType(
+  source: IdeaMedia['source'],
+  filename: string,
+): 'notes' | 'midi' | 'extraction' {
+  if (source === 'recording') {
+    return 'midi'
+  }
+  if (source === 'extraction') {
+    return 'extraction'
+  }
+  if (source === 'notepicker') {
+    return 'notes'
+  }
+
+  const name = filename.toLowerCase()
+  if (name.startsWith('recording-') || name.includes('-recording-')) {
+    return 'midi'
+  }
+  if (name.startsWith('extraction-') || name.includes('-extraction-')) {
+    return 'extraction'
+  }
+  return 'notes'
 }
 
 /** Map persisted idea media into editor content blocks. */
@@ -144,10 +181,10 @@ export function mediaItemsToBlocks(media: IdeaMedia[]): QuickCaptureBlock[] {
     }
 
     if (item.type === 'midi') {
-      // Open MIDI on the note-picker timeline (same NoteEvent storage).
+      const blockType = midiSourceToBlockType(item.source, item.filename)
       blocks.push({
         id: crypto.randomUUID(),
-        type: 'notes',
+        type: blockType,
         noteEvents: item.noteData ?? [],
         bpm: 120,
         mediaId: item.id,

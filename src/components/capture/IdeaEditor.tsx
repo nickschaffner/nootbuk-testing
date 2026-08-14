@@ -11,7 +11,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 
 import { AudioRecorder } from '@/components/capture/AudioRecorder'
+import { MidiRecord } from '@/components/capture/MidiRecord'
 import { NotePicker } from '@/components/capture/note-picker/NotePicker'
+import { FoldedPianoRoll } from '@/components/capture/note-picker/FoldedPianoRoll'
 import {
   blockHasContent,
   createAudioImportBlock,
@@ -26,9 +28,9 @@ import { RolePillSelector } from '@/components/pool/RolePillSelector'
 import { SectionIntentPillSelector } from '@/components/pool/SectionIntentPillSelector'
 import { InstrumentSelector } from '@/components/instruments/InstrumentSelector'
 import { AudioPlayer } from '@/components/player/AudioPlayer'
+import { MidiPlayer } from '@/components/player/MidiPlayer'
 import { ExtractMidiFromAudio } from '@/components/player/ExtractMidiFromAudio'
 import { KeySelector } from '@/components/shared/KeySelector'
-import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -67,7 +69,6 @@ import {
 } from '@/hooks/useMedia'
 import { useSectionsForSong } from '@/hooks/useSections'
 import { useAllSongs } from '@/hooks/useSongs'
-import { useSynth } from '@/hooks/useSynth'
 import {
   getAudioDuration,
   getAudioMimeType,
@@ -76,6 +77,11 @@ import {
 } from '@/lib/audio'
 import { db } from '@/lib/db'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import {
+  barCountForBlocks,
+  noteEventsToTimelineBlocks,
+  parseBeatsPerBar,
+} from '@/lib/timeline-notes'
 import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole, NoteEvent, SectionIntent } from '@/types/idea'
 
@@ -121,6 +127,54 @@ function CaptureBlockShell({
         </Button>
       </div>
       {children}
+    </div>
+  )
+}
+
+function ExtractionBlockView({
+  noteEvents,
+  bpm,
+  timeSignature,
+  onCopyToMidiRecord,
+}: {
+  noteEvents: NoteEvent[]
+  bpm: number
+  timeSignature: string
+  onCopyToMidiRecord?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
+}) {
+  const beatsPerBar = parseBeatsPerBar(timeSignature)
+  const blocks = noteEventsToTimelineBlocks(noteEvents, bpm)
+  const barCount = Math.max(1, barCountForBlocks(blocks, beatsPerBar, 1))
+
+  if (noteEvents.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground">No extracted notes yet.</p>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <FoldedPianoRoll
+        noteEvents={noteEvents}
+        bpm={bpm}
+        beatsPerBar={beatsPerBar}
+        barCount={barCount}
+        gridBeat={0.25}
+        playheadBeat={0}
+        title="Extracted MIDI"
+        emptyMessage="No extracted notes yet"
+      />
+      <MidiPlayer notes={noteEvents} />
+      {onCopyToMidiRecord ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onCopyToMidiRecord({ noteEvents, bpm })}
+        >
+          Copy to MIDI Record
+        </Button>
+      ) : null}
     </div>
   )
 }
@@ -258,10 +312,10 @@ export function IdeaEditor() {
   )
 
   const songs = useAllSongs()
-  const { currentPatch, isMuted } = useSynth()
-  const playbackPatch = isMuted ? 'muted' : currentPatch
   const audioImportInputRef = useRef<HTMLInputElement>(null)
   const notesPickerRef = useRef<HTMLDivElement>(null)
+  const midiRecordRef = useRef<HTMLDivElement>(null)
+  const extractionRef = useRef<HTMLDivElement>(null)
   const [audioImportError, setAudioImportError] = useState<string | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [hydratedIdeaId, setHydratedIdeaId] = useState<string | null>(null)
@@ -423,33 +477,53 @@ export function IdeaEditor() {
         return [...withoutAudio, createEmptyBlock('audio')]
       }
 
-      if (type === 'midi' || type === 'notes') {
-        const existingNotes = current.find((block) => block.type === 'notes')
-        if (existingNotes) {
+      if (type === 'midi' || type === 'notes' || type === 'extraction') {
+        if (current.some((block) => block.type === type)) {
           return current
         }
-
-        const existingMidi = current.find((block) => block.type === 'midi')
-        if (existingMidi && existingMidi.type === 'midi') {
-          return current.map((block) =>
-            block.id === existingMidi.id
-              ? {
-                  id: existingMidi.id,
-                  type: 'notes' as const,
-                  noteEvents: existingMidi.noteEvents,
-                  bpm: existingMidi.bpm,
-                  mediaId: existingMidi.mediaId,
-                  dirty: existingMidi.dirty,
-                }
-              : block,
-          )
-        }
-
-        return [...current, createEmptyBlock('notes')]
+        return [...current, createEmptyBlock(type)]
       }
 
       return [...current, createEmptyBlock(type)]
     })
+  }
+
+  function copyNotesToMidiRecord(noteEvents: NoteEvent[], bpm: number) {
+    setBlocks((current) => {
+      const existing = current.find((block) => block.type === 'midi')
+      if (existing && existing.type === 'midi') {
+        if (existing.mediaId) {
+          queueRemovedMediaIds([existing.mediaId])
+        }
+        return current.map((block) =>
+          block.id === existing.id
+            ? {
+                ...existing,
+                noteEvents,
+                bpm,
+                mediaId: undefined,
+                dirty: true,
+              }
+            : block,
+        )
+      }
+      return [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          type: 'midi' as const,
+          noteEvents,
+          bpm,
+          dirty: true,
+        },
+      ]
+    })
+    window.setTimeout(() => {
+      midiRecordRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 0)
   }
 
   function replaceAudioWithImport(blob: Blob, filename: string) {
@@ -467,11 +541,12 @@ export function IdeaEditor() {
   function applyExtractedMidi(noteEvents: NoteEvent[]) {
     setBlocks((current) => {
       const existingIndex = current.findIndex(
-        (block) => block.type === 'midi' || block.type === 'notes',
+        (block) => block.type === 'extraction',
       )
-      const existing = existingIndex >= 0 ? current[existingIndex] : null
+      const existing =
+        existingIndex >= 0 ? current[existingIndex] : null
 
-      if (existing && (existing.type === 'midi' || existing.type === 'notes')) {
+      if (existing && existing.type === 'extraction') {
         if (existing.mediaId) {
           queueRemovedMediaIds([existing.mediaId])
         }
@@ -479,9 +554,9 @@ export function IdeaEditor() {
         const next = [...current]
         next[existingIndex] = {
           id: crypto.randomUUID(),
-          type: 'notes' as const,
+          type: 'extraction' as const,
           noteEvents,
-          bpm: existing.type === 'notes' ? existing.bpm : 120,
+          bpm: existing.bpm,
           dirty: true,
         }
         return next
@@ -491,13 +566,19 @@ export function IdeaEditor() {
         ...current,
         {
           id: crypto.randomUUID(),
-          type: 'notes' as const,
+          type: 'extraction' as const,
           noteEvents,
           bpm: 120,
           dirty: true,
         },
       ]
     })
+    window.setTimeout(() => {
+      extractionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      })
+    }, 0)
   }
 
   async function handleImportAudioFiles(files: FileList | null) {
@@ -528,9 +609,17 @@ export function IdeaEditor() {
     }
 
     addBlock(type)
-    if (type === 'midi' || type === 'notes') {
+    if (type === 'notes') {
       window.setTimeout(() => {
         notesPickerRef.current?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        })
+      }, 0)
+    }
+    if (type === 'midi') {
+      window.setTimeout(() => {
+        midiRecordRef.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
         })
@@ -606,6 +695,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'audio',
+          source: null,
           filename,
           mimeType: getAudioMimeType(filename, block.blob.type),
           blob: block.blob,
@@ -620,6 +710,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'midi',
+          source: 'recording',
           filename: `recording-${timestamp}.mid`,
           mimeType: 'audio/midi',
           blob,
@@ -638,7 +729,27 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'midi',
+          source: 'notepicker',
           filename: `notes-${timestamp}.mid`,
+          mimeType: 'audio/midi',
+          blob,
+          duration: getMidiDuration(block.noteEvents),
+          noteData: block.noteEvents,
+        })
+      }
+
+      if (block.type === 'extraction' && block.noteEvents.length > 0) {
+        const bpm =
+          tempo && Number.parseInt(tempo, 10) > 0
+            ? Number.parseInt(tempo, 10)
+            : block.bpm
+        const blob = noteEventsToMidiBlob(block.noteEvents, bpm)
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        await addMediaToIdea({
+          ideaId: targetIdeaId,
+          type: 'midi',
+          source: 'extraction',
+          filename: `extraction-${timestamp}.mid`,
           mimeType: 'audio/midi',
           blob,
           duration: getMidiDuration(block.noteEvents),
@@ -650,6 +761,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'image',
+          source: null,
           filename: block.file.name,
           mimeType: block.file.type || 'image/*',
           blob: block.file,
@@ -662,6 +774,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'file',
+          source: null,
           filename: block.file.name,
           mimeType: block.file.type || 'application/octet-stream',
           blob: block.file,
@@ -837,7 +950,7 @@ export function IdeaEditor() {
               <ExtractMidiFromAudio
                 audioBlob={block.blob}
                 confirmLabel="Use This"
-                confirmHint="Use This replaces the current Note Picker content if any exists."
+                confirmHint="Saves as Extracted MIDI. Does not overwrite Note Picker or MIDI Record."
                 previewHint="Listen to the extracted MIDI by itself. Timing is not quantized."
                 onConfirm={(extracted) => {
                   applyExtractedMidi(extracted)
@@ -847,6 +960,37 @@ export function IdeaEditor() {
           </div>
         )
       case 'midi':
+        return (
+          <MidiRecord
+            draft
+            embedded
+            initialNoteEvents={block.noteEvents}
+            tempo={tempo ? Number.parseInt(tempo, 10) : null}
+            timeSignature={timeSignature}
+            onTimeSignatureChange={setTimeSignature}
+            patchName={patchName}
+            onPatchChange={setPatchName}
+            onDraftChange={(data) =>
+              updateBlock(block.id, (current) => {
+                if (current.type !== 'midi') {
+                  return current
+                }
+                if (
+                  current.noteEvents === data.noteEvents &&
+                  current.bpm === data.bpm
+                ) {
+                  return current
+                }
+                return {
+                  ...current,
+                  noteEvents: data.noteEvents,
+                  bpm: data.bpm,
+                  dirty: true,
+                }
+              })
+            }
+          />
+        )
       case 'notes':
         return (
           <NotePicker
@@ -856,29 +1000,44 @@ export function IdeaEditor() {
             tempo={tempo ? Number.parseInt(tempo, 10) : null}
             timeSignature={timeSignature}
             onTimeSignatureChange={setTimeSignature}
-            patchId={playbackPatch}
+            patchName={patchName}
+            onPatchChange={setPatchName}
+            onCopyToMidiRecord={(data) =>
+              copyNotesToMidiRecord(data.noteEvents, data.bpm)
+            }
             onDraftChange={(data) =>
               updateBlock(block.id, (current) => {
-                if (current.type !== 'midi' && current.type !== 'notes') {
+                if (current.type !== 'notes') {
                   return current
                 }
-
                 if (
-                  current.type === 'notes' &&
                   current.noteEvents === data.noteEvents &&
                   current.bpm === data.bpm
                 ) {
                   return current
                 }
-
                 return {
-                  id: current.id,
-                  type: 'notes' as const,
+                  ...current,
                   noteEvents: data.noteEvents,
                   bpm: data.bpm,
-                  mediaId: current.mediaId,
+                  dirty: true,
                 }
               })
+            }
+          />
+        )
+      case 'extraction':
+        return (
+          <ExtractionBlockView
+            noteEvents={block.noteEvents}
+            bpm={
+              tempo && Number.parseInt(tempo, 10) > 0
+                ? Number.parseInt(tempo, 10)
+                : block.bpm
+            }
+            timeSignature={timeSignature}
+            onCopyToMidiRecord={(data) =>
+              copyNotesToMidiRecord(data.noteEvents, data.bpm)
             }
           />
         )
@@ -990,9 +1149,13 @@ export function IdeaEditor() {
                   <div
                     key={block.id}
                     ref={
-                      block.type === 'notes' || block.type === 'midi'
+                      block.type === 'notes'
                         ? notesPickerRef
-                        : undefined
+                        : block.type === 'midi'
+                          ? midiRecordRef
+                          : block.type === 'extraction'
+                            ? extractionRef
+                            : undefined
                     }
                   >
                     <CaptureBlockShell
@@ -1030,12 +1193,7 @@ export function IdeaEditor() {
                 onAutoPatch={(patch) => setPatchName(patch)}
               />
 
-              <div className="grid gap-4 sm:grid-cols-4">
-                <SynthPatchSelector
-                  id="idea-editor-patch"
-                  value={patchName}
-                  onChange={setPatchName}
-                />
+              <div className="grid gap-4 sm:grid-cols-3">
                 <KeySelector
                   id="idea-editor-key"
                   value={key}

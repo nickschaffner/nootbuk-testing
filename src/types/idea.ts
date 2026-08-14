@@ -25,6 +25,9 @@ export type IdeaStatus = 'raw' | 'developed' | 'used' | 'archived'
 
 export type IdeaMediaType = 'audio' | 'midi' | 'image' | 'file'
 
+/** MIDI slot on an idea — zero-or-one of each. Null for non-MIDI media. */
+export type IdeaMediaSource = 'notepicker' | 'recording' | 'extraction'
+
 export type NoteDuration =
   | 'whole'
   | 'half'
@@ -73,6 +76,8 @@ export interface IdeaMedia {
   id: string
   ideaId: string
   type: IdeaMediaType
+  /** Set for midi only; null for audio/image/file. */
+  source: IdeaMediaSource | null
   filename: string
   mimeType: string
   blob: Blob

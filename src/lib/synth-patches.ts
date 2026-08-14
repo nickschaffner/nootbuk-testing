@@ -7,7 +7,6 @@ export const SYNTH_PATCHES = [
   { id: 'strings', label: 'Strings' },
   { id: 'synth-lead', label: 'Synth Lead' },
   { id: 'synth-pad', label: 'Synth Pad' },
-  { id: 'organ', label: 'Organ' },
   { id: 'mallet', label: 'Mallet' },
 ] as const
 

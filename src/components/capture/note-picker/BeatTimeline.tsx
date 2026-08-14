@@ -3,6 +3,7 @@ import {
   ChevronRight,
   Copy,
   Minus,
+  Music2,
   Plus,
   Redo2,
   Trash2,
@@ -29,13 +30,14 @@ interface BeatTimelineProps {
   maxBarsPerLine: number
   cursorBeat: number
   blockWidth: BlockWidthBeats
-  bpm: number
   gridBeat: number
-  midiQuantize: boolean
+  midiQuantize?: boolean
+  showMidiRecQuantize?: boolean
   selectedBlockId: string | null
   isEditing: boolean
   ghost: TimelineBlock | null
   playheadBeat: number
+  playheadPulseOpacity?: number
   isRecording?: boolean
   recordOriginBeat?: number
   recordedBlockIds?: ReadonlySet<string> | null
@@ -45,7 +47,7 @@ interface BeatTimelineProps {
   onGridClick: (beat: number) => void
   onPlayheadMove: (beat: number) => void
   onGridBeatChange: (value: number) => void
-  onMidiQuantizeChange: (value: boolean) => void
+  onMidiQuantizeChange?: (value: boolean) => void
   onToggleEdit: () => void
   onResize: (id: string, deltaBeats: number) => void
   onMove: (id: string, direction: -1 | 1) => void
@@ -93,13 +95,14 @@ export function BeatTimeline({
   maxBarsPerLine,
   cursorBeat,
   blockWidth,
-  bpm,
   gridBeat,
-  midiQuantize,
+  midiQuantize = false,
+  showMidiRecQuantize = false,
   selectedBlockId,
   isEditing,
   ghost,
   playheadBeat,
+  playheadPulseOpacity = 1,
   isRecording = false,
   recordOriginBeat = 0,
   recordedBlockIds = null,
@@ -151,17 +154,19 @@ export function BeatTimeline({
                 </option>
               ))}
             </select>
-            <label className="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={midiQuantize}
-                onChange={(event) =>
-                  onMidiQuantizeChange(event.target.checked)
-                }
-                aria-label="Quantize MIDI recording"
-              />
-              MIDI rec
-            </label>
+            {showMidiRecQuantize ? (
+              <label className="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={midiQuantize}
+                  onChange={(event) =>
+                    onMidiQuantizeChange?.(event.target.checked)
+                  }
+                  aria-label="Quantize MIDI recording"
+                />
+                MIDI rec
+              </label>
+            ) : null}
           </div>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">Bars/line</span>
@@ -335,12 +340,14 @@ export function BeatTimeline({
                     const isRecordedTake = Boolean(
                       recordedBlockIds?.has(block.id),
                     )
+                    const isChord =
+                      block.chordType != null || block.pitches.length > 1
                     return (
                       <button
                         key={block.id}
                         type="button"
                         className={cn(
-                          'absolute top-8 z-[5] flex h-10 items-center justify-center overflow-hidden rounded-md border bg-background px-1 text-xs font-medium shadow-sm',
+                          'absolute top-8 z-[5] flex h-10 items-center justify-center gap-1 overflow-hidden rounded-md border bg-background px-1.5 text-xs font-medium shadow-sm',
                           isSelected && 'border-primary ring-2 ring-primary/40',
                           isRecordedTake &&
                             'border-red-600 bg-red-600 text-white',
@@ -354,6 +361,9 @@ export function BeatTimeline({
                           onSelectBlock(block.id)
                         }}
                       >
+                        {isChord && !isRecordedTake ? (
+                          <Music2 className="size-3 shrink-0 text-muted-foreground" />
+                        ) : null}
                         <span className="truncate">{block.label}</span>
                       </button>
                     )
@@ -388,10 +398,9 @@ export function BeatTimeline({
 
                 {cursorInLine ? (
                   <div
-                    className="timeline-cursor pointer-events-none absolute top-0 z-[15] h-full w-0.5 bg-primary"
+                    className="pointer-events-none absolute top-0 z-[15] h-full w-px bg-primary/35"
                     style={{
-                      left: `calc(${cursorLeftPercent}% - ${cursorAtLineEnd ? '2px' : '0px'})`,
-                      animationDuration: `${60 / bpm}s`,
+                      left: `calc(${cursorLeftPercent}% - ${cursorAtLineEnd ? '1px' : '0px'})`,
                     }}
                   />
                 ) : null}
@@ -414,10 +423,27 @@ export function BeatTimeline({
                       className="pointer-events-none absolute top-0 z-20 h-full"
                       style={{
                         left: `calc(${leftPercent}% - ${playheadAtLineEnd ? '2px' : '0px'})`,
+                        opacity: playheadPulseOpacity,
+                        filter: `brightness(${0.75 + playheadPulseOpacity * 0.85})`,
+                        transition:
+                          'opacity 140ms ease-out, filter 140ms ease-out',
                       }}
                     >
-                      <div className="absolute top-0 left-1/2 z-20 h-2 w-2 -translate-x-1/2 rotate-45 bg-destructive" />
-                      <div className="h-full w-0.5 bg-destructive" />
+                      <div
+                        className="absolute top-0 left-1/2 z-20 h-2.5 w-2.5 -translate-x-1/2 rotate-45 bg-destructive shadow-[0_0_10px_2px] shadow-destructive/80"
+                        style={{
+                          transform: `translateX(-50%) rotate(45deg) scale(${0.85 + playheadPulseOpacity * 0.35})`,
+                          transition: 'transform 140ms ease-out',
+                        }}
+                      />
+                      <div
+                        className="h-full w-1 bg-destructive shadow-[0_0_8px_1px] shadow-destructive/70"
+                        style={{
+                          transform: `scaleX(${0.75 + playheadPulseOpacity * 0.5})`,
+                          transformOrigin: 'center',
+                          transition: 'transform 140ms ease-out',
+                        }}
+                      />
                     </div>
                   )
                 })()}

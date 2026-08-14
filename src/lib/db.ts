@@ -402,6 +402,52 @@ export class NootbukDatabase extends Dexie {
           }
         }
       })
+
+    // IdeaMedia.source for MIDI slots (notepicker | recording | extraction)
+    this.version(8)
+      .stores({
+        ideas: 'id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: 'id, ideaId, type, source',
+        songs: 'id, status, createdAt, updatedAt',
+        songSections: 'id, songId, sortOrder',
+        songJournalEntries: 'id, songId, topic',
+        songReferences: 'id, songId',
+        songAssets: 'id, songId',
+        songTodos: 'id, songId, completed',
+        songVersions: 'id, songId, isMain',
+        albums: 'id, format, createdAt, updatedAt',
+        albumSongs: 'id, albumId, songId',
+        albumReferences: 'id, albumId',
+        instruments: 'id, type, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('ideaMedia').toCollection().modify((item) => {
+          if (item.type !== 'midi') {
+            item.source = null
+            return
+          }
+
+          if (
+            item.source === 'notepicker' ||
+            item.source === 'recording' ||
+            item.source === 'extraction'
+          ) {
+            return
+          }
+
+          const name = String(item.filename ?? '').toLowerCase()
+          if (name.startsWith('recording-') || name.includes('-recording-')) {
+            item.source = 'recording'
+          } else if (
+            name.startsWith('extraction-') ||
+            name.includes('-extraction-')
+          ) {
+            item.source = 'extraction'
+          } else {
+            item.source = 'notepicker'
+          }
+        })
+      })
   }
 }
 

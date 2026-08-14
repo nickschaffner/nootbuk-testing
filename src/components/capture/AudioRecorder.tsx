@@ -62,6 +62,7 @@ export function AudioRecorder({
       await addMediaToIdea({
         ideaId,
         type: 'audio',
+        source: null,
         filename: `recording-${timestamp}.wav`,
         mimeType: 'audio/wav',
         blob: audioBlob,
