@@ -1,4 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
+import dexieCloud from 'dexie-cloud-addon'
 
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
@@ -31,7 +32,7 @@ export class NootbukDatabase extends Dexie {
   instruments!: EntityTable<Instrument, 'id'>
 
   constructor() {
-    super('NootbukDB')
+    super('NootbukDB', { addons: [dexieCloud] })
 
     this.version(1).stores({
       ideas: 'id, songId, sectionId, role, sectionIntent, status, createdAt',
@@ -448,7 +449,29 @@ export class NootbukDatabase extends Dexie {
           }
         })
       })
+
+    this.version(9).stores({
+      ideas: '@id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+      ideaMedia: '@id, ideaId, type, source',
+      songs: '@id, status, createdAt, updatedAt',
+      songSections: '@id, songId, sortOrder',
+      songJournalEntries: '@id, songId, topic',
+      songReferences: '@id, songId',
+      songAssets: '@id, songId',
+      songTodos: '@id, songId, completed',
+      songVersions: '@id, songId, isMain',
+      albums: '@id, format, createdAt, updatedAt',
+      albumSongs: '@id, albumId, songId',
+      albumReferences: '@id, albumId',
+      instruments: '@id, type, createdAt',
+    })
   }
 }
 
 export const db = new NootbukDatabase()
+
+db.cloud.configure({
+  databaseUrl: import.meta.env.VITE_DEXIE_CLOUD_URL,
+  requireAuth: true,
+  tryUseServiceWorker: true,
+})
