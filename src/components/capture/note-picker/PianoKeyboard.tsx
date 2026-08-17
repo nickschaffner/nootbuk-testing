@@ -14,6 +14,7 @@ interface PianoKeyboardProps {
   highlightedKeys?: ReadonlySet<string>
   isEditing?: boolean
   editingLabel?: string | null
+  disabled?: boolean
   onNoteEnter?: (noteName: string, octave: number) => void
   onNoteLeave?: () => void
   onNoteClick: (noteName: string, octave: number) => void
@@ -23,12 +24,14 @@ interface PianoKeyboardProps {
 function OctaveKeyboard({
   octave,
   highlightedKeys,
+  disabled = false,
   onNoteEnter,
   onNoteLeave,
   onNoteClick,
 }: {
   octave: number
   highlightedKeys?: ReadonlySet<string>
+  disabled?: boolean
   onNoteEnter?: (noteName: string, octave: number) => void
   onNoteLeave?: () => void
   onNoteClick: (noteName: string, octave: number) => void
@@ -42,14 +45,29 @@ function OctaveKeyboard({
           <button
             key={keyId}
             type="button"
+            disabled={disabled}
             className={cn(
               'relative flex flex-1 flex-col justify-end rounded-b-md border border-border bg-background pb-2 text-xs font-medium transition-colors',
               lit && 'bg-primary/25',
-              'hover:bg-muted/80',
+              disabled
+                ? 'cursor-not-allowed opacity-50'
+                : 'hover:bg-muted/80',
             )}
-            onMouseEnter={() => onNoteEnter?.(name, octave)}
-            onMouseLeave={() => onNoteLeave?.()}
-            onClick={() => onNoteClick(name, octave)}
+            onMouseEnter={() => {
+              if (!disabled) {
+                onNoteEnter?.(name, octave)
+              }
+            }}
+            onMouseLeave={() => {
+              if (!disabled) {
+                onNoteLeave?.()
+              }
+            }}
+            onClick={() => {
+              if (!disabled) {
+                onNoteClick(name, octave)
+              }
+            }}
           >
             <span className="text-muted-foreground">{name}</span>
           </button>
@@ -66,15 +84,30 @@ function OctaveKeyboard({
           <button
             key={keyId}
             type="button"
+            disabled={disabled}
             className={cn(
               'absolute top-0 z-10 flex h-[58%] w-[9%] -translate-x-1/2 flex-col justify-end rounded-b-md border border-border bg-foreground pb-1.5 text-[10px] font-medium text-background transition-colors',
               lit && 'bg-primary text-primary-foreground',
-              'hover:bg-foreground/90',
+              disabled
+                ? 'cursor-not-allowed opacity-50'
+                : 'hover:bg-foreground/90',
             )}
             style={{ left: `${leftPercent}%` }}
-            onMouseEnter={() => onNoteEnter?.(name, octave)}
-            onMouseLeave={() => onNoteLeave?.()}
-            onClick={() => onNoteClick(name, octave)}
+            onMouseEnter={() => {
+              if (!disabled) {
+                onNoteEnter?.(name, octave)
+              }
+            }}
+            onMouseLeave={() => {
+              if (!disabled) {
+                onNoteLeave?.()
+              }
+            }}
+            onClick={() => {
+              if (!disabled) {
+                onNoteClick(name, octave)
+              }
+            }}
           >
             <span>{name}</span>
           </button>
@@ -89,6 +122,7 @@ export function PianoKeyboard({
   highlightedKeys,
   isEditing = false,
   editingLabel,
+  disabled = false,
   onNoteEnter,
   onNoteLeave,
   onNoteClick,
@@ -113,6 +147,7 @@ export function PianoKeyboard({
             key={octave}
             octave={octave}
             highlightedKeys={highlightedKeys}
+            disabled={disabled}
             onNoteEnter={onNoteEnter}
             onNoteLeave={onNoteLeave}
             onNoteClick={onNoteClick}

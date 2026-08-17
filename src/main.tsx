@@ -2,7 +2,10 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 
 import { App } from '@/app/App'
+import { preloadPianoPatch } from '@/hooks/useSynth'
 import './index.css'
+
+preloadPianoPatch()
 
 if ('serviceWorker' in navigator) {
   void navigator.serviceWorker.register('/sw.js')

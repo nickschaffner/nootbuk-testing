@@ -5,15 +5,12 @@ import {
   Minus,
   Music2,
   Plus,
-  Redo2,
   Trash2,
-  Undo2,
   X,
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import {
-  QUANTIZE_OPTIONS,
   lineCount,
   lineRange,
   quantizeBeat,
@@ -31,8 +28,6 @@ interface BeatTimelineProps {
   cursorBeat: number
   blockWidth: BlockWidthBeats
   gridBeat: number
-  midiQuantize?: boolean
-  showMidiRecQuantize?: boolean
   selectedBlockId: string | null
   isEditing: boolean
   ghost: TimelineBlock | null
@@ -41,13 +36,9 @@ interface BeatTimelineProps {
   isRecording?: boolean
   recordOriginBeat?: number
   recordedBlockIds?: ReadonlySet<string> | null
-  canUndo: boolean
-  canRedo: boolean
   onSelectBlock: (id: string | null) => void
   onGridClick: (beat: number) => void
   onPlayheadMove: (beat: number) => void
-  onGridBeatChange: (value: number) => void
-  onMidiQuantizeChange?: (value: boolean) => void
   onToggleEdit: () => void
   onResize: (id: string, deltaBeats: number) => void
   onMove: (id: string, direction: -1 | 1) => void
@@ -59,8 +50,6 @@ interface BeatTimelineProps {
   onDeleteLine: (lineIndex: number) => void
   onAddLineBelow: (lineIndex: number) => void
   onDuplicateLine: (lineIndex: number) => void
-  onUndo: () => void
-  onRedo: () => void
   className?: string
 }
 
@@ -96,8 +85,6 @@ export function BeatTimeline({
   cursorBeat,
   blockWidth,
   gridBeat,
-  midiQuantize = false,
-  showMidiRecQuantize = false,
   selectedBlockId,
   isEditing,
   ghost,
@@ -106,13 +93,9 @@ export function BeatTimeline({
   isRecording = false,
   recordOriginBeat = 0,
   recordedBlockIds = null,
-  canUndo,
-  canRedo,
   onSelectBlock,
   onGridClick,
   onPlayheadMove,
-  onGridBeatChange,
-  onMidiQuantizeChange,
   onToggleEdit,
   onResize,
   onMove,
@@ -124,8 +107,6 @@ export function BeatTimeline({
   onDeleteLine,
   onAddLineBelow,
   onDuplicateLine,
-  onUndo,
-  onRedo,
   className,
 }: BeatTimelineProps) {
   const selected = blocks.find((block) => block.id === selectedBlockId) ?? null
@@ -138,36 +119,6 @@ export function BeatTimeline({
           Timeline
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-muted-foreground">Quantize</span>
-            <select
-              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-              value={String(gridBeat)}
-              onChange={(event) =>
-                onGridBeatChange(Number.parseFloat(event.target.value))
-              }
-              aria-label="Quantization resolution"
-            >
-              {QUANTIZE_OPTIONS.map((option) => (
-                <option key={option.value} value={String(option.value)}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {showMidiRecQuantize ? (
-              <label className="ml-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <input
-                  type="checkbox"
-                  checked={midiQuantize}
-                  onChange={(event) =>
-                    onMidiQuantizeChange?.(event.target.checked)
-                  }
-                  aria-label="Quantize MIDI recording"
-                />
-                MIDI rec
-              </label>
-            ) : null}
-          </div>
           <div className="flex items-center gap-1">
             <span className="text-xs text-muted-foreground">Bars/line</span>
             <Button
@@ -194,26 +145,6 @@ export function BeatTimeline({
               <Plus className="size-3.5" />
             </Button>
           </div>
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="outline"
-            disabled={!canUndo}
-            onClick={onUndo}
-            aria-label="Undo"
-          >
-            <Undo2 className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            size="icon-sm"
-            variant="outline"
-            disabled={!canRedo}
-            onClick={onRedo}
-            aria-label="Redo"
-          >
-            <Redo2 className="size-3.5" />
-          </Button>
           <Button type="button" size="sm" variant="outline" onClick={onAddBar}>
             Add Bar
           </Button>

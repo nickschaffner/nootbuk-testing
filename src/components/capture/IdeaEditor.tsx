@@ -16,6 +16,13 @@ import { MidiRecord } from '@/components/capture/MidiRecord'
 import { NotePicker } from '@/components/capture/note-picker/NotePicker'
 import { FoldedPianoRoll } from '@/components/capture/note-picker/FoldedPianoRoll'
 import {
+  IDLE_STUDIO_TRANSPORT,
+  NOOP_STUDIO_HANDLERS,
+  StudioBar,
+  type StudioTransportHandlers,
+  type StudioTransportState,
+} from '@/components/capture/StudioBar'
+import {
   blockHasContent,
   createAudioImportBlock,
   createEmptyBlock,
@@ -81,6 +88,7 @@ import { db } from '@/lib/db'
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
 import { timeSignatureFromSong } from '@/lib/time-signature'
 import {
+  GRID_BEAT,
   barCountForBlocks,
   noteEventsToTimelineBlocks,
   parseBeatsPerBar,
@@ -335,6 +343,16 @@ export function IdeaEditor() {
   const [key, setKey] = useState<string | null>(null)
   const [tempo, setTempo] = useState('')
   const [timeSignature, setTimeSignature] = useState('4/4')
+  const [gridBeat, setGridBeat] = useState(GRID_BEAT)
+  const [studioFocus, setStudioFocus] = useState<'notes' | 'midi'>('notes')
+  const [notesTransport, setNotesTransport] = useState<StudioTransportState>(
+    IDLE_STUDIO_TRANSPORT,
+  )
+  const [midiTransport, setMidiTransport] = useState<StudioTransportState>(
+    IDLE_STUDIO_TRANSPORT,
+  )
+  const notesHandlersRef = useRef<StudioTransportHandlers>(NOOP_STUDIO_HANDLERS)
+  const midiHandlersRef = useRef<StudioTransportHandlers>(NOOP_STUDIO_HANDLERS)
   const [lyrics, setLyrics] = useState('')
   const [notes, setNotes] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -344,6 +362,33 @@ export function IdeaEditor() {
   const [selectedSongId, setSelectedSongId] = useState('')
   const [selectedSectionId, setSelectedSectionId] = useState('unassigned')
   const tempoSeededRef = useRef(false)
+
+  const hasNotesTool = blocks.some((block) => block.type === 'notes')
+  const hasMidiTool = blocks.some((block) => block.type === 'midi')
+  const showStudioBar = hasNotesTool || hasMidiTool
+
+  useEffect(() => {
+    if (studioFocus === 'notes' && !hasNotesTool && hasMidiTool) {
+      setStudioFocus('midi')
+      return
+    }
+    if (studioFocus === 'midi' && !hasMidiTool && hasNotesTool) {
+      setStudioFocus('notes')
+    }
+  }, [studioFocus, hasNotesTool, hasMidiTool])
+
+  const activeTransport =
+    studioFocus === 'midi' && hasMidiTool
+      ? midiTransport
+      : hasNotesTool
+        ? notesTransport
+        : midiTransport
+  const activeHandlers =
+    studioFocus === 'midi' && hasMidiTool
+      ? midiHandlersRef
+      : hasNotesTool
+        ? notesHandlersRef
+        : midiHandlersRef
 
   const sections = useSectionsForSong(selectedSongId || undefined)
 
@@ -991,76 +1036,86 @@ export function IdeaEditor() {
         )
       case 'midi':
         return (
-          <MidiRecord
-            draft
-            embedded
-            initialNoteEvents={block.noteEvents}
-            tempo={tempo ? Number.parseInt(tempo, 10) : null}
-            timeSignature={timeSignature}
-            onTimeSignatureChange={setTimeSignature}
-            onTempoChange={(next) =>
-              setTempo(next && next > 0 ? String(next) : '')
-            }
-            patchName={patchName}
-            onPatchChange={setPatchName}
-            onDraftChange={(data) =>
-              updateBlock(block.id, (current) => {
-                if (current.type !== 'midi') {
-                  return current
-                }
-                if (
-                  current.noteEvents === data.noteEvents &&
-                  current.bpm === data.bpm
-                ) {
-                  return current
-                }
-                return {
-                  ...current,
-                  noteEvents: data.noteEvents,
-                  bpm: data.bpm,
-                  dirty: true,
-                }
-              })
-            }
-          />
+          <div
+            onPointerDownCapture={() => setStudioFocus('midi')}
+          >
+            <MidiRecord
+              draft
+              embedded
+              initialNoteEvents={block.noteEvents}
+              tempo={tempo ? Number.parseInt(tempo, 10) : null}
+              timeSignature={timeSignature}
+              patchName={patchName}
+              gridBeat={gridBeat}
+              onGridBeatChange={setGridBeat}
+              onTransportStateChange={setMidiTransport}
+              onRegisterTransportHandlers={(handlers) => {
+                midiHandlersRef.current = handlers
+              }}
+              onDraftChange={(data) =>
+                updateBlock(block.id, (current) => {
+                  if (current.type !== 'midi') {
+                    return current
+                  }
+                  if (
+                    current.noteEvents === data.noteEvents &&
+                    current.bpm === data.bpm
+                  ) {
+                    return current
+                  }
+                  return {
+                    ...current,
+                    noteEvents: data.noteEvents,
+                    bpm: data.bpm,
+                    dirty: true,
+                  }
+                })
+              }
+            />
+          </div>
         )
       case 'notes':
         return (
-          <NotePicker
-            draft
-            embedded
-            initialNoteEvents={block.noteEvents}
-            tempo={tempo ? Number.parseInt(tempo, 10) : null}
-            timeSignature={timeSignature}
-            onTimeSignatureChange={setTimeSignature}
-            onTempoChange={(next) =>
-              setTempo(next && next > 0 ? String(next) : '')
-            }
-            patchName={patchName}
-            onPatchChange={setPatchName}
-            onCopyToMidiRecord={(data) =>
-              copyNotesToMidiRecord(data.noteEvents, data.bpm)
-            }
-            onDraftChange={(data) =>
-              updateBlock(block.id, (current) => {
-                if (current.type !== 'notes') {
-                  return current
-                }
-                if (
-                  current.noteEvents === data.noteEvents &&
-                  current.bpm === data.bpm
-                ) {
-                  return current
-                }
-                return {
-                  ...current,
-                  noteEvents: data.noteEvents,
-                  bpm: data.bpm,
-                  dirty: true,
-                }
-              })
-            }
-          />
+          <div
+            onPointerDownCapture={() => setStudioFocus('notes')}
+          >
+            <NotePicker
+              draft
+              embedded
+              initialNoteEvents={block.noteEvents}
+              tempo={tempo ? Number.parseInt(tempo, 10) : null}
+              timeSignature={timeSignature}
+              patchName={patchName}
+              gridBeat={gridBeat}
+              onGridBeatChange={setGridBeat}
+              onTransportStateChange={setNotesTransport}
+              onRegisterTransportHandlers={(handlers) => {
+                notesHandlersRef.current = handlers
+              }}
+              onCopyToMidiRecord={(data) =>
+                copyNotesToMidiRecord(data.noteEvents, data.bpm)
+              }
+              onDraftChange={(data) =>
+                updateBlock(block.id, (current) => {
+                  if (current.type !== 'notes') {
+                    return current
+                  }
+                  if (
+                    current.noteEvents === data.noteEvents &&
+                    current.bpm === data.bpm
+                  ) {
+                    return current
+                  }
+                  return {
+                    ...current,
+                    noteEvents: data.noteEvents,
+                    bpm: data.bpm,
+                    dirty: true,
+                  }
+                })
+              }
+            />
+          </div>
         )
       case 'extraction':
         return (
@@ -1181,6 +1236,24 @@ export function IdeaEditor() {
               </div>
             ) : (
               <div className="space-y-4">
+                {showStudioBar ? (
+                  <StudioBar
+                    tempo={tempo}
+                    timeSignature={timeSignature || '4/4'}
+                    gridBeat={gridBeat}
+                    patchName={patchName}
+                    transport={activeTransport}
+                    onTempoChange={setTempo}
+                    onTimeSignatureChange={setTimeSignature}
+                    onGridBeatChange={setGridBeat}
+                    onPatchChange={setPatchName}
+                    onPlayPause={() => activeHandlers.current.playPause()}
+                    onRestart={() => activeHandlers.current.restart()}
+                    onToggleLoop={() => activeHandlers.current.toggleLoop()}
+                    onUndo={() => activeHandlers.current.undo()}
+                    onRedo={() => activeHandlers.current.redo()}
+                  />
+                ) : null}
                 {blocks.map((block) => (
                   <div
                     key={block.id}

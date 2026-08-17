@@ -1,13 +1,14 @@
-import { Circle, Pause, Play, RotateCcw, Square, Undo2 } from 'lucide-react'
+import { Circle, Square } from 'lucide-react'
+
+import type {
+  StudioTransportHandlers,
+  StudioTransportState,
+} from '@/components/capture/StudioBar'
 import { useEffect, useRef, useState } from 'react'
 import * as Tone from 'tone'
 
 import { FoldedPianoRoll } from '@/components/capture/note-picker/FoldedPianoRoll'
-import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
-import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useMidi } from '@/hooks/useMidi'
 import { useSynth } from '@/hooks/useSynth'
 import { parsePlaybackPatch } from '@/lib/instrument-utils'
@@ -19,7 +20,6 @@ import {
   GRID_BEAT,
   noteEventsToTimelineBlocks,
   parseBeatsPerBar,
-  QUANTIZE_OPTIONS,
   quantizeBeat,
   timelineBlocksToNoteEvents,
   timelineEndBeat,
@@ -51,10 +51,11 @@ interface MidiRecordProps {
   initialNoteEvents?: NoteEvent[]
   tempo?: number | null
   timeSignature?: string | null
-  onTimeSignatureChange?: (value: string) => void
-  onTempoChange?: (bpm: number | null) => void
   patchName?: string | null
-  onPatchChange?: (value: string | null) => void
+  gridBeat?: number
+  onGridBeatChange?: (value: number) => void
+  onTransportStateChange?: (state: StudioTransportState) => void
+  onRegisterTransportHandlers?: (handlers: StudioTransportHandlers) => void
   onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
 }
 
@@ -83,10 +84,11 @@ export function MidiRecord({
   initialNoteEvents,
   tempo,
   timeSignature,
-  onTimeSignatureChange,
-  onTempoChange,
   patchName = null,
-  onPatchChange,
+  gridBeat: gridBeatProp,
+  onGridBeatChange,
+  onTransportStateChange,
+  onRegisterTransportHandlers,
   onDraftChange,
 }: MidiRecordProps) {
   const synth = useSynth()
@@ -109,7 +111,9 @@ export function MidiRecord({
       1,
     ),
   )
-  const [gridBeat, setGridBeat] = useState(GRID_BEAT)
+  const [internalGridBeat, setInternalGridBeat] = useState(GRID_BEAT)
+  const gridBeat = gridBeatProp ?? internalGridBeat
+  const setGridBeat = onGridBeatChange ?? setInternalGridBeat
   const [midiQuantize, setMidiQuantize] = useState(false)
   const [snapControls, setSnapControls] = useState(true)
   const [recordMode, setRecordMode] = useState<RecordMode>('record')
@@ -911,6 +915,28 @@ export function MidiRecord({
     applySnapshot(previous)
   }
 
+  const handlePlayPauseRef = useRef<() => Promise<void>>(async () => {})
+  const handleRestartRef = useRef<() => Promise<void>>(async () => {})
+  const undoRef = useRef(undo)
+  undoRef.current = undo
+
+  useEffect(() => {
+    onTransportStateChange?.({
+      isPlaying: isPlaying && !isRecording && !isCountingIn,
+      loopEnabled,
+      canUndo: past.length > 0,
+      canRedo: false,
+      transportLocked: isRecording || isCountingIn,
+    })
+  }, [
+    isPlaying,
+    isRecording,
+    isCountingIn,
+    loopEnabled,
+    past.length,
+    onTransportStateChange,
+  ])
+
   function handleClear() {
     if (recordingRef.current || countingInRef.current) {
       return
@@ -921,6 +947,29 @@ export function MidiRecord({
     setBarCount(1)
     setPlayheadBeat(0)
     playheadBeatRef.current = 0
+  }
+
+  /** Shift all notes left so the earliest starts at beat 0. Relative timing unchanged. */
+  function handleTrim() {
+    if (recordingRef.current || countingInRef.current || blocks.length === 0) {
+      return
+    }
+    const offset = Math.min(...blocks.map((block) => block.startBeat))
+    if (offset <= 0) {
+      return
+    }
+    pushHistory()
+    if (playingRef.current) {
+      pausePlayback()
+    }
+    const next = blocks.map((block) => ({
+      ...block,
+      startBeat: block.startBeat - offset,
+    }))
+    setBlocks(next)
+    setBarCount((bars) =>
+      trimBarCount(next, beatsPerBarRef.current, bars, 1),
+    )
   }
 
   function recordingExceptIds() {
@@ -1129,6 +1178,32 @@ export function MidiRecord({
     await startPlayback(loopEnabledRef.current ? activeLoopStart() : 0)
   }
 
+  handlePlayPauseRef.current = handlePlayPause
+  handleRestartRef.current = handleRestart
+
+  onRegisterTransportHandlers?.({
+    playPause: () => {
+      void handlePlayPauseRef.current()
+    },
+    restart: () => {
+      void handleRestartRef.current()
+    },
+    toggleLoop: () => {
+      setLoopEnabled((value) => {
+        const next = !value
+        if (next && !loopRegionInitializedRef.current) {
+          applyInitialLoopRegion()
+          loopRegionInitializedRef.current = true
+        }
+        return next
+      })
+    },
+    undo: () => {
+      undoRef.current()
+    },
+    redo: () => {},
+  })
+
   function handlePlayheadMove(beat: number) {
     if (recordingRef.current || countingInRef.current) {
       return
@@ -1152,95 +1227,6 @@ export function MidiRecord({
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Label className="text-xs text-muted-foreground">TIME</Label>
-        <TimeSignatureSelector
-          compact
-          hideLabel
-          id="midi-record-time"
-          value={timeSignature}
-          onChange={(next) => onTimeSignatureChange?.(next)}
-        />
-        <Label
-          htmlFor="midi-record-tempo"
-          className="ml-2 text-xs text-muted-foreground"
-        >
-          TEMPO
-        </Label>
-        <Input
-          id="midi-record-tempo"
-          type="number"
-          min={1}
-          placeholder="120"
-          className="h-8 w-20"
-          value={tempo && tempo > 0 ? tempo : ''}
-          onChange={(event) => {
-            const raw = event.target.value
-            if (raw === '') {
-              onTempoChange?.(null)
-              return
-            }
-            const next = Number.parseInt(raw, 10)
-            if (!Number.isFinite(next) || next < 1) {
-              return
-            }
-            onTempoChange?.(next)
-          }}
-        />
-      </div>
-
-      <div className="max-w-xs">
-        <SynthPatchSelector
-          id="midi-record-patch"
-          value={patchName}
-          onChange={(next) => onPatchChange?.(next)}
-        />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => void handlePlayPause()}
-          disabled={isRecording || isCountingIn}
-        >
-          {isPlaying && !isRecording && !isCountingIn ? (
-            <>
-              <Pause className="size-3.5" /> Pause
-            </>
-          ) : (
-            <>
-              <Play className="size-3.5" /> Play
-            </>
-          )}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => void handleRestart()}
-          disabled={isRecording || isCountingIn}
-        >
-          <RotateCcw className="size-3.5" /> Restart
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={loopEnabled ? 'default' : 'outline'}
-          disabled={isRecording || isCountingIn}
-          onClick={() => {
-            setLoopEnabled((value) => {
-              const next = !value
-              if (next && !loopRegionInitializedRef.current) {
-                applyInitialLoopRegion()
-                loopRegionInitializedRef.current = true
-              }
-              return next
-            })
-          }}
-        >
-          Loop
-        </Button>
         <Button
           type="button"
           size="sm"
@@ -1249,6 +1235,20 @@ export function MidiRecord({
           onClick={handleClear}
         >
           Clear
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={
+            isRecording ||
+            isCountingIn ||
+            blocks.length === 0 ||
+            Math.min(...blocks.map((block) => block.startBeat)) <= 0
+          }
+          onClick={handleTrim}
+        >
+          Trim
         </Button>
         <Button
           type="button"
@@ -1308,21 +1308,6 @@ export function MidiRecord({
           >
             Snap Controls
           </Button>
-          <select
-            className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-            value={String(gridBeat)}
-            disabled={isRecording || isCountingIn}
-            onChange={(event) =>
-              setGridBeat(Number.parseFloat(event.target.value))
-            }
-            aria-label="Quantization resolution"
-          >
-            {QUANTIZE_OPTIONS.map((option) => (
-              <option key={option.value} value={String(option.value)}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </div>
         <Button
           type="button"
@@ -1334,7 +1319,7 @@ export function MidiRecord({
           }
           variant={isRecording || isCountingIn ? 'destructive' : 'default'}
           disabled={
-            !isRecording && !isCountingIn && midi.midiDevices.length === 0
+            (!isRecording && !isCountingIn && (midi.midiDevices.length === 0 || !synth.patchReady))
           }
           onClick={() => {
             if (isCountingIn) {
@@ -1357,16 +1342,6 @@ export function MidiRecord({
               <Circle className="size-3.5 fill-current" /> Record
             </>
           )}
-        </Button>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="outline"
-          disabled={isRecording || isCountingIn || past.length === 0}
-          onClick={undo}
-          aria-label="Undo last take"
-        >
-          <Undo2 className="size-3.5" />
         </Button>
         {midi.isSupported ? (
           midi.midiDevices.length === 0 ? (

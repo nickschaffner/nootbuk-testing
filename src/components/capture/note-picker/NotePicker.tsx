@@ -1,13 +1,13 @@
-import { Pause, Play, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as Tone from 'tone'
 
+import type {
+  StudioTransportHandlers,
+  StudioTransportState,
+} from '@/components/capture/StudioBar'
 import { BeatTimeline } from '@/components/capture/note-picker/BeatTimeline'
 import { PianoKeyboard } from '@/components/capture/note-picker/PianoKeyboard'
-import { SynthPatchSelector } from '@/components/shared/SynthPatchSelector'
-import { TimeSignatureSelector } from '@/components/shared/TimeSignatureSelector'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useSynth } from '@/hooks/useSynth'
 import { shouldIgnoreGlobalShortcut } from '@/lib/browser-capabilities'
@@ -57,10 +57,11 @@ interface NotePickerProps {
   initialNoteEvents?: NoteEvent[]
   tempo?: number | null
   timeSignature?: string | null
-  onTimeSignatureChange?: (value: string) => void
-  onTempoChange?: (bpm: number | null) => void
   patchName?: string | null
-  onPatchChange?: (value: string | null) => void
+  gridBeat?: number
+  onGridBeatChange?: (value: number) => void
+  onTransportStateChange?: (state: StudioTransportState) => void
+  onRegisterTransportHandlers?: (handlers: StudioTransportHandlers) => void
   onDraftChange?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
   onCopyToMidiRecord?: (data: { noteEvents: NoteEvent[]; bpm: number }) => void
 }
@@ -94,10 +95,11 @@ export function NotePicker({
   initialNoteEvents,
   tempo,
   timeSignature,
-  onTimeSignatureChange,
-  onTempoChange,
   patchName = null,
-  onPatchChange,
+  gridBeat: gridBeatProp,
+  onGridBeatChange,
+  onTransportStateChange,
+  onRegisterTransportHandlers,
   onDraftChange,
   onCopyToMidiRecord,
 }: NotePickerProps) {
@@ -128,7 +130,9 @@ export function NotePicker({
   const [barsPerLine, setBarsPerLine] = useState(1)
   const [cursorBeat, setCursorBeat] = useState(0)
   const [ghost, setGhost] = useState<TimelineBlock | null>(null)
-  const [gridBeat, setGridBeat] = useState(GRID_BEAT)
+  const [internalGridBeat, setInternalGridBeat] = useState(GRID_BEAT)
+  const gridBeat = gridBeatProp ?? internalGridBeat
+  const setGridBeat = onGridBeatChange ?? setInternalGridBeat
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
@@ -568,6 +572,19 @@ export function NotePicker({
   undoRef.current = undo
   redoRef.current = redo
 
+  const handlePlayPauseRef = useRef<() => Promise<void>>(async () => {})
+  const handleRestartRef = useRef<() => Promise<void>>(async () => {})
+
+  useEffect(() => {
+    onTransportStateChange?.({
+      isPlaying,
+      loopEnabled,
+      canUndo: past.length > 0,
+      canRedo: future.length > 0,
+      transportLocked: false,
+    })
+  }, [isPlaying, loopEnabled, past.length, future.length, onTransportStateChange])
+
   function exitEditMode() {
     setIsEditing(false)
   }
@@ -865,6 +882,27 @@ export function NotePicker({
     await startPlayback(0)
   }
 
+  handlePlayPauseRef.current = handlePlayPause
+  handleRestartRef.current = handleRestart
+
+  onRegisterTransportHandlers?.({
+    playPause: () => {
+      void handlePlayPauseRef.current()
+    },
+    restart: () => {
+      void handleRestartRef.current()
+    },
+    toggleLoop: () => {
+      setLoopEnabled((value) => !value)
+    },
+    undo: () => {
+      undoRef.current()
+    },
+    redo: () => {
+      redoRef.current()
+    },
+  })
+
   return (
     <div
       ref={pickerRootRef}
@@ -879,47 +917,11 @@ export function NotePicker({
         highlightedKeys={pianoHighlights}
         isEditing={isEditing}
         editingLabel={isEditing ? selectedBlock?.label : null}
+        disabled={!synth.patchReady}
         onNoteEnter={handleChordHover}
         onNoteLeave={() => setHoverHighlights(new Set())}
         onNoteClick={handlePianoNote}
       />
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Label className="text-xs text-muted-foreground">TIME</Label>
-        <TimeSignatureSelector
-          compact
-          hideLabel
-          id="note-picker-time"
-          value={timeSignature}
-          onChange={(next) => onTimeSignatureChange?.(next)}
-        />
-        <Label
-          htmlFor="note-picker-tempo"
-          className="ml-2 text-xs text-muted-foreground"
-        >
-          TEMPO
-        </Label>
-        <Input
-          id="note-picker-tempo"
-          type="number"
-          min={1}
-          placeholder="120"
-          className="h-8 w-20"
-          value={tempo && tempo > 0 ? tempo : ''}
-          onChange={(event) => {
-            const raw = event.target.value
-            if (raw === '') {
-              onTempoChange?.(null)
-              return
-            }
-            const next = Number.parseInt(raw, 10)
-            if (!Number.isFinite(next) || next < 1) {
-              return
-            }
-            onTempoChange?.(next)
-          }}
-        />
-      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <Label className="text-xs text-muted-foreground">OCT</Label>
@@ -935,14 +937,6 @@ export function NotePicker({
             {octaveValue}
           </Button>
         ))}
-      </div>
-
-      <div className="max-w-xs">
-        <SynthPatchSelector
-          id="note-picker-patch"
-          value={patchName}
-          onChange={(next) => onPatchChange?.(next)}
-        />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -978,38 +972,6 @@ export function NotePicker({
           }
         >
           {inputMode === 'preview' ? 'Preview mode' : 'Commit mode'}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => void handlePlayPause()}
-        >
-          {isPlaying ? (
-            <>
-              <Pause className="size-3.5" /> Pause
-            </>
-          ) : (
-            <>
-              <Play className="size-3.5" /> Play
-            </>
-          )}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => void handleRestart()}
-        >
-          <RotateCcw className="size-3.5" /> Restart
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant={loopEnabled ? 'default' : 'outline'}
-          onClick={() => setLoopEnabled((value) => !value)}
-        >
-          Loop
         </Button>
         {onCopyToMidiRecord ? (
           <Button
@@ -1059,12 +1021,9 @@ export function NotePicker({
           ghost={ghost}
           playheadBeat={playheadBeat}
           playheadPulseOpacity={playheadPulseOpacity}
-          canUndo={past.length > 0}
-          canRedo={future.length > 0}
           onSelectBlock={handleSelectBlock}
           onGridClick={handleGridClick}
           onPlayheadMove={handlePlayheadMove}
-          onGridBeatChange={setGridBeat}
           onToggleEdit={toggleEditMode}
           onResize={(id, delta) => {
             pushHistory()
@@ -1146,8 +1105,6 @@ export function NotePicker({
             setBlocks(next.blocks)
             setBarCount(next.barCount)
           }}
-          onUndo={undo}
-          onRedo={redo}
         />
       </div>
     </div>

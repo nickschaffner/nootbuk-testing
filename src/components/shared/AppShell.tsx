@@ -10,7 +10,7 @@ import { MobileTabBar } from '@/components/shared/MobileTabBar'
 import { StorageWarningBanner } from '@/components/shared/StorageWarningBanner'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { preloadCommonPatches } from '@/hooks/useSynth'
+import { preloadPianoPatch, useSynth } from '@/hooks/useSynth'
 import { QuickCaptureProvider } from '@/stores/quickCapture'
 import { cn } from '@/lib/utils'
 
@@ -24,10 +24,17 @@ const navItems = [
 
 export function AppShell() {
   const showCalibration = isDevMode()
+  const { patchReady, loadingPatchName, ensureStarted } = useSynth()
+
+  useEffect(() => {
+    preloadPianoPatch()
+  }, [])
 
   useEffect(() => {
     function unlockAudio() {
-      preloadCommonPatches()
+      void ensureStarted().catch((caught) => {
+        console.warn('Audio unlock failed:', caught)
+      })
       window.removeEventListener('pointerdown', unlockAudio)
       window.removeEventListener('keydown', unlockAudio)
     }
@@ -39,7 +46,7 @@ export function AppShell() {
       window.removeEventListener('pointerdown', unlockAudio)
       window.removeEventListener('keydown', unlockAudio)
     }
-  }, [])
+  }, [ensureStarted])
 
   return (
     <QuickCaptureProvider>
@@ -72,9 +79,32 @@ export function AppShell() {
                 </NavLink>
               ))}
 
+              {!patchReady && loadingPatchName ? (
+                <div
+                  className="mt-auto space-y-2 px-3 py-2"
+                  aria-live="polite"
+                  aria-busy="true"
+                >
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span
+                      className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+                      aria-hidden
+                    />
+                    <span>Loading {loadingPatchName}…</span>
+                  </div>
+                  <div
+                    className="h-1 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label={`Loading ${loadingPatchName}`}
+                  >
+                    <div className="h-full w-1/2 animate-pulse rounded-full bg-primary/80" />
+                  </div>
+                </div>
+              ) : null}
+
               {showCalibration ? (
                 <>
-                  <Separator className="my-2" />
+                  <Separator className={cn(!patchReady && loadingPatchName ? 'my-2' : 'mt-auto my-2')} />
                   <NavLink
                     to="/calibration"
                     className={({ isActive }) =>

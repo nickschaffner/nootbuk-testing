@@ -26,7 +26,7 @@ export function SynthPatchSelector({
   value,
   onChange,
 }: SynthPatchSelectorProps) {
-  const { setPatch, isLoadingPatch, synthSource, isMuted } = useSynth()
+  const { setPatch, synthSource, isMuted } = useSynth()
   const resolved: PlaybackPatchId = parsePlaybackPatch(value) ?? 'piano'
 
   useEffect(() => {
@@ -67,9 +67,6 @@ export function SynthPatchSelector({
           ))}
         </SelectContent>
       </Select>
-      {isLoadingPatch ? (
-        <p className="text-xs text-muted-foreground">Loading patch...</p>
-      ) : null}
     </div>
   )
 }
