@@ -63,7 +63,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 
 | Component | Key props | Notes |
 |---|---|---|
-| `Button` | `variant` `primary\|secondary\|ghost\|danger\|link`, `size` `sm\|md\|lg`, `icon?` | Text action. Forwards `<button>` props. |
+| `Button` | `variant` `primary\|secondary\|outline\|ghost\|danger\|link`, `size` `sm\|md\|lg`, `block?`, `icon?` | Text action. `outline` is hairline. `block` is full-width. |
 | `IconButton` | `shape` `square\|round`, `variant` `solid\|outline\|ghost`, `size` `sm\|md\|lg`, `aria-label` (required) | Single-glyph action; pass one icon as children. |
 | `PlayButton` | `playing`, `size` `sm\|md\|lg` | Round vermillion play/pause. Hollow triangle in primary-foreground. |
 | `RecordButton` | `recording`, `size` `md\|lg`, `shape` `round\|square` | Idle dot → stop square with pulse. |

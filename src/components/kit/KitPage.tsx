@@ -378,14 +378,20 @@ export default function KitPage() {
       {/* ── Buttons ────────────────────────────────────────────────────── */}
       <KitSection no="K.04" title="Buttons" kicker="Button · IconButton · PlayButton · RecordButton">
         <div className="grid gap-8">
-          <Spec name="Button — variants" note="primary · secondary · ghost · danger · link">
+          <Spec name="Button — variants" note="primary · secondary · outline · ghost · danger · link">
             <Row>
               <Button variant="primary">Save to Pool</Button>
               <Button variant="secondary">Add Section</Button>
+              <Button variant="outline">+ 12 More Ideas</Button>
               <Button variant="ghost">Cancel</Button>
               <Button variant="danger">Delete</Button>
               <Button variant="link">Copy to MIDI Record</Button>
             </Row>
+          </Spec>
+          <Spec name="Button — outline block" note="full-width hairline · load-more">
+            <Button variant="outline" block onClick={() => undefined}>
+              + 12 More Ideas
+            </Button>
           </Spec>
           <Spec name="Button — sizes & states" note="sm · md · lg">
             <Row>

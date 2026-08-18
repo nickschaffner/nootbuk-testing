@@ -12,6 +12,7 @@ const SIZE: Record<IconButtonSize, string> = {
   sm: 'size-8',
   md: 'size-9',
   lg: 'size-10',
+  xl: 'size-14',
 }
 
 export interface PlayButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

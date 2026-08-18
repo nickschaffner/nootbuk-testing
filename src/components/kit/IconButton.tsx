@@ -5,12 +5,12 @@ import { cn } from './cn'
 // IconButton — a single-glyph action. Pass one icon as children.
 //   shape:   square (default, Swiss) · round
 //   variant: solid (vermillion) · outline · ghost
-//   size:    sm (h-8) · md (h-9) · lg (h-10)
+//   size:    sm (h-8) · md (h-9) · lg (h-10) · xl (h-14)
 // ─────────────────────────────────────────────────────────────────────────
 
 export type IconButtonShape = 'square' | 'round'
 export type IconButtonVariant = 'solid' | 'outline' | 'ghost'
-export type IconButtonSize = 'sm' | 'md' | 'lg'
+export type IconButtonSize = 'sm' | 'md' | 'lg' | 'xl'
 
 const VARIANT: Record<IconButtonVariant, string> = {
   solid: 'noise bg-primary text-primary-foreground border border-primary hover:brightness-110',
@@ -23,6 +23,7 @@ const SIZE: Record<IconButtonSize, string> = {
   sm: 'size-8',
   md: 'size-9',
   lg: 'size-10',
+  xl: 'size-14',
 }
 
 export interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

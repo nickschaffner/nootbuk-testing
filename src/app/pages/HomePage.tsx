@@ -29,6 +29,7 @@ import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole } from '@/types/idea'
 
 const SONG_SLOTS = 3
+const POOL_VISIBLE = 8
 
 export function HomePage() {
   const { open: openCapture, openIdea } = useQuickCapture()
@@ -43,6 +44,7 @@ export function HomePage() {
   const [roleFilter, setRoleFilter] = useState<IdeaRole[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [poolSort, setPoolSort] = useState<TableSort | null>(null)
+  const [poolExpanded, setPoolExpanded] = useState(false)
   const [creatingSong, setCreatingSong] = useState(false)
   const [creatingAlbum, setCreatingAlbum] = useState(false)
 
@@ -103,6 +105,11 @@ export function HomePage() {
       return 0
     })
   }, [filteredIdeas, poolSort])
+
+  const visibleIdeas = poolExpanded
+    ? displayedIdeas
+    : displayedIdeas.slice(0, POOL_VISIBLE)
+  const hiddenPoolCount = displayedIdeas.length - visibleIdeas.length
 
   async function handleCreateSong() {
     setCreatingSong(true)
@@ -250,27 +257,38 @@ export function HomePage() {
         ) : filteredIdeas.length === 0 ? (
           <EmptyState title="No ideas match your filters." />
         ) : (
-          <Table sort={poolSort} onSort={setPoolSort}>
-            <TableHeader>
-              <TableRow>
-                <TableHead column="role">Role</TableHead>
-                <TableHead column="title">Title</TableHead>
-                <TableHead column="key">Key</TableHead>
-                <TableHead column="tempo">BPM</TableHead>
-                <TableHead column="updated">Updated</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {displayedIdeas.map((idea) => (
-                <PoolIdeaRow
-                  key={idea.id}
-                  idea={idea}
-                  onOpen={() => openIdea(idea.id)}
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <>
+            <Table sort={poolSort} onSort={setPoolSort}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead column="role">Role</TableHead>
+                  <TableHead column="title">Title</TableHead>
+                  <TableHead column="key">Key</TableHead>
+                  <TableHead column="tempo">BPM</TableHead>
+                  <TableHead column="updated">Updated</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleIdeas.map((idea) => (
+                  <PoolIdeaRow
+                    key={idea.id}
+                    idea={idea}
+                    onOpen={() => openIdea(idea.id)}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+            {hiddenPoolCount > 0 ? (
+              <Button
+                variant="outline"
+                block
+                onClick={() => setPoolExpanded(true)}
+              >
+                + {hiddenPoolCount} More {hiddenPoolCount === 1 ? 'Idea' : 'Ideas'}
+              </Button>
+            ) : null}
+          </>
         )}
       </section>
     </div>

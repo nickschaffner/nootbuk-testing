@@ -17,8 +17,8 @@ export interface RuleHeaderProps {
 
 export function RuleHeader({ title, subtitle, className }: RuleHeaderProps) {
   return (
-    <div className={cn('flex items-center gap-3', className)}>
-      <span className="label-mono shrink-0 text-primary">{title}</span>
+    <div className={cn('flex h-4 items-center gap-3', className)}>
+      <span className="label-mono shrink-0 leading-none text-primary">{title}</span>
       <span className="h-px min-w-4 flex-1 bg-primary" aria-hidden />
       {subtitle ? <MonoLabel className="shrink-0 text-right">{subtitle}</MonoLabel> : null}
     </div>
