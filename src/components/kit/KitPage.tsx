@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   Album,
   AudioLines,
@@ -42,6 +42,7 @@ import {
   PlayButton,
   RuleHeader,
   RedBar,
+  SearchBar,
   SECTION_INTENTS,
   SegmentedControl,
   SONG_STATUSES,
@@ -54,10 +55,18 @@ import {
   TodoRow,
   AudioVersionRow,
   IdeaCard,
+  IdeaRow,
   Menu,
   SongCard,
   AlbumCard,
   EmptyLibraryCard,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  type TableSort,
   Window,
 } from './index'
 
@@ -120,6 +129,18 @@ const TYPE_SCALE: { label: string; cls: string; sample: string; spec: string }[]
   { label: 'Mono Label', cls: 'label-mono', sample: 'Tempo · 120 BPM', spec: 'Space Mono · 400 · 0.6875rem · 0.14em · UPPER' },
 ]
 
+const TABLE_SPEC_ROWS = [
+  { name: 'Jazz Bass', kind: 'Bass', year: 1960 },
+  { name: 'Casio CT-X700', kind: 'Keys', year: 2018 },
+  { name: 'Massive', kind: 'Synth', year: 2007 },
+]
+
+const IDEA_SPEC_ROWS = [
+  { role: 'Bassline', title: 'Bassline — Dm — 92 BPM', ideaKey: 'Dm', tempo: 92, lastWorked: '2h ago', updatedAt: 2 },
+  { role: 'Melody', title: 'Falling in the dark, again', ideaKey: 'Am', tempo: 108, lastWorked: '1d ago', updatedAt: 24 },
+  { role: 'Sample', title: 'Rain loop off the balcony', ideaKey: null as string | null, tempo: null as number | null, lastWorked: '3d ago', updatedAt: 72 },
+]
+
 // ═══════════════════════════════════════════════════════════════════════════
 // The catalog page
 // ═══════════════════════════════════════════════════════════════════════════
@@ -139,6 +160,8 @@ export default function KitPage() {
   const [keyMode, setKeyMode] = useState('minor')
   const [todoDone, setTodoDone] = useState(false)
   const [main, setMain] = useState(true)
+  const [tableSort, setTableSort] = useState<TableSort | null>(null)
+  const [ideaTableSort, setIdeaTableSort] = useState<TableSort | null>(null)
 
   const captureModes = [
     { value: 'audio', label: 'Audio' },
@@ -151,6 +174,48 @@ export default function KitPage() {
   function toggleNote(n: string) {
     setNotes((prev) => (prev.includes(n) ? prev.filter((x) => x !== n) : [...prev, n]))
   }
+
+  const tableSpecRows = useMemo(() => {
+    if (!tableSort) {
+      return TABLE_SPEC_ROWS
+    }
+    const direction = tableSort.direction === 'asc' ? 1 : -1
+    return [...TABLE_SPEC_ROWS].sort((a, b) => {
+      if (tableSort.column === 'name') return a.name.localeCompare(b.name) * direction
+      if (tableSort.column === 'kind') return a.kind.localeCompare(b.kind) * direction
+      if (tableSort.column === 'year') return (a.year - b.year) * direction
+      return 0
+    })
+  }, [tableSort])
+
+  const ideaSpecRows = useMemo(() => {
+    if (!ideaTableSort) {
+      return IDEA_SPEC_ROWS
+    }
+    const direction = ideaTableSort.direction === 'asc' ? 1 : -1
+    return [...IDEA_SPEC_ROWS].sort((a, b) => {
+      if (ideaTableSort.column === 'role') return a.role.localeCompare(b.role) * direction
+      if (ideaTableSort.column === 'title') return a.title.localeCompare(b.title) * direction
+      if (ideaTableSort.column === 'key') {
+        const left = a.ideaKey ?? ''
+        const right = b.ideaKey ?? ''
+        if (!left && !right) return 0
+        if (!left) return 1
+        if (!right) return -1
+        return left.localeCompare(right) * direction
+      }
+      if (ideaTableSort.column === 'tempo') {
+        if (a.tempo == null && b.tempo == null) return 0
+        if (a.tempo == null) return 1
+        if (b.tempo == null) return -1
+        return (a.tempo - b.tempo) * direction
+      }
+      if (ideaTableSort.column === 'updated') {
+        return (a.updatedAt - b.updatedAt) * direction
+      }
+      return 0
+    })
+  }, [ideaTableSort])
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -425,8 +490,14 @@ export default function KitPage() {
       </KitSection>
 
       {/* ── Forms ──────────────────────────────────────────────────────── */}
-      <KitSection no="K.06" title="Forms & Fields" kicker="Field · Input · Textarea · Checkbox · Radio">
-        <Panel className="p-5">
+      <KitSection no="K.06" title="Forms & Fields" kicker="Field · Input · SearchBar · Textarea · Checkbox · Radio">
+        <div className="grid gap-8">
+          <Spec name="SearchBar" note="leading icon box · panel fill · flush field">
+            <div className="max-w-md">
+              <SearchBar placeholder="Search" />
+            </div>
+          </Spec>
+          <Panel className="p-5">
           <form className="grid gap-5 md:grid-cols-2" onSubmit={(e) => e.preventDefault()}>
             <Field label="Idea Title" htmlFor="f-title">
               <Input id="f-title" placeholder="Bassline — Dm — 92 BPM" />
@@ -455,6 +526,7 @@ export default function KitPage() {
             </div>
           </form>
         </Panel>
+        </div>
       </KitSection>
 
       <div className="mx-auto max-w-6xl px-6"><RedBar /></div>
@@ -644,8 +716,83 @@ export default function KitPage() {
 
       <div className="mx-auto max-w-6xl px-6"><RedBar /></div>
 
+      {/* ── Table ──────────────────────────────────────────────────────── */}
+      <KitSection no="K.10" title="Table" kicker="agnostic · sortable heads">
+        <div className="grid gap-8">
+          <Spec name="Table" note="any labeled head sorts · empty heads do not · parent owns the data">
+            <Table sort={tableSort} onSort={setTableSort}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead column="name">Name</TableHead>
+                  <TableHead column="kind">Type</TableHead>
+                  <TableHead column="year">Year</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tableSpecRows.map((row) => (
+                  <TableRow key={row.name}>
+                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="label-mono text-muted-foreground">{row.kind}</TableCell>
+                    <TableCell className="label-mono text-muted-foreground">{row.year}</TableCell>
+                    <TableCell />
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Spec>
+          <Spec name="IdeaRow" note="pool composition · labeled heads sort · plays/menu have no head">
+            <Table sort={ideaTableSort} onSort={setIdeaTableSort}>
+              <TableHeader>
+                <TableRow>
+                  <TableHead column="role">Role</TableHead>
+                  <TableHead column="title">Title</TableHead>
+                  <TableHead column="key">Key</TableHead>
+                  <TableHead column="tempo">BPM</TableHead>
+                  <TableHead column="updated">Updated</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {ideaSpecRows.map((row) => (
+                  <IdeaRow
+                    key={row.title}
+                    role={row.role}
+                    title={row.title}
+                    ideaKey={row.ideaKey}
+                    tempo={row.tempo}
+                    lastWorked={row.lastWorked}
+                    plays={
+                      row.role === 'Sample' ? undefined : (
+                        <div className="flex items-center gap-0.5">
+                          <IconButton aria-label="Play MIDI" variant="ghost" size="sm">
+                            <Music2 size={15} />
+                          </IconButton>
+                          {row.role === 'Bassline' ? (
+                            <IconButton aria-label="Play audio" variant="ghost" size="sm">
+                              <Mic size={15} />
+                            </IconButton>
+                          ) : null}
+                        </div>
+                      )
+                    }
+                    menuItems={[
+                      { label: 'Turn into Song', onSelect: () => undefined },
+                      { label: 'Move to Song', onSelect: () => undefined },
+                      { label: 'Copy to Song', onSelect: () => undefined },
+                    ]}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </Spec>
+        </div>
+      </KitSection>
+
+      <div className="mx-auto max-w-6xl px-6"><RedBar /></div>
+
       {/* ── Native HTML elements ───────────────────────────────────────── */}
-      <KitSection no="K.10" title="HTML Elements" kicker="base typography & rhythm">
+      <KitSection no="K.11" title="HTML Elements" kicker="base typography & rhythm">
         <Panel className="p-6">
           <div className="prose-kit flex flex-col gap-4">
             <h1 className="font-display text-4xl font-black uppercase tracking-tight">Heading 1</h1>

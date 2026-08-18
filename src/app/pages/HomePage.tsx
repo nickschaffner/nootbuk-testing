@@ -2,34 +2,31 @@ import { Lightbulb } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { IdeaCard } from '@/components/pool/IdeaCard'
+import { PoolIdeaRow } from '@/components/home/PoolIdeaRow'
 import { RecentAlbumCard, RecentSongCard } from '@/components/home/RecentLibraryCards'
 import {
   Button,
+  Chip,
   EmptyLibraryCard,
   EmptyState,
   IDEA_ROLES,
-  Input,
-  Pick,
   RuleHeader,
+  SearchBar,
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  type TableSort,
 } from '@/components/kit'
 import { createAlbum, useAllAlbums } from '@/hooks/useAlbums'
 import { useIdeasInPool } from '@/hooks/useIdeas'
-import {
-  mediaFlagsFor,
-  useIdeaMediaFlagsMap,
-} from '@/hooks/useIdeaMediaIndex'
 import { createSong, useAllSongs } from '@/hooks/useSongs'
 import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
 import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
-import { ideaMatchesSearch } from '@/lib/idea-label'
+import { getIdeaDisplayLabel, ideaMatchesSearch } from '@/lib/idea-label'
 import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole } from '@/types/idea'
-
-const ROLE_FILTER_OPTIONS = [
-  { value: 'all', label: 'All roles' },
-  ...IDEA_ROLES,
-]
 
 const SONG_SLOTS = 3
 
@@ -40,12 +37,12 @@ export function HomePage() {
   const songs = useAllSongs()
   const albums = useAllAlbums()
   const ideas = useIdeasInPool()
-  const mediaMap = useIdeaMediaFlagsMap()
   const todoCounts = useIncompleteTodoCountsBySong()
   const playbackVersions = usePlaybackVersionsIndex()
 
-  const [roleFilter, setRoleFilter] = useState<IdeaRole | 'all'>('all')
+  const [roleFilter, setRoleFilter] = useState<IdeaRole[]>([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [poolSort, setPoolSort] = useState<TableSort | null>(null)
   const [creatingSong, setCreatingSong] = useState(false)
   const [creatingAlbum, setCreatingAlbum] = useState(false)
 
@@ -59,12 +56,53 @@ export function HomePage() {
     }
 
     return ideas.filter((idea) => {
-      if (roleFilter !== 'all' && idea.role !== roleFilter) {
+      if (roleFilter.length > 0 && !roleFilter.includes(idea.role)) {
         return false
       }
       return ideaMatchesSearch(idea, searchQuery)
     })
   }, [ideas, roleFilter, searchQuery])
+
+  const displayedIdeas = useMemo(() => {
+    if (!poolSort) {
+      return filteredIdeas
+    }
+
+    const direction = poolSort.direction === 'asc' ? 1 : -1
+
+    return [...filteredIdeas].sort((a, b) => {
+      if (poolSort.column === 'role') {
+        return a.role.localeCompare(b.role) * direction
+      }
+      if (poolSort.column === 'title') {
+        return (
+          getIdeaDisplayLabel(a).localeCompare(getIdeaDisplayLabel(b), undefined, {
+            sensitivity: 'base',
+          }) * direction
+        )
+      }
+      if (poolSort.column === 'key') {
+        const left = a.key?.trim() ?? ''
+        const right = b.key?.trim() ?? ''
+        if (!left && !right) return 0
+        if (!left) return 1
+        if (!right) return -1
+        return left.localeCompare(right, undefined, { sensitivity: 'base' }) * direction
+      }
+      if (poolSort.column === 'tempo') {
+        if (a.tempo == null && b.tempo == null) return 0
+        if (a.tempo == null) return 1
+        if (b.tempo == null) return -1
+        return (a.tempo - b.tempo) * direction
+      }
+      if (poolSort.column === 'updated') {
+        return (
+          (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()) * direction
+        )
+      }
+      return 0
+    })
+  }, [filteredIdeas, poolSort])
 
   async function handleCreateSong() {
     setCreatingSong(true)
@@ -116,13 +154,6 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl font-black uppercase tracking-tight">Home</h1>
-        <p className="text-sm text-muted-foreground">
-          Recent work and your idea pool.
-        </p>
-      </div>
-
       <section className="space-y-6">
         <RuleHeader title="Recent" />
 
@@ -159,30 +190,49 @@ export function HomePage() {
         )}
       </section>
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-display text-xl font-extrabold uppercase tracking-wide">Idea Pool</h2>
-          <p className="text-sm text-muted-foreground">
-            Unattached ideas waiting to land in a song.
-          </p>
-        </div>
+      <section className="space-y-6">
+        <RuleHeader
+          title="Idea Pool"
+          subtitle={
+            ideas === undefined
+              ? undefined
+              : `${ideas.length} Idea${ideas.length === 1 ? '' : 's'}`
+          }
+        />
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="sm:flex-1">
-            <Input
-              placeholder="Search ideas..."
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-          </div>
-          <div className="w-full sm:w-44">
-            <Pick
-              options={ROLE_FILTER_OPTIONS}
-              value={roleFilter}
-              onChange={(event) =>
-                setRoleFilter(event.target.value as IdeaRole | 'all')
-              }
-            />
+        <div className="grid grid-cols-2 items-start gap-8">
+          <SearchBar
+            placeholder="Search"
+            value={searchQuery}
+            onChange={(event) => setSearchQuery(event.target.value)}
+          />
+          <div className="flex flex-wrap items-start gap-1.5">
+            <Chip
+              selected={roleFilter.length === 0}
+              onClick={() => setRoleFilter([])}
+            >
+              All
+            </Chip>
+            {IDEA_ROLES.map((role) => {
+              const value = role.value as IdeaRole
+              const selected = roleFilter.includes(value)
+              return (
+                <Chip
+                  key={role.value}
+                  selected={selected}
+                  onClick={() => {
+                    setRoleFilter((current) => {
+                      if (current.includes(value)) {
+                        return current.filter((item) => item !== value)
+                      }
+                      return [...current, value]
+                    })
+                  }}
+                >
+                  {role.label}
+                </Chip>
+              )
+            })}
           </div>
         </div>
 
@@ -200,17 +250,27 @@ export function HomePage() {
         ) : filteredIdeas.length === 0 ? (
           <EmptyState title="No ideas match your filters." />
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {filteredIdeas.map((idea) => (
-              <IdeaCard
-                key={idea.id}
-                idea={idea}
-                songTitle={null}
-                mediaFlags={mediaFlagsFor(mediaMap, idea.id)}
-                onClick={() => openIdea(idea.id)}
-              />
-            ))}
-          </div>
+          <Table sort={poolSort} onSort={setPoolSort}>
+            <TableHeader>
+              <TableRow>
+                <TableHead column="role">Role</TableHead>
+                <TableHead column="title">Title</TableHead>
+                <TableHead column="key">Key</TableHead>
+                <TableHead column="tempo">BPM</TableHead>
+                <TableHead column="updated">Updated</TableHead>
+                <TableHead />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayedIdeas.map((idea) => (
+                <PoolIdeaRow
+                  key={idea.id}
+                  idea={idea}
+                  onOpen={() => openIdea(idea.id)}
+                />
+              ))}
+            </TableBody>
+          </Table>
         )}
       </section>
     </div>

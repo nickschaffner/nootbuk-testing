@@ -4,6 +4,69 @@ Pull these into the Nootbuk app. Newest first.
 
 ---
 
+## 2026-08-18 · SearchBar
+
+Leading search icon in a square `bg-panel` box (Window header fill), flush
+against the field. One hairline frame, no gap. Catalog **K.06**. Home Idea
+Pool uses it.
+
+### Files touched
+```
+src/components/kit/SearchBar.tsx
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+src/app/pages/HomePage.tsx
+```
+
+---
+
+## 2026-08-18 · Table is agnostic + sortable heads
+
+Table is a generic grid, not an idea widget. Pass `sort` + `onSort`; the
+table does not touch your rows. Any `TableHead` with a text label is
+sortable. Empty heads (actions) are not. `column` is the sort id
+(defaults to the label text).
+
+Catalog K.10 shows a generic table first, IdeaRow as a composition.
+
+### Files touched
+```
+src/components/kit/Table.tsx
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+src/app/pages/HomePage.tsx
+```
+
+---
+
+## 2026-08-18 · Table + IdeaRow
+
+Hairline data table for list views. Title column eats leftover width so
+timestamp, play controls, and ⋯ stay packed to the right.
+
+- `Table` / `TableHeader` / `TableBody` / `TableRow` / `TableHead` /
+  `TableCell` / `TableActions` in `src/components/kit/Table.tsx`.
+- `IdeaRow` in `src/components/kit/IdeaRow.tsx` — role badge, title, key,
+  BPM, then last-updated + `plays` slot + `Menu`. Prop is `ideaKey` (React
+  `key` is reserved).
+- Catalog **K.10 Table**. Native HTML elements moved to **K.11**.
+- Home Idea Pool uses this instead of the card grid.
+
+### Files touched
+```
+src/components/kit/Table.tsx
+src/components/kit/IdeaRow.tsx
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+src/components/home/PoolIdeaRow.tsx
+src/app/pages/HomePage.tsx
+```
+
+---
+
 ## 2026-08-18 · Menu — the ⋯ context pop-up
 
 New `Menu` component (`src/components/kit/Menu.tsx`) for the three-dot actions

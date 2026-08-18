@@ -17,6 +17,7 @@ Every UI element in the app must come from the kit:
 - Record buttons → `import { RecordButton } from '@/components/kit'`
 - Selects/dropdowns → `import { Pick } from '@/components/kit'`
 - Text inputs → `import { Input } from '@/components/kit'`
+- Search fields → `import { SearchBar } from '@/components/kit'`
 - Textareas → `import { Textarea } from '@/components/kit'`
 - Checkboxes → `import { Checkbox } from '@/components/kit'`
 - Radios → `import { Radio } from '@/components/kit'`
@@ -36,6 +37,8 @@ Every UI element in the app must come from the kit:
 - Empty states → `import { EmptyState } from '@/components/kit'`
 - Status steppers → `import { StatusStepper } from '@/components/kit'`
 - Idea cards → `import { IdeaCard } from '@/components/kit'`
+- Idea pool rows → `import { IdeaRow } from '@/components/kit'`
+- Data tables → `import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/kit'`
 - Song cards → `import { SongCard } from '@/components/kit'`
 - Album cards → `import { AlbumCard } from '@/components/kit'`
 - Empty library slots → `import { EmptyLibraryCard } from '@/components/kit'`

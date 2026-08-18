@@ -86,6 +86,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | `Field` | `label`, `htmlFor?`, `hint?` | Mono label + control wrapper. |
 | `MonoLabel` | `htmlFor?` | Uppercase tracked eyebrow. |
 | `Input` / `Textarea` | native props | Square-cornered fields. |
+| `SearchBar` | native input props | Leading search icon in a `bg-panel` box, flush against the field. One hairline frame. |
 | `Checkbox` / `Radio` | native props + `label?` | Swiss square check / round radio. |
 
 ### Surfaces
@@ -121,6 +122,16 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | `TodoRow` | `text`, `completed?`, `timestamp?`, `onToggle?`, `onDelete?` | Production to-do. Playhead time uses `Length`. |
 | `AudioVersionRow` | `label`, `filename?`, `duration?`, `isMain?`, `playing?` + `on*` | Saved take/version. `Length` then play. |
 
+### Table
+
+| Component | Key props | Notes |
+|---|---|---|
+| `Table` | `sort?`, `onSort?` | Agnostic hairline grid. Parent owns data + sort. |
+| `TableHead` | `column?` | Text label → sortable (click toggles asc/desc). Empty / non-text heads are not. `column` defaults to the label. |
+| `TableHeader` / `TableBody` / `TableRow` / `TableCell` | | Row hover. Clickable when `onClick` is set. |
+| `TableActions` | `children` | Right-packed cluster. |
+| `IdeaRow` | `role`, `title`, `ideaKey?`, `tempo?`, `lastWorked?`, `plays?`, `menuItems?`, `onOpen?` | Pool line on top of Table. Use `ideaKey` (not `key`). |
+
 ## Option constants
 
 `options.ts` mirrors the working app's enums so selectors offer identical
@@ -150,6 +161,32 @@ import { SegmentedControl, IDEA_ROLES } from '@/components/kit'
   media={['audio', 'midi']}
   onPlay={play}
 />
+
+// A pool row
+<Table sort={sort} onSort={setSort}>
+  <TableHeader>
+    <TableRow>
+      <TableHead column="role">Role</TableHead>
+      <TableHead column="title">Title</TableHead>
+      <TableHead column="key">Key</TableHead>
+      <TableHead column="tempo">BPM</TableHead>
+      <TableHead column="updated">Updated</TableHead>
+      <TableHead />
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    <IdeaRow
+      role="Bassline"
+      title="Bassline — Dm — 92 BPM"
+      ideaKey="Dm"
+      tempo={92}
+      lastWorked="2h ago"
+      plays={plays}
+      menuItems={items}
+      onOpen={open}
+    />
+  </TableBody>
+</Table>
 
 // The capture transport
 <StudioBar

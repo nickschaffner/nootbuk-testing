@@ -34,6 +34,9 @@ export type { PickProps } from './Pick'
 export { MonoLabel, Input, Textarea, Field, Checkbox, Radio } from './Field'
 export type { FieldProps } from './Field'
 
+export { SearchBar } from './SearchBar'
+export type { SearchBarProps } from './SearchBar'
+
 export { Panel, Recess, Window, RedBar, EmptyState } from './Surfaces'
 export type { PanelRaised } from './Surfaces'
 
@@ -63,6 +66,20 @@ export type { AudioVersionRowProps } from './AudioVersionRow'
 
 export { IdeaCard, QUICK_PLAY_SOURCES } from './IdeaCard'
 export type { IdeaCardProps, MediaKind } from './IdeaCard'
+
+export { IdeaRow } from './IdeaRow'
+export type { IdeaRowProps } from './IdeaRow'
+
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableActions,
+} from './Table'
+export type { TableProps, TableHeadProps, TableSort, TableSortDirection } from './Table'
 
 export { Menu } from './Menu'
 export type { MenuProps, MenuOption, MenuItem } from './Menu'
