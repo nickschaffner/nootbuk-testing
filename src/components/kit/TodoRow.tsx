@@ -23,7 +23,7 @@ export function TodoRow({ text, completed = false, timestamp, onToggle, onDelete
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-xs border border-hairline bg-card px-2 py-1.5',
+        'flex items-center gap-2 rounded-xs border border-hairline bg-card px-2 py-1.5 transition-colors hover:border-foreground/60',
         className,
       )}
     >

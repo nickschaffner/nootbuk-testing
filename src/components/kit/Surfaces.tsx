@@ -15,12 +15,25 @@ export function Panel({
   children,
   className,
   as: Tag = 'div',
+  raised = false,
 }: {
   children: ReactNode
   className?: string
   as?: 'div' | 'section' | 'article'
+  /** Lift on the signature hard vermillion drop shadow. */
+  raised?: boolean
 }) {
-  return <Tag className={cn('rounded-xs border border-hairline bg-card', className)}>{children}</Tag>
+  return (
+    <Tag
+      className={cn(
+        'noise rounded-xs border bg-card',
+        raised ? 'border-foreground shadow-hard' : 'border-hairline',
+        className,
+      )}
+    >
+      {children}
+    </Tag>
+  )
 }
 
 export function Recess({ children, className }: { children: ReactNode; className?: string }) {
@@ -41,15 +54,24 @@ export function Window({
   right,
   children,
   className,
+  raised = false,
 }: {
   title: ReactNode
   right?: ReactNode
   children: ReactNode
   className?: string
+  /** Lift on the signature hard vermillion drop shadow (dialog framing). */
+  raised?: boolean
 }) {
   return (
-    <div className={cn('overflow-hidden rounded-xs border border-hairline bg-card', className)}>
-      <div className="flex items-center justify-between gap-3 border-b border-hairline bg-panel px-3 py-2">
+    <div
+      className={cn(
+        'rounded-xs border bg-card',
+        raised ? 'border-foreground shadow-hard' : 'border-hairline',
+        className,
+      )}
+    >
+      <div className="noise flex items-center justify-between gap-3 border-b border-hairline bg-panel px-3 py-2">
         <MonoLabel className="text-foreground">{title}</MonoLabel>
         {right}
       </div>

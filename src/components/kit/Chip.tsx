@@ -27,7 +27,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
       className={cn(
         'focusable inline-flex items-center gap-1.5 rounded-xs border px-2.5 py-1 text-xs font-medium uppercase tracking-wide transition-colors',
         selected
-          ? 'border-primary bg-primary text-primary-foreground'
+          ? 'noise border-primary bg-primary text-primary-foreground'
           : tone === 'accent'
             ? 'border-primary/50 bg-transparent text-primary hover:bg-primary/10'
             : 'border-hairline bg-card text-muted-foreground hover:border-foreground hover:text-foreground',
@@ -52,7 +52,7 @@ export function Badge({ children, tone = 'neutral', className }: BadgeProps) {
     <span
       className={cn(
         'inline-flex items-center rounded-xs px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wider',
-        tone === 'accent' && 'bg-primary text-primary-foreground',
+        tone === 'accent' && 'noise bg-primary text-primary-foreground',
         tone === 'neutral' && 'bg-muted text-muted-foreground',
         tone === 'outline' && 'border border-hairline text-muted-foreground',
         className,

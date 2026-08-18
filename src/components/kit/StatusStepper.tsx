@@ -36,7 +36,7 @@ export function StatusStepper({ stages, value, onChange, className }: StatusStep
             <span
               className={cn(
                 'h-1.5 w-full rounded-[1px] transition-colors',
-                done ? 'bg-primary' : 'bg-muted',
+                done ? 'noise bg-primary' : 'bg-muted',
               )}
             />
             <span

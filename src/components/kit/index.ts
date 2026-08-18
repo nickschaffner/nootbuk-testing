@@ -33,6 +33,9 @@ export type { FieldProps } from './Field'
 
 export { Panel, Recess, Window, RedBar, EmptyState } from './Surfaces'
 
+export { Noise } from './Noise'
+export type { NoiseProps, NoiseVariant } from './Noise'
+
 export { StudioBar } from './StudioBar'
 export type { StudioBarProps } from './StudioBar'
 

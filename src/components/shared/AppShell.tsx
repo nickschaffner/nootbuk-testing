@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
-import { Disc3, Guitar, Home, Lightbulb, Music2, Wrench } from 'lucide-react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Disc3, Guitar, Home, Lightbulb, Music2, SwatchBook, Wrench } from 'lucide-react'
 
 import { IdeaEditor } from '@/components/capture/IdeaEditor'
 import { isDevMode } from '@/components/calibration/isDevMode'
@@ -24,6 +24,8 @@ const navItems = [
 
 export function AppShell() {
   const showCalibration = isDevMode()
+  const { pathname } = useLocation()
+  const isStyleguide = pathname === '/styleguide'
   const { patchReady, loadingPatchName, ensureStarted } = useSynth()
 
   useEffect(() => {
@@ -106,6 +108,20 @@ export function AppShell() {
                 <>
                   <Separator className={cn(!patchReady && loadingPatchName ? 'my-2' : 'mt-auto my-2')} />
                   <NavLink
+                    to="/styleguide"
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                        isActive
+                          ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                          : 'text-amber-700/80 hover:bg-amber-500/10 hover:text-amber-700 dark:text-amber-400/80 dark:hover:text-amber-300',
+                      )
+                    }
+                  >
+                    <SwatchBook className="size-4" />
+                    Style Guide
+                  </NavLink>
+                  <NavLink
                     to="/calibration"
                     className={({ isActive }) =>
                       cn(
@@ -127,7 +143,13 @@ export function AppShell() {
           <div className="relative flex min-w-0 flex-1 flex-col">
             <StorageWarningBanner />
             <BrowserSupportNotice />
-            <main className="flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6">
+            <main
+              className={
+                isStyleguide
+                  ? 'min-h-0 flex-1 overflow-auto p-0'
+                  : 'flex-1 overflow-auto p-4 pb-20 md:p-6 md:pb-6'
+              }
+            >
               <Outlet />
             </main>
             <CaptureButton />

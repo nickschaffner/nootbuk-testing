@@ -35,7 +35,7 @@ export const RecordButton = forwardRef<HTMLButtonElement, RecordButtonProps>(fun
       className={cn(
         'focusable inline-flex items-center justify-center border-2 border-primary text-primary transition-colors',
         shape === 'round' ? 'rounded-full' : 'rounded-xs',
-        recording ? 'bg-primary text-primary-foreground rec-pulse' : 'bg-transparent hover:bg-primary/10',
+        recording ? 'noise bg-primary text-primary-foreground rec-pulse' : 'bg-transparent hover:bg-primary/10',
         s.box,
         className,
       )}

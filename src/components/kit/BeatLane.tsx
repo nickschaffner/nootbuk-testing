@@ -40,7 +40,7 @@ export function BeatLane({ beats = 4, blocks = [], label, className }: BeatLaneP
             className={cn(
               'absolute top-1.5 bottom-1.5 flex items-center justify-center rounded-[1px] border px-1 text-[0.5625rem] font-bold uppercase tracking-wide',
               b.active
-                ? 'border-primary bg-primary text-primary-foreground'
+                ? 'noise border-primary bg-primary text-primary-foreground'
                 : 'border-primary/40 bg-primary/20 text-foreground',
             )}
             style={{

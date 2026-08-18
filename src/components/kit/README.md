@@ -33,6 +33,29 @@ option constants. Individual files also export cleanly if you prefer
   dark modes come for free.
 - **Square by default** — `rounded-xs` (2px). Round only for record dots,
   knobs, and radios.
+- **Noise + hard shadow** — solid vermillion fills carry noise (feathered
+  print grain). Elevation is the signature hard vermillion drop shadow
+  (`.shadow-hard`, `.shadow-hard-sm`, `.shadow-hard-press`) — sharp, no blur —
+  or inset wells (`Recess`). No soft shadows. All defined in `src/index.css`.
+
+### Noise — the base concept
+
+One grayscale grain tile lives in the `--grain-image` CSS variable
+(`src/index.css`) and is reused system-wide, so the tooth always matches.
+Three ways to apply it to **any** element:
+
+1. **Utility class** (solid fills that can host a `::after`):
+   - `.noise-flat` — uniform full coverage (the general base)
+   - `.noise` — feathered toward the top-left corner (letterpress tooth)
+   - `.noise-strong` — denser/coarser, for dark or heavy fills
+2. **`<Noise/>` component** — an overlay for elements that can't host a
+   pseudo-element (images, gradients, video). Place inside a `relative`
+   container; pass `over` to sit above content.
+3. **Raw variable** — `style={{ backgroundImage: 'var(--grain-image)' }}` for
+   bespoke cases.
+
+Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
+`--grain-mask` (set on the element or a parent).
 
 ## Components
 
@@ -67,9 +90,10 @@ option constants. Individual files also export cleanly if you prefer
 
 | Component | Key props | Notes |
 |---|---|---|
-| `Panel` | `as?` `div\|section\|article` | Default hairline-framed card. |
+| `Noise` | `variant` `flat\|feathered\|strong`, `over?`, `opacity?`, `size?`, `blend?` | Grain overlay for elements that can't host `::after` (images, gradients). Drop inside a `relative` container. |
+| `Panel` | `as?` `div\|section\|article`, `raised?` | Hairline-framed card (subtle noise). `raised` → hard vermillion shadow. |
 | `Recess` | — | Inset well (readouts, rolls). |
-| `Window` | `title`, `right?` | Titled panel with mono header bar. |
+| `Window` | `title`, `right?`, `raised?` | Titled panel with mono header bar. `raised` → dialog framing. |
 | `RedBar` | `grain?`, `height?` | Vermillion divider rule. |
 | `EmptyState` | `icon?`, `title`, `hint?`, `action?` | Placeholder for empty pools/sections. |
 

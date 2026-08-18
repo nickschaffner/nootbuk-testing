@@ -43,7 +43,7 @@ export function IdeaCard({
   return (
     <article
       className={cn(
-        'flex flex-col gap-2 rounded-xs border border-hairline bg-card p-3 transition-colors hover:border-foreground/40',
+        'noise flex flex-col gap-2 rounded-xs border border-hairline bg-card p-3 transition-colors hover:border-foreground hover:shadow-hard-sm',
         className,
       )}
     >

@@ -14,7 +14,7 @@ export type ButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'bg-primary text-primary-foreground border border-primary hover:opacity-90 active:opacity-80',
+    'noise bg-primary text-primary-foreground border border-primary hover:brightness-110 active:brightness-95',
   secondary:
     'bg-transparent text-foreground border border-foreground hover:bg-foreground hover:text-background',
   ghost:

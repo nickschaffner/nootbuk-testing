@@ -13,7 +13,7 @@ export type IconButtonVariant = 'solid' | 'outline' | 'ghost'
 export type IconButtonSize = 'sm' | 'md' | 'lg'
 
 const VARIANT: Record<IconButtonVariant, string> = {
-  solid: 'bg-primary text-primary-foreground border border-primary hover:opacity-90',
+  solid: 'noise bg-primary text-primary-foreground border border-primary hover:brightness-110',
   outline:
     'bg-transparent text-foreground border border-foreground hover:bg-foreground hover:text-background',
   ghost: 'bg-transparent text-foreground border border-transparent hover:bg-muted',

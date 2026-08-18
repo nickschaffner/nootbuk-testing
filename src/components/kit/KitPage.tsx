@@ -10,6 +10,7 @@ import {
   Search,
   Wand2,
 } from 'lucide-react'
+import { Noise } from './Noise'
 import {
   ALBUM_STATUSES,
   BLOCK_WIDTHS,
@@ -182,6 +183,43 @@ export default function KitPage() {
         </div>
       </KitSection>
 
+      {/* ── Noise base concept ─────────────────────────────────────────── */}
+      <KitSection no="K.025" title="Noise" kicker="one grain · any element">
+        <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
+          A single grayscale grain tile lives in <code className="font-mono">--grain-image</code> and is
+          reused everywhere. Apply it with a utility class on any solid fill, or drop the{' '}
+          <code className="font-mono">&lt;Noise/&gt;</code> overlay over anything that can't host a
+          pseudo-element (images, gradients). Tune with{' '}
+          <code className="font-mono">--grain-size / --grain-opacity / --grain-blend / --grain-mask</code>.
+        </p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {[
+            { cls: 'noise-flat', name: '.noise-flat', note: 'uniform · the base' },
+            { cls: 'noise', name: '.noise', note: 'feathered corner' },
+            { cls: 'noise-strong', name: '.noise-strong', note: 'dense · dark fills' },
+          ].map((v) => (
+            <div key={v.cls} className={`${v.cls} flex h-28 flex-col justify-end rounded-xs bg-primary p-3 text-primary-foreground`}>
+              <span className="label-mono">{v.name}</span>
+              <span className="text-xs opacity-80">{v.note}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          {/* grain over neutral fills */}
+          <div className="noise-flat flex h-24 items-center justify-center rounded-xs border border-hairline bg-muted">
+            <span className="label-mono text-muted-foreground">on muted</span>
+          </div>
+          {/* <Noise> overlay over a gradient (no solid fill / pseudo available) */}
+          <div className="relative flex h-24 items-center justify-center overflow-hidden rounded-xs border border-hairline bg-gradient-to-br from-primary to-foreground">
+            <span className="label-mono relative z-[2] text-primary-foreground">&lt;Noise over/&gt;</span>
+            <Noise variant="flat" over />
+          </div>
+          <div className="noise flex h-24 items-center justify-center rounded-xs border border-foreground bg-card">
+            <span className="label-mono text-muted-foreground">on card</span>
+          </div>
+        </div>
+      </KitSection>
+
       {/* ── Space / radius / shadow / outline ──────────────────────────── */}
       <KitSection no="K.03" title="Space · Radius · Elevation">
         <div className="grid gap-8 md:grid-cols-3">
@@ -220,14 +258,20 @@ export default function KitPage() {
             </p>
           </Spec>
 
-          <Spec name="Borders & Elevation" note="hairline + inset">
-            <div className="flex flex-col gap-3">
+          <Spec name="Borders & Elevation" note="hairline · inset · hard shadow">
+            <div className="flex flex-col gap-4">
               <div className="rounded-xs border border-hairline bg-card px-3 py-2 text-xs">border-hairline · flat panel</div>
               <Recess className="px-3 py-2 text-xs">inset well · shadow-[inset…] recess</Recess>
-              <div className="rounded-xs border-2 border-primary px-3 py-2 text-xs">2px ring · focus / record</div>
+              <div className="noise shadow-hard rounded-xs border border-foreground bg-card px-3 py-2 text-xs">
+                <code className="font-mono">.shadow-hard</code> · 6px vermillion offset + noise
+              </div>
+              <div className="shadow-hard-press rounded-xs border border-foreground bg-card px-3 py-2 text-xs">
+                <code className="font-mono">.shadow-hard-press</code> · hover / press me
+              </div>
             </div>
             <p className="mt-3 text-xs text-muted-foreground">
-              No drop shadows for lift — depth is inset wells and hairlines. Focus is a 2px vermillion outline.
+              Two depth systems: inset wells (readouts) and the signature <strong>hard vermillion drop
+              shadow</strong> — a sharp, blur-less block for raised surfaces. Fills carry <code className="font-mono">.noise</code> tooth. Focus is a 2px vermillion outline.
             </p>
           </Spec>
         </div>
@@ -390,6 +434,20 @@ export default function KitPage() {
             action={<Button size="sm" icon={<Plus size={14} />}>Capture</Button>}
           />
         </div>
+
+        <Spec name="Raised surfaces" note="raised prop → hard shadow + noise">
+          <div className="grid gap-8 md:grid-cols-2">
+            <Panel raised className="p-4">
+              <MonoLabel>Panel · raised</MonoLabel>
+              <p className="mt-2 text-sm text-muted-foreground">
+                The <code className="font-mono">raised</code> prop lifts the panel onto the hard vermillion shadow with a foreground border — used for dialogs and pop-outs.
+              </p>
+            </Panel>
+            <Window raised title="Quick Capture" right={<Badge tone="accent">Modal</Badge>}>
+              <p className="text-sm text-muted-foreground">Dialog framing: header bar carries noise, body sits on the hard shadow.</p>
+            </Window>
+          </div>
+        </Spec>
       </KitSection>
 
       {/* ── Studio ─────────────────────────────────────────────────────── */}

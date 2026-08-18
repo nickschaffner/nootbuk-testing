@@ -10,6 +10,7 @@ import { InstrumentEditPage } from '@/app/pages/InstrumentEditPage'
 import { InstrumentsPage } from '@/app/pages/InstrumentsPage'
 import { SongPage } from '@/app/pages/SongPage'
 import { SongsPage } from '@/app/pages/SongsPage'
+import StyleguidePage from '@/app/pages/StyleguidePage'
 
 export function App() {
   return (
@@ -25,6 +26,7 @@ export function App() {
           <Route path="instruments" element={<InstrumentsPage />} />
           <Route path="instruments/:id" element={<InstrumentEditPage />} />
           <Route path="calibration" element={<CalibrationPage />} />
+          <Route path="styleguide" element={<StyleguidePage />} />
         </Route>
       </Routes>
     </BrowserRouter>
