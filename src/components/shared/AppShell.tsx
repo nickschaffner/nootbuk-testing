@@ -1,18 +1,17 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Disc3, Guitar, Home, Lightbulb, Music2, SwatchBook, Wrench } from 'lucide-react'
+import { Disc3, Guitar, Home, Lightbulb, Music2, Plus, SwatchBook, Wrench } from 'lucide-react'
 
 import { IdeaEditor } from '@/components/capture/IdeaEditor'
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { BrowserSupportNotice } from '@/components/shared/BrowserSupportNotice'
-import { CaptureButton } from '@/components/shared/CaptureButton'
 import { MobileTabBar } from '@/components/shared/MobileTabBar'
 import { StorageWarningBanner } from '@/components/shared/StorageWarningBanner'
 import { Toggle } from '@/components/kit'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { preloadPianoPatch, useSynth } from '@/hooks/useSynth'
-import { QuickCaptureProvider } from '@/stores/quickCapture'
+import { QuickCaptureProvider, useQuickCapture } from '@/stores/quickCapture'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -22,6 +21,21 @@ const navItems = [
   { to: '/albums', label: 'Albums', icon: Disc3 },
   { to: '/instruments', label: 'Instruments', icon: Guitar },
 ] as const
+
+function NavCaptureButton() {
+  const { open } = useQuickCapture()
+
+  return (
+    <button
+      type="button"
+      onClick={() => open()}
+      className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+    >
+      <Plus className="size-4" />
+      Capture
+    </button>
+  )
+}
 
 export function AppShell() {
   const showCalibration = isDevMode()
@@ -85,32 +99,21 @@ export function AppShell() {
                 </NavLink>
               ))}
 
-              {!patchReady && loadingPatchName ? (
-                <div
-                  className="mt-auto space-y-2 px-3 py-2"
-                  aria-live="polite"
-                  aria-busy="true"
-                >
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span
-                      className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
-                      aria-hidden
-                    />
-                    <span>Loading {loadingPatchName}…</span>
-                  </div>
-                  <div
-                    className="h-1 overflow-hidden rounded-full bg-muted"
-                    role="progressbar"
-                    aria-label={`Loading ${loadingPatchName}`}
-                  >
-                    <div className="h-full w-1/2 animate-pulse rounded-full bg-primary/80" />
-                  </div>
-                </div>
-              ) : null}
+              <NavCaptureButton />
+              <div className="px-3 py-2">
+                <Toggle
+                  checked={dark}
+                  label="Dark"
+                  onChange={(checked) => {
+                    setDark(checked)
+                    document.documentElement.classList.toggle('dark', checked)
+                  }}
+                />
+              </div>
 
               {showCalibration ? (
                 <>
-                  <Separator className={cn(!patchReady && loadingPatchName ? 'my-2' : 'mt-auto my-2')} />
+                  <Separator className="my-2" />
                   <NavLink
                     to="/styleguide"
                     className={({ isActive }) =>
@@ -141,17 +144,30 @@ export function AppShell() {
                   </NavLink>
                 </>
               ) : null}
+
+              {!patchReady && loadingPatchName ? (
+                <div
+                  className="mt-auto space-y-2 px-3 py-2"
+                  aria-live="polite"
+                  aria-busy="true"
+                >
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <span
+                      className="size-3.5 shrink-0 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground"
+                      aria-hidden
+                    />
+                    <span>Loading {loadingPatchName}…</span>
+                  </div>
+                  <div
+                    className="h-1 overflow-hidden rounded-full bg-muted"
+                    role="progressbar"
+                    aria-label={`Loading ${loadingPatchName}`}
+                  >
+                    <div className="h-full w-1/2 animate-pulse rounded-full bg-primary/80" />
+                  </div>
+                </div>
+              ) : null}
             </nav>
-            <div className="border-t border-border p-3">
-              <Toggle
-                checked={dark}
-                label="Dark"
-                onChange={(checked) => {
-                  setDark(checked)
-                  document.documentElement.classList.toggle('dark', checked)
-                }}
-              />
-            </div>
           </aside>
 
           <div className="relative flex min-w-0 flex-1 flex-col">
@@ -166,7 +182,6 @@ export function AppShell() {
             >
               <Outlet />
             </main>
-            <CaptureButton />
             <MobileTabBar />
             <IdeaEditor />
           </div>

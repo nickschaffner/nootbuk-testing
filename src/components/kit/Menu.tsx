@@ -8,8 +8,8 @@ import { IconButton } from './IconButton'
 // Menu — the "⋯" context pop-up. Flexible: takes 1..n options.
 //
 // It is a true OVERLAY, never an inline element: the pop-up is rendered in a
-// portal on <body> with fixed positioning, so it never pushes siblings around
-// and is never clipped by an `overflow-hidden` ancestor.
+// portal on <body> with `position: fixed`. Desktop placement flips above the
+// trigger when it won't fit below, then clamps into the viewport.
 //
 //   • Desktop (≥ sm): inverse Panel (`raised="noise"`) — paper on dark, studio
 //     on light — lifted on a grain drop instead of the vermillion hard shadow.
@@ -44,29 +44,63 @@ export interface MenuProps {
 }
 
 const SM = 640 // Tailwind `sm` breakpoint
-const GAP = 4 // px below the trigger
+const GAP = 4
+const PAD = 8
+
+function placePanel(
+  trigger: DOMRect,
+  panel: HTMLElement,
+  align: 'start' | 'end',
+): { top: number; left: number } {
+  const height = panel.offsetHeight
+  const width = panel.offsetWidth
+  const viewHeight = window.innerHeight
+  const viewWidth = window.innerWidth
+
+  const belowTop = trigger.bottom + GAP
+  const aboveTop = trigger.top - GAP - height
+  const fitsBelow = belowTop + height <= viewHeight - PAD
+  const fitsAbove = aboveTop >= PAD
+
+  let top: number
+  if (fitsBelow) {
+    top = belowTop
+  } else if (fitsAbove) {
+    top = aboveTop
+  } else {
+    const spaceBelow = viewHeight - trigger.bottom - GAP
+    const spaceAbove = trigger.top - GAP
+    top = spaceAbove > spaceBelow ? aboveTop : belowTop
+    const maxTop = Math.max(PAD, viewHeight - PAD - height)
+    top = Math.min(Math.max(top, PAD), maxTop)
+  }
+
+  let left = align === 'end' ? trigger.right - width : trigger.left
+  const maxLeft = Math.max(PAD, viewWidth - PAD - width)
+  left = Math.min(Math.max(left, PAD), maxLeft)
+
+  return { top, left }
+}
 
 export function Menu({ items, align = 'end', label = 'Actions', trigger, className }: MenuProps) {
   const [open, setOpen] = useState(false)
-  const [desktop, setDesktop] = useState(false)
-  const [pos, setPos] = useState<{ top: number; left?: number; right?: number }>({ top: 0 })
+  const [desktop, setDesktop] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth >= SM,
+  )
+  const [pos, setPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const anchor = useRef<HTMLSpanElement>(null)
   const panel = useRef<HTMLDivElement>(null)
 
-  // measure the trigger and place the desktop popover against its rect
   useLayoutEffect(() => {
     if (!open) return
     const isDesktop = window.innerWidth >= SM
     setDesktop(isDesktop)
     if (!isDesktop) return
-    const r = anchor.current?.getBoundingClientRect()
-    if (!r) return
-    setPos(
-      align === 'end'
-        ? { top: r.bottom + GAP, right: window.innerWidth - r.right }
-        : { top: r.bottom + GAP, left: r.left },
-    )
-  }, [open, align])
+    const trigger = anchor.current?.getBoundingClientRect()
+    const el = panel.current
+    if (!trigger || !el) return
+    setPos(placePanel(trigger, el, align))
+  }, [open, align, desktop, items.length])
 
   useEffect(() => {
     if (!open) return
