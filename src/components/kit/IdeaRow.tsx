@@ -1,6 +1,5 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { Badge } from './Chip'
-import { cn } from './cn'
 import { Menu, type MenuOption } from './Menu'
 import { TableActions, TableCell, TableRow } from './Table'
 

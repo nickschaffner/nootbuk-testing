@@ -86,7 +86,6 @@ export function MidiRecord({
   timeSignature,
   patchName = null,
   gridBeat: gridBeatProp,
-  onGridBeatChange,
   onTransportStateChange,
   onRegisterTransportHandlers,
   onDraftChange,
@@ -111,9 +110,8 @@ export function MidiRecord({
       1,
     ),
   )
-  const [internalGridBeat, setInternalGridBeat] = useState(GRID_BEAT)
+  const [internalGridBeat] = useState(GRID_BEAT)
   const gridBeat = gridBeatProp ?? internalGridBeat
-  const setGridBeat = onGridBeatChange ?? setInternalGridBeat
   const [midiQuantize, setMidiQuantize] = useState(false)
   const [snapControls, setSnapControls] = useState(true)
   const [recordMode, setRecordMode] = useState<RecordMode>('record')

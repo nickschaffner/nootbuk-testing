@@ -97,7 +97,6 @@ export function NotePicker({
   timeSignature,
   patchName = null,
   gridBeat: gridBeatProp,
-  onGridBeatChange,
   onTransportStateChange,
   onRegisterTransportHandlers,
   onDraftChange,
@@ -130,9 +129,8 @@ export function NotePicker({
   const [barsPerLine, setBarsPerLine] = useState(1)
   const [cursorBeat, setCursorBeat] = useState(0)
   const [ghost, setGhost] = useState<TimelineBlock | null>(null)
-  const [internalGridBeat, setInternalGridBeat] = useState(GRID_BEAT)
+  const [internalGridBeat] = useState(GRID_BEAT)
   const gridBeat = gridBeatProp ?? internalGridBeat
-  const setGridBeat = onGridBeatChange ?? setInternalGridBeat
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)

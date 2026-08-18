@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { Button } from '@/components/kit'
@@ -6,12 +6,6 @@ import KitPage from '@/components/kit/KitPage'
 
 export default function StyleguidePage() {
   const [dark, setDark] = useState(() => document.documentElement.classList.contains('dark'))
-
-  useEffect(() => {
-    return () => {
-      document.documentElement.classList.add('dark')
-    }
-  }, [])
 
   if (!isDevMode()) {
     return null

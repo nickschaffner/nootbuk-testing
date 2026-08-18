@@ -5,7 +5,7 @@ import type { IconButtonSize } from './IconButton'
 
 // ─────────────────────────────────────────────────────────────────────────
 // PlayButton — round vermillion play/pause. Hollow triangle (stroke, no
-// fill) in keys-black. Figma SongCard variant 3.
+// fill) in primary-foreground, same as other vermillion buttons.
 // ─────────────────────────────────────────────────────────────────────────
 
 const SIZE: Record<IconButtonSize, string> = {
@@ -36,7 +36,7 @@ export const PlayButton = forwardRef<HTMLButtonElement, PlayButtonProps>(functio
       ref={ref}
       type={type}
       className={cn(
-        'focusable inline-flex items-center justify-center rounded-full border border-primary bg-primary text-keys-black noise hover:brightness-110 disabled:pointer-events-none disabled:opacity-40',
+        'focusable inline-flex items-center justify-center rounded-full border border-primary bg-primary text-primary-foreground noise hover:brightness-110 disabled:pointer-events-none disabled:opacity-40',
         SIZE[size],
         className,
       )}

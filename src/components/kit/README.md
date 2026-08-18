@@ -65,7 +65,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 |---|---|---|
 | `Button` | `variant` `primary\|secondary\|ghost\|danger\|link`, `size` `sm\|md\|lg`, `icon?` | Text action. Forwards `<button>` props. |
 | `IconButton` | `shape` `square\|round`, `variant` `solid\|outline\|ghost`, `size` `sm\|md\|lg`, `aria-label` (required) | Single-glyph action; pass one icon as children. |
-| `PlayButton` | `playing`, `size` `sm\|md\|lg` | Round vermillion play/pause. Hollow keys-black triangle. |
+| `PlayButton` | `playing`, `size` `sm\|md\|lg` | Round vermillion play/pause. Hollow triangle in primary-foreground. |
 | `RecordButton` | `recording`, `size` `md\|lg`, `shape` `round\|square` | Idle dot → stop square with pulse. |
 
 ### Selection

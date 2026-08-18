@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Disc3, Guitar, Home, Lightbulb, Music2, SwatchBook, Wrench } from 'lucide-react'
 
@@ -8,6 +8,7 @@ import { BrowserSupportNotice } from '@/components/shared/BrowserSupportNotice'
 import { CaptureButton } from '@/components/shared/CaptureButton'
 import { MobileTabBar } from '@/components/shared/MobileTabBar'
 import { StorageWarningBanner } from '@/components/shared/StorageWarningBanner'
+import { Toggle } from '@/components/kit'
 import { Separator } from '@/components/ui/separator'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { preloadPianoPatch, useSynth } from '@/hooks/useSynth'
@@ -27,6 +28,9 @@ export function AppShell() {
   const { pathname } = useLocation()
   const isStyleguide = pathname === '/styleguide'
   const { patchReady, loadingPatchName, ensureStarted } = useSynth()
+  const [dark, setDark] = useState(() =>
+    document.documentElement.classList.contains('dark'),
+  )
 
   useEffect(() => {
     preloadPianoPatch()
@@ -138,6 +142,16 @@ export function AppShell() {
                 </>
               ) : null}
             </nav>
+            <div className="border-t border-border p-3">
+              <Toggle
+                checked={dark}
+                label="Dark"
+                onChange={(checked) => {
+                  setDark(checked)
+                  document.documentElement.classList.toggle('dark', checked)
+                }}
+              />
+            </div>
           </aside>
 
           <div className="relative flex min-w-0 flex-1 flex-col">
