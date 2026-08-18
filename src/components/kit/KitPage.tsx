@@ -1,13 +1,17 @@
 import { useState, type ReactNode } from 'react'
 import {
+  Album,
   AudioLines,
   Command,
+  Copy,
   Import,
   Mic,
   Music2,
+  Pencil,
   Piano,
   Plus,
   Search,
+  Trash2,
   Wand2,
 } from 'lucide-react'
 import { Noise } from './Noise'
@@ -15,6 +19,7 @@ import {
   ALBUM_STATUSES,
   BLOCK_WIDTHS,
   Badge,
+  Length,
   BeatLane,
   Button,
   Checkbox,
@@ -34,6 +39,8 @@ import {
   Radio,
   Recess,
   RecordButton,
+  PlayButton,
+  RuleHeader,
   RedBar,
   SECTION_INTENTS,
   SegmentedControl,
@@ -47,6 +54,10 @@ import {
   TodoRow,
   AudioVersionRow,
   IdeaCard,
+  Menu,
+  SongCard,
+  AlbumCard,
+  EmptyLibraryCard,
   Window,
 } from './index'
 
@@ -58,11 +69,7 @@ function KitSection({ no, title, kicker, children }: { no: string; title: string
   return (
     <section className="mx-auto max-w-6xl px-6 py-14">
       <header className="mb-10">
-        <div className="mb-3 flex items-center gap-3">
-          <span className="label-mono text-primary">{no}</span>
-          <span className="h-px flex-1 bg-primary" />
-          {kicker ? <MonoLabel>{kicker}</MonoLabel> : null}
-        </div>
+        <RuleHeader title={no} subtitle={kicker} className="mb-3" />
         <h2 className="font-display text-3xl font-black uppercase tracking-tight md:text-4xl">{title}</h2>
       </header>
       {children}
@@ -148,6 +155,25 @@ export default function KitPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       {/* ── Type scale ─────────────────────────────────────────────────── */}
+      <KitSection no="K.015" title="Rule Header" kicker="title · optional subtitle">
+        <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
+          Vermillion mono title, a 1px primary rule, optional muted subtitle. Tokens follow{' '}
+          <code className="font-mono">.dark</code> — paper light and studio dark. Use for page
+          sections (<code className="font-mono">Recent</code>) and catalog marks (
+          <code className="font-mono">K.01</code>).
+        </p>
+        <div className="flex flex-col gap-6">
+          <div className="space-y-2">
+            <MonoLabel>Title only</MonoLabel>
+            <RuleHeader title="Recent" />
+          </div>
+          <div className="space-y-2">
+            <MonoLabel>Title + subtitle</MonoLabel>
+            <RuleHeader title="K.01" subtitle="Archivo · Archivo Expanded · Space Mono" />
+          </div>
+        </div>
+      </KitSection>
+
       <KitSection no="K.01" title="Typography" kicker="Archivo · Archivo Expanded · Space Mono">
         <div className="flex flex-col gap-6">
           {TYPE_SCALE.map((t) => (
@@ -265,6 +291,11 @@ export default function KitPage() {
               <div className="noise shadow-hard rounded-xs border border-foreground bg-card px-3 py-2 text-xs">
                 <code className="font-mono">.shadow-hard</code> · 6px vermillion offset + noise
               </div>
+              <div className="shadow-noise rounded-xs">
+                <div className="scheme-inverse noise rounded-xs border border-hairline bg-card px-3 py-2 text-xs text-foreground">
+                  <code className="font-mono">.shadow-noise</code> · 6px grain drop · inverse fill
+                </div>
+              </div>
               <div className="shadow-hard-press rounded-xs border border-foreground bg-card px-3 py-2 text-xs">
                 <code className="font-mono">.shadow-hard-press</code> · hover / press me
               </div>
@@ -280,7 +311,7 @@ export default function KitPage() {
       <div className="mx-auto max-w-6xl px-6"><RedBar /></div>
 
       {/* ── Buttons ────────────────────────────────────────────────────── */}
-      <KitSection no="K.04" title="Buttons" kicker="Button · IconButton · RecordButton">
+      <KitSection no="K.04" title="Buttons" kicker="Button · IconButton · PlayButton · RecordButton">
         <div className="grid gap-8">
           <Spec name="Button — variants" note="primary · secondary · ghost · danger · link">
             <Row>
@@ -309,6 +340,13 @@ export default function KitPage() {
               <IconButton aria-label="Piano" shape="round" variant="ghost" size="lg"><Piano size={18} /></IconButton>
             </Row>
           </Spec>
+          <Spec name="PlayButton" note="round vermillion · hollow triangle">
+            <Row>
+              <PlayButton aria-label="Play" playing={false} onClick={() => undefined} />
+              <PlayButton aria-label="Pause" playing onClick={() => undefined} />
+              <PlayButton aria-label="Play disabled" playing={false} disabled />
+            </Row>
+          </Spec>
           <Spec name="RecordButton" note="idle → recording (pulses)">
             <Row>
               <RecordButton recording={rec} onClick={() => setRec((r) => !r)} />
@@ -320,7 +358,7 @@ export default function KitPage() {
       </KitSection>
 
       {/* ── Selection controls ─────────────────────────────────────────── */}
-      <KitSection no="K.05" title="Selection" kicker="Segmented · Toggle · Chip · Pick">
+      <KitSection no="K.05" title="Selection" kicker="Segmented · Toggle · Chip · Length · Pick">
         <div className="grid gap-8">
           <Spec name="SegmentedControl" note="capture modes">
             <div className="flex flex-col gap-3">
@@ -365,6 +403,14 @@ export default function KitPage() {
               <Badge tone="accent">Released</Badge>
               <Badge tone="neutral">Sketch</Badge>
               <Badge tone="outline">Pool</Badge>
+            </Row>
+          </Spec>
+          <Spec name="Length" note="mm:ss chip · used everywhere duration is shown">
+            <Row>
+              <Length>0:42</Length>
+              <Length>1:24</Length>
+              <Length>3:12</Length>
+              <Length>32:14</Length>
             </Row>
           </Spec>
           <Spec name="Pick — native select" note="patch · grid · time · key">
@@ -435,12 +481,18 @@ export default function KitPage() {
           />
         </div>
 
-        <Spec name="Raised surfaces" note="raised prop → hard shadow + noise">
+        <Spec name="Raised surfaces" note="vermillion hard · grain inverse">
           <div className="grid gap-8 md:grid-cols-2">
             <Panel raised className="p-4">
               <MonoLabel>Panel · raised</MonoLabel>
               <p className="mt-2 text-sm text-muted-foreground">
                 The <code className="font-mono">raised</code> prop lifts the panel onto the hard vermillion shadow with a foreground border — used for dialogs and pop-outs.
+              </p>
+            </Panel>
+            <Panel raised="noise" className="p-4">
+              <MonoLabel>Panel · raised=&quot;noise&quot;</MonoLabel>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Inverse fill (paper on dark, studio on light) with a grain drop instead of vermillion. Menu pop-out uses this.
               </p>
             </Panel>
             <Window raised title="Quick Capture" right={<Badge tone="accent">Modal</Badge>}>
@@ -490,7 +542,7 @@ export default function KitPage() {
       </KitSection>
 
       {/* ── Library ────────────────────────────────────────────────────── */}
-      <KitSection no="K.09" title="Library" kicker="StatusStepper · IdeaCard · rows">
+      <KitSection no="K.09" title="Library" kicker="StatusStepper · IdeaCard · SongCard · AlbumCard · Menu">
         <div className="grid gap-8">
           <Spec name="StatusStepper — song" note="7 stages · click to set">
             <StatusStepper stages={SONG_STATUSES} value={songStatus} onChange={setSongStatus} />
@@ -503,6 +555,68 @@ export default function KitPage() {
               <IdeaCard role="Bassline" title="Bassline — Dm — 92 BPM" instrument="Jazz Bass" location="Pool" timestamp="2h ago" media={['audio', 'midi']} />
               <IdeaCard role="Melody" title="Falling in the dark, again" instrument="Synth Lead" location="Nightdrive" timestamp="1d ago" media={['midi']} />
               <IdeaCard role="Sample" title="Rain loop off the balcony" location="Pool" timestamp="3d ago" media={['audio', 'image']} />
+            </div>
+          </Spec>
+          <Spec name="SongCard" note="Figma variant 3 · raised · to-do hidden at 0 · play only with a file">
+            <div className="grid gap-8 sm:grid-cols-2">
+              <SongCard
+                title="Static Bloom"
+                status="Mixing"
+                lastWorked="5h ago"
+                todoCount={3}
+                length="4:12"
+                artwork="/kit/song-artwork.svg"
+                menuItems={[
+                  { label: 'Add to album', icon: <Album size={15} />, onSelect: () => undefined },
+                  { label: 'Delete', icon: <Trash2 size={15} />, destructive: true, onSelect: () => undefined },
+                ]}
+                onPlay={() => undefined}
+              />
+              <SongCard
+                title="Glass Highway"
+                status="Arranging"
+                lastWorked="1d ago"
+                menuItems={[
+                  { label: 'Add to album', icon: <Album size={15} />, onSelect: () => undefined },
+                  { label: 'Delete', icon: <Trash2 size={15} />, destructive: true, onSelect: () => undefined },
+                ]}
+              />
+            </div>
+          </Spec>
+          <Spec name="AlbumCard" note="same as SongCard · track count · no play/length">
+            <div className="grid gap-8 sm:grid-cols-2">
+              <AlbumCard
+                title="Night Drive"
+                status="In progress"
+                trackCount={8}
+                timestamp="3d ago"
+                artworkUrl="/kit/album-artwork.svg"
+                menuItems={[{ label: 'Delete', icon: <Trash2 size={15} />, destructive: true, onSelect: () => undefined }]}
+              />
+              <AlbumCard
+                title="Glass Highway"
+                status="Draft"
+                trackCount={0}
+                timestamp="1d ago"
+                menuItems={[{ label: 'Delete', icon: <Trash2 size={15} />, destructive: true, onSelect: () => undefined }]}
+              />
+            </div>
+          </Spec>
+          <Spec name="Menu" note="inverse panel · grain drop">
+            <Menu
+              label="Song"
+              align="end"
+              items={[
+                { label: 'Rename', icon: <Pencil size={15} /> },
+                { label: 'Duplicate', icon: <Copy size={15} /> },
+                { label: 'Delete', icon: <Trash2 size={15} />, destructive: true },
+              ]}
+            />
+          </Spec>
+          <Spec name="EmptyLibraryCard" note="blank slot vs CTA">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <EmptyLibraryCard />
+              <EmptyLibraryCard label="+ New Album" onCreate={() => undefined} />
             </div>
           </Spec>
           <Spec name="TodoRow" note="production to-do">

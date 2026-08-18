@@ -1,7 +1,7 @@
 import { GripVertical, Trash2 } from 'lucide-react'
 import { cn } from './cn'
 import { Checkbox } from './Field'
-import { Badge } from './Chip'
+import { Length } from './Chip'
 import { IconButton } from './IconButton'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ export function TodoRow({ text, completed = false, timestamp, onToggle, onDelete
       >
         {text}
       </span>
-      {timestamp ? <Badge tone="outline">{timestamp}</Badge> : null}
+      {timestamp ? <Length>{timestamp}</Length> : null}
       <IconButton aria-label="Delete todo" variant="ghost" size="sm" onClick={onDelete}>
         <Trash2 size={14} />
       </IconButton>

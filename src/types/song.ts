@@ -24,6 +24,7 @@ export interface Song {
   masterEngineer: string | null
   copyright: string | null
   sampleCredits: string | null
+  artworkBlob: Blob | null
   createdAt: string
   updatedAt: string
 }

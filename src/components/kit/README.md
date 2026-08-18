@@ -65,6 +65,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 |---|---|---|
 | `Button` | `variant` `primary\|secondary\|ghost\|danger\|link`, `size` `sm\|md\|lg`, `icon?` | Text action. Forwards `<button>` props. |
 | `IconButton` | `shape` `square\|round`, `variant` `solid\|outline\|ghost`, `size` `sm\|md\|lg`, `aria-label` (required) | Single-glyph action; pass one icon as children. |
+| `PlayButton` | `playing`, `size` `sm\|md\|lg` | Round vermillion play/pause. Hollow keys-black triangle. |
 | `RecordButton` | `recording`, `size` `md\|lg`, `shape` `round\|square` | Idle dot → stop square with pulse. |
 
 ### Selection
@@ -75,6 +76,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | `Toggle` | `checked`, `onChange`, `label?`, `disabled?` | Hardware-style switch. |
 | `Chip` | `selected?`, `tone` `default\|accent`, `onClick` | Selectable tag (roles, intents, chords). |
 | `Badge` | `tone` `neutral\|accent\|outline` | Non-interactive status tag. |
+| `Length` | children (`mm:ss`) | Outline duration chip. Use everywhere a length or playhead time is shown. |
 | `Pick` | `options: Option[]`, `label?`, `placeholder?` | Native `<select>` in the ledger idiom. |
 
 ### Forms
@@ -91,10 +93,11 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | Component | Key props | Notes |
 |---|---|---|
 | `Noise` | `variant` `flat\|feathered\|strong`, `over?`, `opacity?`, `size?`, `blend?` | Grain overlay for elements that can't host `::after` (images, gradients). Drop inside a `relative` container. |
-| `Panel` | `as?` `div\|section\|article`, `raised?` | Hairline-framed card (subtle noise). `raised` → hard vermillion shadow. |
+| `Panel` | `as?` `div\|section\|article`, `raised?` `true\|'noise'` | Hairline-framed card (subtle noise). `raised` → vermillion hard shadow. `raised="noise"` → inverse fill + grain drop. |
 | `Recess` | — | Inset well (readouts, rolls). |
 | `Window` | `title`, `right?`, `raised?` | Titled panel with mono header bar. `raised` → dialog framing. |
 | `RedBar` | `grain?`, `height?` | Vermillion divider rule. |
+| `RuleHeader` | `title`, `subtitle?` | Vermillion mono title + 1px rule. Optional muted subtitle on the right. Light/dark via tokens. |
 | `EmptyState` | `icon?`, `title`, `hint?`, `action?` | Placeholder for empty pools/sections. |
 
 ### Studio
@@ -110,9 +113,13 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | Component | Key props | Notes |
 |---|---|---|
 | `StatusStepper` | `stages: Option[]`, `value`, `onChange?` | Fills up to the active stage. Song = 7 stages, album = 3. |
+| `Menu` | `items: MenuOption[]`, `align?`, `label?`, `trigger?` | Portal overlay. Inverse Panel with `.shadow-noise` grain drop. One enabled item → that action's icon instead of ⋯. |
 | `IdeaCard` | `role`, `title`, `instrument?`, `location?`, `timestamp?`, `media?: MediaKind[]`, `onPlay?`, `onMenu?` | Pool atom. `MediaKind = 'audio'\|'midi'\|'image'`. |
-| `TodoRow` | `text`, `completed?`, `timestamp?`, `onToggle?`, `onDelete?` | Production to-do. |
-| `AudioVersionRow` | `label`, `filename?`, `duration?`, `isMain?`, `playing?` + `on*` | Saved take/version. |
+| `SongCard` | `title`, `status`, `todoCount?`, `length?`, `lastWorked?`, `artwork?`, `playing?`, `onPlay?`, `menuItems?`, `onOpen?` | Figma variant 3 only. Inset square cover (`p-3` `gap-3`), `shadow-hard`. To-do chip omitted at 0. `Length` + `PlayButton`. |
+| `AlbumCard` | `title`, `status`, `trackCount`, `timestamp?`, `artworkUrl?`, `menuItems?`, `onOpen?` | Same shell as SongCard. Outline chip is track count (hidden at 0). Play and length omitted. |
+| `EmptyLibraryCard` | `label?`, `onCreate?` | Dashed slot matching card height. CTA when `label` + `onCreate` are set. |
+| `TodoRow` | `text`, `completed?`, `timestamp?`, `onToggle?`, `onDelete?` | Production to-do. Playhead time uses `Length`. |
+| `AudioVersionRow` | `label`, `filename?`, `duration?`, `isMain?`, `playing?` + `on*` | Saved take/version. `Length` then play. |
 
 ## Option constants
 

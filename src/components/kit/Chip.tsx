@@ -62,3 +62,18 @@ export function Badge({ children, tone = 'neutral', className }: BadgeProps) {
     </span>
   )
 }
+
+// Duration / playhead time — the outline badge used for mm:ss everywhere
+// (todo cues, version length, song/album runtime).
+export interface LengthProps {
+  children: ReactNode
+  className?: string
+}
+
+export function Length({ children, className }: LengthProps) {
+  return (
+    <Badge tone="outline" className={cn('tabular-nums', className)}>
+      {children}
+    </Badge>
+  )
+}

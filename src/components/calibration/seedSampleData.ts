@@ -118,6 +118,7 @@ export async function seedSampleData(): Promise<void> {
     masterEngineer: null,
     copyright: null,
     sampleCredits: null,
+    artworkBlob: null,
     createdAt: daysAgo(10),
     updatedAt: daysAgo(1),
   }
@@ -137,6 +138,7 @@ export async function seedSampleData(): Promise<void> {
     masterEngineer: null,
     copyright: null,
     sampleCredits: null,
+    artworkBlob: null,
     createdAt: daysAgo(8),
     updatedAt: daysAgo(2),
   }

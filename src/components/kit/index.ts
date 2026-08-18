@@ -16,14 +16,17 @@ export type { IconButtonProps, IconButtonShape, IconButtonVariant, IconButtonSiz
 export { RecordButton } from './RecordButton'
 export type { RecordButtonProps, RecordButtonSize } from './RecordButton'
 
+export { PlayButton } from './PlayButton'
+export type { PlayButtonProps } from './PlayButton'
+
 export { SegmentedControl } from './SegmentedControl'
 export type { SegmentedControlProps } from './SegmentedControl'
 
 export { Toggle } from './Toggle'
 export type { ToggleProps } from './Toggle'
 
-export { Chip, Badge } from './Chip'
-export type { ChipProps, ChipTone, BadgeProps } from './Chip'
+export { Chip, Badge, Length } from './Chip'
+export type { ChipProps, ChipTone, BadgeProps, LengthProps } from './Chip'
 
 export { Pick } from './Pick'
 export type { PickProps } from './Pick'
@@ -32,6 +35,10 @@ export { MonoLabel, Input, Textarea, Field, Checkbox, Radio } from './Field'
 export type { FieldProps } from './Field'
 
 export { Panel, Recess, Window, RedBar, EmptyState } from './Surfaces'
+export type { PanelRaised } from './Surfaces'
+
+export { RuleHeader } from './RuleHeader'
+export type { RuleHeaderProps } from './RuleHeader'
 
 export { Noise } from './Noise'
 export type { NoiseProps, NoiseVariant } from './Noise'
@@ -56,3 +63,15 @@ export type { AudioVersionRowProps } from './AudioVersionRow'
 
 export { IdeaCard, QUICK_PLAY_SOURCES } from './IdeaCard'
 export type { IdeaCardProps, MediaKind } from './IdeaCard'
+
+export { Menu } from './Menu'
+export type { MenuProps, MenuOption, MenuItem } from './Menu'
+
+export { SongCard } from './SongCard'
+export type { SongCardProps } from './SongCard'
+
+export { AlbumCard, EmptyLibraryCard } from './LibraryCards'
+export type {
+  AlbumCardProps,
+  EmptyLibraryCardProps,
+} from './LibraryCards'

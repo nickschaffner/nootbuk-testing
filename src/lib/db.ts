@@ -465,6 +465,51 @@ export class NootbukDatabase extends Dexie {
       albumReferences: '@id, albumId',
       instruments: '@id, type, createdAt',
     })
+
+    // Song.artworkBlob (cover art, parallel to Album.artworkBlob)
+    this.version(10)
+      .stores({
+        ideas: '@id, songId, sectionId, role, sectionIntent, status, instrumentId, createdAt',
+        ideaMedia: '@id, ideaId, type, source',
+        songs: '@id, status, createdAt, updatedAt',
+        songSections: '@id, songId, sortOrder',
+        songJournalEntries: '@id, songId, topic',
+        songReferences: '@id, songId',
+        songAssets: '@id, songId',
+        songTodos: '@id, songId, completed',
+        songVersions: '@id, songId, isMain',
+        albums: '@id, format, createdAt, updatedAt',
+        albumSongs: '@id, albumId, songId',
+        albumReferences: '@id, albumId',
+        instruments: '@id, type, createdAt',
+      })
+      .upgrade(async (tx) => {
+        const assets = await tx.table('songAssets').toArray()
+        const artworkBySong = new Map<string, { blob: Blob; createdAt: string }>()
+
+        for (const asset of assets) {
+          if (asset.type !== 'artwork') {
+            continue
+          }
+          const songId = asset.songId as string
+          const createdAt = String(asset.createdAt ?? '')
+          const prev = artworkBySong.get(songId)
+          if (!prev || createdAt > prev.createdAt) {
+            artworkBySong.set(songId, {
+              blob: asset.blob as Blob,
+              createdAt,
+            })
+          }
+        }
+
+        await tx.table('songs').toCollection().modify((song) => {
+          if (song.artworkBlob !== undefined && song.artworkBlob !== null) {
+            return
+          }
+          const fromAsset = artworkBySong.get(song.id as string)
+          song.artworkBlob = fromAsset?.blob ?? null
+        })
+      })
   }
 }
 

@@ -4,6 +4,117 @@ Pull these into the Nootbuk app. Newest first.
 
 ---
 
+## 2026-08-18 · Menu — the ⋯ context pop-up
+
+New `Menu` component (`src/components/kit/Menu.tsx`) for the three-dot actions
+pop-up used on cards/rows. Self-contained and responsive:
+
+- **True overlay** — the pop-up renders in a **portal on `document.body`** with
+  `position: fixed`, so it NEVER pushes sibling elements around and is never
+  clipped by an `overflow-hidden` ancestor. Closes on scroll/resize too.
+- **Positioning note (important)** — the popover is placed against the trigger's
+  `getBoundingClientRect()`, so the trigger wrapper must be an `inline-flex`
+  element (a real box), NOT `display: contents`. A `contents` wrapper reports a
+  zero rect and the menu lands at the page origin.
+- **Desktop (≥ sm)** — hairline popover positioned against the trigger's
+  `getBoundingClientRect()` (`align` `start|end`), with `noise` + `shadow-hard`.
+- **Mobile (< sm)** — full-width bottom **action sheet**, dimmed backdrop,
+  larger tap targets (`py-3`), optional `label` heading, safe-area padding.
+- Owns its open state; closes on select, outside pointerdown, and Escape.
+- **Flexible count** — pass 1..n `items`; `max-h-[60vh] overflow-auto` handles
+  long lists.
+
+```tsx
+<Menu
+  label="Song"                         // aria-label + mobile sheet heading
+  align="end"                          // 'start' | 'end' (desktop anchor)
+  items={[
+    { label: 'Rename', icon: <Pencil size={15} /> },
+    { label: 'Duplicate', icon: <Copy size={15} /> },
+    { label: 'Delete', icon: <Trash2 size={15} />, destructive: true },
+  ]}
+/>
+```
+
+Catalog: **K.09 Library**.
+
+### Files touched
+```
+src/components/kit/Menu.tsx
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+```
+
+---
+
+## 2026-08-18 · Length chip
+
+Duration/playhead time is a named `Length` component (outline Badge +
+tabular-nums). Extracted from TodoRow. Use it everywhere mm:ss is shown:
+TodoRow, AudioVersionRow, SongCard, AlbumCard. Catalog specimen in K.05.
+
+Song/Album card layout: title + optional art on top; `Length` then play then
+menu on the right; status/todos (or tracks) lower-left; last-worked lower-right.
+Style guide specimens include artwork thumbs.
+
+### Files touched
+```
+src/components/kit/Chip.tsx            (Length)
+src/components/kit/TodoRow.tsx
+src/components/kit/AudioVersionRow.tsx
+src/components/kit/LibraryCards.tsx
+src/components/kit/KitPage.tsx
+src/components/kit/index.ts
+public/kit/song-artwork.svg
+public/kit/album-artwork.svg
+```
+
+---
+
+## 2026-08-18 · SongCard / AlbumCard / EmptyLibraryCard / Menu
+
+Compact horizontal cards matching IdeaCard (badge row · title · footer). Square
+artwork is a 40px thumb and only renders when a URL is passed — no poster
+block. Song shows last-worked timestamp, todo count, and play+length when a
+version exists. Album shows track count and calculated length. Empty slots fill
+the Recent row (3 songs + 1 album).
+
+`Menu` is the three-dot action list used by the cards (Add to album / Delete).
+
+Catalog: **K.09 Library**. Home Recent uses the wired cards.
+
+### Files touched
+```
+src/components/kit/Menu.tsx            (new)
+src/components/kit/LibraryCards.tsx    (new)
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+```
+
+---
+
+## 2026-08-18 · RuleHeader
+
+Section mark: vermillion `.label-mono` title, 1px `bg-primary` rule, optional
+muted subtitle (`MonoLabel`). Title-only (`Recent`) or title + subtitle
+(`K.01` / `Archivo · Archivo Expanded · Space Mono`). Colors are tokens
+(`text-primary`, `bg-primary`, `text-muted-foreground`) so paper light and
+studio dark both work.
+
+Catalog: **K.015 Rule Header**. Home uses it for Recent.
+
+### Files touched
+```
+src/components/kit/RuleHeader.tsx  (new)
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+```
+
+---
+
 ## 2026-08-17 · Noise as a reusable base concept
 
 Noise is no longer hard-wired to specific components — it's now a first-class,

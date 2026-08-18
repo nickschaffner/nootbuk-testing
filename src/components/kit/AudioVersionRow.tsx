@@ -1,7 +1,7 @@
 import { Pause, Play, Star, Trash2 } from 'lucide-react'
 import { cn } from './cn'
 import { Input } from './Field'
-import { Badge } from './Chip'
+import { Badge, Length } from './Chip'
 import { IconButton } from './IconButton'
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -42,6 +42,7 @@ export function AudioVersionRow({
         className,
       )}
     >
+      {duration ? <Length>{duration}</Length> : null}
       <IconButton
         aria-label={playing ? 'Pause' : 'Play version'}
         variant="ghost"
@@ -57,12 +58,9 @@ export function AudioVersionRow({
           className="h-7 border-transparent bg-transparent px-1 hover:border-hairline"
           aria-label="Version label"
         />
-        <div className="flex items-center gap-2 px-1">
-          {filename ? (
-            <span className="label-mono truncate text-muted-foreground">{filename}</span>
-          ) : null}
-          {duration ? <span className="label-mono text-muted-foreground">{duration}</span> : null}
-        </div>
+        {filename ? (
+          <span className="label-mono truncate px-1 text-muted-foreground">{filename}</span>
+        ) : null}
       </div>
       {isMain ? <Badge tone="accent">Main</Badge> : null}
       <IconButton

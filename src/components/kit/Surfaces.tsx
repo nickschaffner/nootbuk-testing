@@ -5,11 +5,15 @@ import { MonoLabel } from './Field'
 // ─────────────────────────────────────────────────────────────────────────
 // Surfaces — the containers the whole system is built on.
 //   Panel   · hairline-framed card on the card fill (the default surface)
+//            raised          → vermillion hard drop
+//            raised="noise"  → inverse fill + grain drop
 //   Recess  · inset well, darker than its parent (piano rolls, readouts)
 //   Window  · titled panel with a mono header bar (chord picker, dialogs)
 //   RedBar  · the vermillion divider rule, with optional grain
 //   EmptyState · centered placeholder for empty pools/sections
 // ─────────────────────────────────────────────────────────────────────────
+
+export type PanelRaised = boolean | 'noise'
 
 export function Panel({
   children,
@@ -20,9 +24,24 @@ export function Panel({
   children: ReactNode
   className?: string
   as?: 'div' | 'section' | 'article'
-  /** Lift on the signature hard vermillion drop shadow. */
-  raised?: boolean
+  /** `true` = vermillion hard shadow. `'noise'` = inverse fill + grain drop. */
+  raised?: PanelRaised
 }) {
+  if (raised === 'noise') {
+    return (
+      <Tag className="shadow-noise inline-block max-w-full rounded-xs align-top">
+        <div
+          className={cn(
+            'scheme-inverse noise rounded-xs bg-card text-foreground',
+            className,
+          )}
+        >
+          {children}
+        </div>
+      </Tag>
+    )
+  }
+
   return (
     <Tag
       className={cn(

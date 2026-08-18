@@ -8,7 +8,9 @@ export interface SongWithSections {
   sections: SongSection[]
 }
 
-type CreateSongInput = Omit<Song, 'id' | 'createdAt' | 'updatedAt'>
+type CreateSongInput = Omit<Song, 'id' | 'createdAt' | 'updatedAt' | 'artworkBlob'> & {
+  artworkBlob?: Blob | null
+}
 
 type UpdateSongInput = Partial<Omit<Song, 'id' | 'createdAt'>> & {
   id: string
@@ -75,6 +77,7 @@ export async function createSong(input: CreateSongInput): Promise<Song> {
       masterEngineer: input.masterEngineer ?? null,
       copyright: input.copyright ?? null,
       sampleCredits: input.sampleCredits ?? null,
+      artworkBlob: input.artworkBlob ?? null,
       createdAt: now,
       updatedAt: now,
     }

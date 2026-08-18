@@ -1,0 +1,76 @@
+---
+description: Design system enforcement - all UI must use kit components
+globs: src/components/**, src/app/**
+alwaysApply: false
+---
+
+# Design System Rules
+
+## Source of Truth
+The component library at /src/components/kit/ is the SINGLE source of truth for all UI primitives. The app NEVER creates its own buttons, inputs, cards, panels, labels, toggles, badges, or any other UI primitive. Always import from @/components/kit.
+
+## Mandatory Imports
+Every UI element in the app must come from the kit:
+- Buttons → `import { Button } from '@/components/kit'`
+- Icon buttons → `import { IconButton } from '@/components/kit'`
+- Play buttons → `import { PlayButton } from '@/components/kit'`
+- Record buttons → `import { RecordButton } from '@/components/kit'`
+- Selects/dropdowns → `import { Pick } from '@/components/kit'`
+- Text inputs → `import { Input } from '@/components/kit'`
+- Textareas → `import { Textarea } from '@/components/kit'`
+- Checkboxes → `import { Checkbox } from '@/components/kit'`
+- Radios → `import { Radio } from '@/components/kit'`
+- Label + input groups → `import { Field } from '@/components/kit'`
+- Standalone labels → `import { MonoLabel } from '@/components/kit'`
+- Toggle switches → `import { Toggle } from '@/components/kit'`
+- Selectable tags → `import { Chip } from '@/components/kit'`
+- Status badges → `import { Badge } from '@/components/kit'`
+- Length / duration chips → `import { Length } from '@/components/kit'`
+- Mode switches → `import { SegmentedControl } from '@/components/kit'`
+- Small square selectors → `import { Pick } from '@/components/kit'`
+- Card surfaces → `import { Panel } from '@/components/kit'`
+- Toolbar/recessed surfaces → `import { Recess } from '@/components/kit'`
+- Titled modals/dialogs → `import { Window } from '@/components/kit'`
+- Section dividers → `import { RedBar } from '@/components/kit'`
+- Section rule headers → `import { RuleHeader } from '@/components/kit'`
+- Empty states → `import { EmptyState } from '@/components/kit'`
+- Status steppers → `import { StatusStepper } from '@/components/kit'`
+- Idea cards → `import { IdeaCard } from '@/components/kit'`
+- Song cards → `import { SongCard } from '@/components/kit'`
+- Album cards → `import { AlbumCard } from '@/components/kit'`
+- Empty library slots → `import { EmptyLibraryCard } from '@/components/kit'`
+- Action menus → `import { Menu } from '@/components/kit'`
+- Todo rows → `import { TodoRow } from '@/components/kit'`
+- Audio version rows → `import { AudioVersionRow } from '@/components/kit'`
+- Studio transport bar → `import { StudioBar } from '@/components/kit'`
+- Piano keyboard → `import { OnScreenKeyboard } from '@/components/kit'`
+- Piano roll bars → `import { BeatLane } from '@/components/kit'`
+
+## Option Constants
+Use option constants from the kit for all selectors:
+- `IDEA_ROLES`, `SECTION_INTENTS`, `IDEA_STATUSES`
+- `SONG_STATUSES`, `ALBUM_STATUSES`, `ALBUM_FORMATS`
+- `CHORD_TYPES`, `SYNTH_PATCHES`, `INSTRUMENT_TYPES`
+- `QUANTIZE_OPTIONS`, `BLOCK_WIDTHS`, `TIME_SIGNATURES`
+- `KEY_ROOTS`, `KEY_MODES`
+
+## Do NOT
+- Do NOT import from @/components/ui (shadcn). The kit replaces shadcn.
+- Do NOT create inline styled buttons, inputs, cards, or any primitive.
+- Do NOT hardcode font sizes, spacing, colors, or border radius. Use design tokens from CSS variables.
+- Do NOT use raw HTML elements (button, input, select, div-as-card) when a kit component exists.
+- Do NOT duplicate any component that already exists in the kit. If a new primitive is needed, add it to /src/components/kit/ first, then use it.
+
+## Adding New Components
+If a component does not exist in the kit but is needed:
+1. Create it in /src/components/kit/ following the same patterns (controlled, className passthrough, tokens not hex, square by default).
+2. Export it from /src/components/kit/index.ts.
+3. Then import and use it in the app.
+Never create one-off components in the app — everything goes through the kit.
+
+## Styling
+- Colors: use CSS variable utilities (bg-primary, border-hairline, text-muted-foreground). Never hex values.
+- Corners: --radius (2px) everywhere. Round only true circles.
+- Typography: font-display for headings, font-sans for body, .label-mono for control labels.
+- Grain: .noise class on solid fills only (primary buttons, red bar).
+- Layout spacing: use Tailwind spacing utilities but never override kit component internal spacing.
