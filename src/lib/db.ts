@@ -510,6 +510,16 @@ export class NootbukDatabase extends Dexie {
           song.artworkBlob = fromAsset?.blob ?? null
         })
       })
+
+    this.version(11)
+      .stores({
+        ideas: '@id, songId, sectionId, role, sectionIntent, instrumentId, createdAt',
+      })
+      .upgrade(async (tx) => {
+        await tx.table('ideas').toCollection().modify((idea) => {
+          delete idea.status
+        })
+      })
   }
 }
 

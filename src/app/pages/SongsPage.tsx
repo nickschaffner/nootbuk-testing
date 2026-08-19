@@ -1,144 +1,73 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Trash2 } from 'lucide-react'
+import { Music2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
-import { AudioPlayButton } from '@/components/player/AudioPlayButton'
-
+import { RecentSongCard } from '@/components/home/RecentLibraryCards'
+import { SongFilters, songMatchesSearch, tempoRangeForBpm, tempoRangeKey } from '@/components/songs/SongFilters'
+import { SongsTable } from '@/components/songs/SongsTable'
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { createSong, deleteSong, useAllSongs } from '@/hooks/useSongs'
+  Button,
+  EmptyState,
+  PageHeader,
+  TabSwitcher,
+  type TableSort,
+} from '@/components/kit'
+import { useAlbumCountsBySong } from '@/hooks/useAlbumSongs'
+import { createSong, useAllSongs } from '@/hooks/useSongs'
 import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
 import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
-import { formatRelativeTime } from '@/lib/format'
-import type { Song, SongStatus, SongVersion } from '@/types/song'
+import type { SongStatus } from '@/types/song'
 
-function formatSongStatus(status: SongStatus): string {
-  return status.charAt(0).toUpperCase() + status.slice(1)
-}
+type SongsView = 'cards' | 'table'
 
-function SongRow({
-  song,
-  playbackVersion,
-  incompleteCount,
-}: {
-  song: Song
-  playbackVersion?: SongVersion
-  incompleteCount: number
-}) {
-  const [isDeleting, setIsDeleting] = useState(false)
-
-  async function handleDelete(deleteIdeas: boolean) {
-    setIsDeleting(true)
-    try {
-      await deleteSong(song.id, { deleteIdeas })
-    } catch {
-      // deleteSong already logs the error
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  return (
-    <li className="flex items-center gap-2 px-2 py-1 pr-2 sm:px-4">
-      {playbackVersion ? (
-        <AudioPlayButton blob={playbackVersion.blob} />
-      ) : (
-        <div className="size-8 shrink-0" />
-      )}
-
-      <Link
-        to={`/song/${song.id}`}
-        className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 py-2 transition-colors hover:bg-muted/40"
-      >
-        <p className="min-w-0 flex-1 truncate text-sm font-medium">
-          {song.title}
-        </p>
-        {incompleteCount > 0 ? (
-          <Badge variant="secondary" className="shrink-0 tabular-nums">
-            {incompleteCount} todo{incompleteCount === 1 ? '' : 's'}
-          </Badge>
-        ) : null}
-        <Badge variant="outline" className="shrink-0 capitalize">
-          {formatSongStatus(song.status)}
-        </Badge>
-        <span className="w-16 shrink-0 text-sm text-muted-foreground">
-          {song.key ?? '—'}
-        </span>
-        <span className="w-16 shrink-0 text-sm text-muted-foreground">
-          {song.tempo ? `${song.tempo} BPM` : '—'}
-        </span>
-        <span className="shrink-0 text-xs text-muted-foreground">
-          {formatRelativeTime(song.updatedAt)}
-        </span>
-      </Link>
-
-      <AlertDialog>
-        <AlertDialogTrigger asChild>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            className="shrink-0 text-muted-foreground hover:text-destructive"
-            disabled={isDeleting}
-            aria-label={`Delete ${song.title}`}
-          >
-            <Trash2 />
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{song.title}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This removes the song and its sections, journal, references,
-              assets, todos, versions, and album links. Choose what happens to
-              ideas that belong to this song.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={isDeleting}
-              onClick={(event) => {
-                event.preventDefault()
-                void handleDelete(false)
-              }}
-            >
-              {isDeleting ? 'Deleting...' : 'Keep Ideas (move to pool)'}
-            </AlertDialogAction>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={isDeleting}
-              onClick={(event) => {
-                event.preventDefault()
-                void handleDelete(true)
-              }}
-            >
-              {isDeleting ? 'Deleting...' : 'Delete Everything'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </li>
-  )
-}
+const VIEW_OPTIONS: { value: SongsView; label: string }[] = [
+  { value: 'cards', label: 'Cards' },
+  { value: 'table', label: 'Table' },
+]
 
 export function SongsPage() {
   const songs = useAllSongs()
   const playbackVersions = usePlaybackVersionsIndex()
   const todoCounts = useIncompleteTodoCountsBySong()
+  const albumCounts = useAlbumCountsBySong()
   const navigate = useNavigate()
   const [isCreating, setIsCreating] = useState(false)
+  const [sort, setSort] = useState<TableSort | null>(null)
+  const [view, setView] = useState<SongsView>('cards')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<SongStatus[]>([])
+  const [keyFilter, setKeyFilter] = useState('')
+  const [tempoFilter, setTempoFilter] = useState('')
+  const [timeFilter, setTimeFilter] = useState('')
+
+  const allSongs = useMemo(() => songs ?? [], [songs])
+
+  const rows = useMemo(() => {
+    return allSongs.filter((song) => {
+      if (!songMatchesSearch(song, searchQuery)) {
+        return false
+      }
+      if (statusFilter.length > 0 && !statusFilter.includes(song.status)) {
+        return false
+      }
+      if (keyFilter && (song.key?.trim() ?? '') !== keyFilter) {
+        return false
+      }
+      if (timeFilter && (song.timeSignature?.trim() ?? '') !== timeFilter) {
+        return false
+      }
+      if (tempoFilter) {
+        if (song.tempo == null) {
+          return false
+        }
+        const range = tempoRangeForBpm(song.tempo)
+        if (tempoRangeKey(range.min, range.max) !== tempoFilter) {
+          return false
+        }
+      }
+      return true
+    })
+  }, [allSongs, searchQuery, statusFilter, keyFilter, tempoFilter, timeFilter])
 
   async function handleNewSong() {
     setIsCreating(true)
@@ -168,35 +97,77 @@ export function SongsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Songs</h1>
-          <p className="text-muted-foreground">
-            All your songs, sorted by last modified.
-          </p>
-        </div>
-        <Button onClick={() => void handleNewSong()} disabled={isCreating}>
-          {isCreating ? 'Creating...' : 'New Song'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Songs"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isCreating}
+            onClick={() => void handleNewSong()}
+          >
+            {isCreating ? 'Creating...' : '+ New Song'}
+          </Button>
+        }
+      />
 
       {songs === undefined ? (
         <p className="text-sm text-muted-foreground">Loading songs...</p>
       ) : songs.length === 0 ? (
-        <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          No songs yet. Create one to start organizing ideas.
-        </p>
+        <EmptyState
+          icon={<Music2 size={28} />}
+          title="No songs yet"
+          hint="Create one to start organizing ideas."
+          action={
+            <Button disabled={isCreating} onClick={() => void handleNewSong()}>
+              {isCreating ? 'Creating...' : '+ New Song'}
+            </Button>
+          }
+        />
       ) : (
-        <ul className="divide-y rounded-lg border">
-          {songs.map((song) => (
-            <SongRow
-              key={song.id}
-              song={song}
-              playbackVersion={playbackVersions?.[song.id]}
-              incompleteCount={todoCounts?.[song.id] ?? 0}
+        <>
+          <SongFilters
+            songs={allSongs}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            keyFilter={keyFilter}
+            onKeyFilterChange={setKeyFilter}
+            tempoFilter={tempoFilter}
+            onTempoFilterChange={setTempoFilter}
+            timeFilter={timeFilter}
+            onTimeFilterChange={setTimeFilter}
+          />
+          <TabSwitcher
+            options={VIEW_OPTIONS}
+            value={view}
+            onChange={setView}
+          />
+          {rows.length === 0 ? (
+            <EmptyState title="No songs match your filters." />
+          ) : view === 'table' ? (
+            <SongsTable
+              songs={rows}
+              playbackVersions={playbackVersions}
+              todoCounts={todoCounts}
+              albumCounts={albumCounts}
+              sort={sort}
+              onSort={setSort}
             />
-          ))}
-        </ul>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 pb-2 pr-2 sm:grid-cols-2">
+              {rows.map((song) => (
+                <RecentSongCard
+                  key={song.id}
+                  song={song}
+                  todoCount={todoCounts?.[song.id] ?? 0}
+                  playbackVersion={playbackVersions?.[song.id]}
+                />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   )

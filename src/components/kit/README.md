@@ -73,6 +73,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | Component | Key props | Notes |
 |---|---|---|
 | `SegmentedControl` | `options: Option[]`, `value`, `onChange`, `size`, `block` | Mutually-exclusive; active segment fills vermillion. |
+| `TabSwitcher` | `options: Option[]`, `value`, `onChange` | View/section tabs. No frame. Active tab sits on a 2px vermillion rule. |
 | `Toggle` | `checked`, `onChange`, `label?`, `disabled?` | Hardware-style switch. |
 | `Chip` | `selected?`, `tone` `default\|accent`, `onClick` | Selectable tag (roles, intents, chords). |
 | `Badge` | `tone` `neutral\|accent\|outline` | Non-interactive status tag. |
@@ -99,6 +100,7 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 | `Window` | `title`, `right?`, `raised?` | Titled panel with mono header bar. `raised` → dialog framing. |
 | `RedBar` | `grain?`, `height?` | Vermillion divider rule. |
 | `RuleHeader` | `title`, `subtitle?` | Vermillion mono title + 1px rule. Optional muted subtitle on the right. Light/dark via tokens. |
+| `PageHeader` | `title`, `action?` | Page masthead. Locked `h-16`. Display L title between 2px vermillion rules; right rule runs to the CTA. CTA slot for `Button variant="secondary" size="sm"`. |
 | `EmptyState` | `icon?`, `title`, `hint?`, `action?` | Placeholder for empty pools/sections. |
 
 ### Studio
@@ -126,18 +128,19 @@ Tune any of them with `--grain-size`, `--grain-opacity`, `--grain-blend`,
 
 | Component | Key props | Notes |
 |---|---|---|
-| `Table` | `sort?`, `onSort?` | Agnostic hairline grid. Parent owns data + sort. |
+| `Table` | `sort?`, `onSort?`, `stickyEnd?` | Agnostic hairline grid. Parent owns data + sort. Last column sticks on sideways scroll (`stickyEnd`, default on). |
 | `TableHead` | `column?` | Text label → sortable (click toggles asc/desc). Empty / non-text heads are not. `column` defaults to the label. |
 | `TableHeader` / `TableBody` / `TableRow` / `TableCell` | | Row hover. Clickable when `onClick` is set. |
 | `TableActions` | `children` | Right-packed cluster. |
-| `IdeaRow` | `role`, `title`, `ideaKey?`, `tempo?`, `lastWorked?`, `plays?`, `menuItems?`, `onOpen?` | Pool line on top of Table. Use `ideaKey` (not `key`). |
+| `IdeaRow` | `role`, `title`, `ideaKey?`, `tempo?`, `tracks?`, `lastWorked?`, `plays?`, `menuItems?`, `onOpen?` | Pool line on top of Table. Plays first, then role/title/key/bpm/tracks/updated, then ⋯. Use `ideaKey` (not `key`). Blank `—` for missing key, bpm, tracks. |
+| `SongRow` | `title`, `status`, `todoCount?`, `length?`, `songKey?`, `tempo?`, `time?`, `albums?`, `lastWorked?`, `plays?`, `menuItems?`, `onOpen?` | Songs list line. Play + length · title (todo chip after the title if count > 0) · status · key · tempo · time · albums · updated, then ⋯. Solo menu action collapses to that icon (delete → trash). Use `songKey` (not `key`). Blank `—` for missing albums / updated. |
 
 ## Option constants
 
 `options.ts` mirrors the working app's enums so selectors offer identical
 choices. Each is an `Option[]` (`{ value, label }`):
 
-`IDEA_ROLES` · `SECTION_INTENTS` · `IDEA_STATUSES` · `SONG_STATUSES` ·
+`IDEA_ROLES` · `SECTION_INTENTS` · `SONG_STATUSES` ·
 `ALBUM_STATUSES` · `ALBUM_FORMATS` · `CHORD_TYPES` · `SYNTH_PATCHES` ·
 `INSTRUMENT_TYPES` · `QUANTIZE_OPTIONS` · `BLOCK_WIDTHS` · `TIME_SIGNATURES` ·
 `KEY_ROOTS` · `KEY_MODES`. Plus `WHITE_NOTES` / `BLACK_NOTES` for keyboards.
@@ -166,10 +169,12 @@ import { SegmentedControl, IDEA_ROLES } from '@/components/kit'
 <Table sort={sort} onSort={setSort}>
   <TableHeader>
     <TableRow>
+      <TableHead />
       <TableHead column="role">Role</TableHead>
       <TableHead column="title">Title</TableHead>
       <TableHead column="key">Key</TableHead>
       <TableHead column="tempo">BPM</TableHead>
+      <TableHead column="tracks">Tracks</TableHead>
       <TableHead column="updated">Updated</TableHead>
       <TableHead />
     </TableRow>

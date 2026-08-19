@@ -878,7 +878,6 @@ export function IdeaEditor() {
       patchSettings: null,
       lyrics: lyrics.trim() || null,
       notes: notes.trim() || null,
-      status: 'raw',
     })
 
     await persistMediaForIdea(created.id)
@@ -948,8 +947,6 @@ export function IdeaEditor() {
         patchName,
         lyrics: lyrics.trim() || null,
         notes: notes.trim() || null,
-        // Preserve fields not shown in the unified layout
-        status: idea.status,
       })
       await persistMediaForIdea(ideaId)
       resetForm()

@@ -11,7 +11,6 @@ export type {
   IdeaMedia,
   IdeaMediaType,
   IdeaRole,
-  IdeaStatus,
   NoteDuration,
   NoteEvent,
   SectionIntent,

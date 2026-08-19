@@ -45,6 +45,8 @@ function headerColumnId(children: ReactNode, column?: string): string | null {
 export interface TableProps extends HTMLAttributes<HTMLTableElement> {
   sort?: TableSort | null
   onSort?: (sort: TableSort) => void
+  /** Pin the last column (⋯ / delete) while the table scrolls sideways. */
+  stickyEnd?: boolean
 }
 
 export function Table({
@@ -52,12 +54,20 @@ export function Table({
   className,
   sort = null,
   onSort,
+  stickyEnd = true,
   ...rest
 }: TableProps) {
   return (
     <TableSortContext.Provider value={{ sort, onSort }}>
       <div className={cn('w-full min-w-0 overflow-x-auto', className)}>
-        <table className="w-full border-collapse text-sm" {...rest}>
+        <table
+          className={cn(
+            'w-full border-separate border-spacing-0 text-sm',
+            stickyEnd &&
+              '[&_th:last-child]:sticky [&_th:last-child]:right-0 [&_th:last-child]:z-10 [&_th:last-child]:bg-inherit [&_th:last-child]:shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.35)] [&_td:last-child]:sticky [&_td:last-child]:right-0 [&_td:last-child]:z-10 [&_td:last-child]:bg-inherit [&_td:last-child]:shadow-[-8px_0_12px_-8px_rgba(0,0,0,0.35)]',
+          )}
+          {...rest}
+        >
           {children}
         </table>
       </div>
@@ -73,7 +83,7 @@ export function TableHeader({
   return (
     <thead
       className={cn(
-        'border-b border-hairline [&_tr]:cursor-default [&_tr]:hover:bg-transparent',
+        '[&_tr]:cursor-default [&_tr]:bg-background [&_tr]:hover:bg-background',
         className,
       )}
       {...rest}
@@ -103,7 +113,7 @@ export function TableRow({
   return (
     <tr
       className={cn(
-        'border-b border-hairline last:border-b-0 hover:bg-muted/50',
+        'bg-background border-b border-hairline last:border-b-0 hover:bg-muted/50',
         rest.onClick && 'cursor-pointer',
         className,
       )}

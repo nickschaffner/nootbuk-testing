@@ -120,7 +120,6 @@ export async function createIdea(input: CreateIdeaInput): Promise<Idea> {
       patchSettings: input.patchSettings ?? null,
       lyrics: input.lyrics ?? null,
       notes: input.notes ?? null,
-      status: input.status ?? 'raw',
       createdAt: now,
       updatedAt: now,
     }

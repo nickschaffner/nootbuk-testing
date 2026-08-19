@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { AlbumCard } from '@/components/album/AlbumCard'
-import { Button } from '@/components/ui/button'
+import { Button, PageHeader } from '@/components/kit'
 import { createAlbum, useAllAlbums } from '@/hooks/useAlbums'
 
 export function AlbumsPage() {
@@ -34,17 +34,19 @@ export function AlbumsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Albums</h1>
-          <p className="text-muted-foreground">
-            Group songs into albums and manage release metadata.
-          </p>
-        </div>
-        <Button onClick={() => void handleNewAlbum()} disabled={isCreating}>
-          {isCreating ? 'Creating...' : 'New Album'}
-        </Button>
-      </div>
+      <PageHeader
+        title="Albums"
+        action={
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={isCreating}
+            onClick={() => void handleNewAlbum()}
+          >
+            {isCreating ? 'Creating...' : '+ New Album'}
+          </Button>
+        }
+      />
 
       {albums === undefined ? (
         <p className="text-sm text-muted-foreground">Loading albums...</p>

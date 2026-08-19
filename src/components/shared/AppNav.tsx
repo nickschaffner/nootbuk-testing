@@ -188,7 +188,7 @@ export function AppNav({
     <div className="flex h-full min-h-0 flex-col">
       <div
         className={cn(
-          'noise flex h-16 shrink-0 items-center border-b border-hairline bg-panel',
+          'noise flex h-16 shrink-0 items-center border-b border-hairline bg-deeper',
           collapsed ? 'justify-center px-1' : 'justify-between gap-2 px-3',
         )}
       >
@@ -274,7 +274,7 @@ export function AppNav({
 
       <div
         className={cn(
-          'mt-auto flex shrink-0 flex-col gap-2 border-t border-hairline',
+          'mt-auto flex shrink-0 flex-col gap-2 border-t border-hairline bg-deeper',
           collapsed ? 'items-center p-2' : 'p-3',
         )}
       >

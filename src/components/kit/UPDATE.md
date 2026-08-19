@@ -4,6 +4,32 @@ Pull these into the Nootbuk app. Newest first.
 
 ---
 
+## 2026-08-18 · PageHeader
+
+Reusable page masthead: icon + display title, mono subheading, optional
+CTA slot. Locked to `h-16` to match the sidebar “Nootbuk” brand bar.
+Catalog **K.016**. Wired on Ideas, Songs, Albums, Instruments, Style
+Guide, Calibration.
+
+CTA pages pass `Button variant="primary" size="lg"` (`+ New Song`, etc).
+Dev pages omit `action`.
+
+### Files touched
+```
+src/components/kit/PageHeader.tsx
+src/components/kit/index.ts
+src/components/kit/KitPage.tsx
+src/components/kit/README.md
+src/app/pages/IdeasPage.tsx
+src/app/pages/SongsPage.tsx
+src/app/pages/AlbumsPage.tsx
+src/app/pages/InstrumentsPage.tsx
+src/app/pages/StyleguidePage.tsx
+src/components/calibration/CalibrationPage.tsx
+```
+
+---
+
 ## 2026-08-18 · SearchBar
 
 Leading search icon in a square `bg-panel` box (Window header fill), flush

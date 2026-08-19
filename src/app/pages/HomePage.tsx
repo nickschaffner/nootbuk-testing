@@ -2,21 +2,14 @@ import { Lightbulb } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
-import { PoolIdeaRow } from '@/components/home/PoolIdeaRow'
+import { IdeaSearchRoleFilters } from '@/components/home/IdeaSearchRoleFilters'
+import { IdeaTable, sortIdeas } from '@/components/home/IdeaTable'
 import { RecentAlbumCard, RecentSongCard } from '@/components/home/RecentLibraryCards'
 import {
   Button,
-  Chip,
   EmptyLibraryCard,
   EmptyState,
-  IDEA_ROLES,
   RuleHeader,
-  SearchBar,
-  Table,
-  TableBody,
-  TableHead,
-  TableHeader,
-  TableRow,
   type TableSort,
 } from '@/components/kit'
 import { createAlbum, useAllAlbums } from '@/hooks/useAlbums'
@@ -24,7 +17,7 @@ import { useIdeasInPool } from '@/hooks/useIdeas'
 import { createSong, useAllSongs } from '@/hooks/useSongs'
 import { useIncompleteTodoCountsBySong } from '@/hooks/useSongTodos'
 import { usePlaybackVersionsIndex } from '@/hooks/useSongVersions'
-import { getIdeaDisplayLabel, ideaMatchesSearch } from '@/lib/idea-label'
+import { ideaMatchesSearch } from '@/lib/idea-label'
 import { useQuickCapture } from '@/stores/quickCapture'
 import type { IdeaRole } from '@/types/idea'
 
@@ -65,46 +58,10 @@ export function HomePage() {
     })
   }, [ideas, roleFilter, searchQuery])
 
-  const displayedIdeas = useMemo(() => {
-    if (!poolSort) {
-      return filteredIdeas
-    }
-
-    const direction = poolSort.direction === 'asc' ? 1 : -1
-
-    return [...filteredIdeas].sort((a, b) => {
-      if (poolSort.column === 'role') {
-        return a.role.localeCompare(b.role) * direction
-      }
-      if (poolSort.column === 'title') {
-        return (
-          getIdeaDisplayLabel(a).localeCompare(getIdeaDisplayLabel(b), undefined, {
-            sensitivity: 'base',
-          }) * direction
-        )
-      }
-      if (poolSort.column === 'key') {
-        const left = a.key?.trim() ?? ''
-        const right = b.key?.trim() ?? ''
-        if (!left && !right) return 0
-        if (!left) return 1
-        if (!right) return -1
-        return left.localeCompare(right, undefined, { sensitivity: 'base' }) * direction
-      }
-      if (poolSort.column === 'tempo') {
-        if (a.tempo == null && b.tempo == null) return 0
-        if (a.tempo == null) return 1
-        if (b.tempo == null) return -1
-        return (a.tempo - b.tempo) * direction
-      }
-      if (poolSort.column === 'updated') {
-        return (
-          (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()) * direction
-        )
-      }
-      return 0
-    })
-  }, [filteredIdeas, poolSort])
+  const displayedIdeas = useMemo(
+    () => sortIdeas(filteredIdeas, poolSort),
+    [filteredIdeas, poolSort],
+  )
 
   const visibleIdeas = poolExpanded
     ? displayedIdeas
@@ -161,8 +118,10 @@ export function HomePage() {
 
   return (
     <div className="space-y-8">
-      <section className="space-y-6">
-        <RuleHeader title="Recent" />
+      <section>
+        <div className="flex h-16 items-center">
+          <RuleHeader title="Recent" className="w-full" />
+        </div>
 
         {songs === undefined || albums === undefined ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
@@ -207,41 +166,12 @@ export function HomePage() {
           }
         />
 
-        <div className="grid grid-cols-2 items-start gap-8">
-          <SearchBar
-            placeholder="Search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
-          <div className="flex flex-wrap items-start gap-1.5">
-            <Chip
-              selected={roleFilter.length === 0}
-              onClick={() => setRoleFilter([])}
-            >
-              All
-            </Chip>
-            {IDEA_ROLES.map((role) => {
-              const value = role.value as IdeaRole
-              const selected = roleFilter.includes(value)
-              return (
-                <Chip
-                  key={role.value}
-                  selected={selected}
-                  onClick={() => {
-                    setRoleFilter((current) => {
-                      if (current.includes(value)) {
-                        return current.filter((item) => item !== value)
-                      }
-                      return [...current, value]
-                    })
-                  }}
-                >
-                  {role.label}
-                </Chip>
-              )
-            })}
-          </div>
-        </div>
+        <IdeaSearchRoleFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          roleFilter={roleFilter}
+          onRoleFilterChange={setRoleFilter}
+        />
 
         {ideas === undefined ? (
           <p className="text-sm text-muted-foreground">Loading ideas...</p>
@@ -258,27 +188,12 @@ export function HomePage() {
           <EmptyState title="No ideas match your filters." />
         ) : (
           <>
-            <Table sort={poolSort} onSort={setPoolSort}>
-              <TableHeader>
-                <TableRow>
-                  <TableHead column="role">Role</TableHead>
-                  <TableHead column="title">Title</TableHead>
-                  <TableHead column="key">Key</TableHead>
-                  <TableHead column="tempo">BPM</TableHead>
-                  <TableHead column="updated">Updated</TableHead>
-                  <TableHead />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleIdeas.map((idea) => (
-                  <PoolIdeaRow
-                    key={idea.id}
-                    idea={idea}
-                    onOpen={() => openIdea(idea.id)}
-                  />
-                ))}
-              </TableBody>
-            </Table>
+            <IdeaTable
+              ideas={visibleIdeas}
+              sort={poolSort}
+              onSort={setPoolSort}
+              onOpen={(idea) => openIdea(idea.id)}
+            />
             {hiddenPoolCount > 0 ? (
               <Button
                 variant="outline"

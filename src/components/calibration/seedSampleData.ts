@@ -97,7 +97,6 @@ export async function seedSampleData(): Promise<void> {
         notes: withWords
           ? `Production note: try this ${role} idea mid-tempo.`
           : null,
-        status: index < 2 ? 'developed' : 'raw',
         createdAt: created,
         updatedAt: created,
       }
@@ -204,7 +203,6 @@ export async function seedSampleData(): Promise<void> {
       patchSettings: null,
       lyrics: null,
       notes: 'Pad swell into verse',
-      status: 'used',
       createdAt: daysAgo(9),
       updatedAt: daysAgo(3),
     },
@@ -223,7 +221,6 @@ export async function seedSampleData(): Promise<void> {
       patchSettings: null,
       lyrics: null,
       notes: 'Walking eighths',
-      status: 'used',
       createdAt: daysAgo(9),
       updatedAt: daysAgo(3),
     },
@@ -242,7 +239,6 @@ export async function seedSampleData(): Promise<void> {
       patchSettings: null,
       lyrics: 'Looking for a signal light',
       notes: null,
-      status: 'developed',
       createdAt: daysAgo(7),
       updatedAt: daysAgo(2),
     },
@@ -261,7 +257,6 @@ export async function seedSampleData(): Promise<void> {
       patchSettings: null,
       lyrics: null,
       notes: 'D – Bm – G – A',
-      status: 'used',
       createdAt: daysAgo(6),
       updatedAt: daysAgo(2),
     },
@@ -280,7 +275,6 @@ export async function seedSampleData(): Promise<void> {
       patchSettings: null,
       lyrics: null,
       notes: 'Arp enters half-time',
-      status: 'raw',
       createdAt: daysAgo(5),
       updatedAt: daysAgo(1),
     },

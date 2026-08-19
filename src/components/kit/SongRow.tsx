@@ -1,62 +1,82 @@
 import type { MouseEvent, ReactNode } from 'react'
-import { Badge } from './Chip'
+import { Badge, Length } from './Chip'
 import { Menu, type MenuOption } from './Menu'
 import { TableActions, TableCell, TableRow } from './Table'
 
 // ─────────────────────────────────────────────────────────────────────────
-// IdeaRow — one pool/list line. Plays · role · title · key · bpm · tracks ·
-// last updated, then ⋯ with no header.
+// SongRow — one songs-list line. Play + length · title (+ todo chip) ·
+// status · key · tempo · time · albums · updated, then ⋯ / delete.
 // ─────────────────────────────────────────────────────────────────────────
 
-export interface IdeaRowProps {
-  role: string
+export interface SongRowProps {
   title: string
-  ideaKey?: string | null
+  status: string
+  todoCount?: number
+  length?: string | null
+  songKey?: string | null
   tempo?: number | null
-  tracks?: number | null
+  time?: string | null
+  albums?: number | null
   lastWorked?: string
-  /** Quick-play controls (audio / MIDI / note picker). */
   plays?: ReactNode
   menuItems?: MenuOption[]
   onOpen?: () => void
   className?: string
 }
 
-export function IdeaRow({
-  role,
+export function SongRow({
   title,
-  ideaKey,
+  status,
+  todoCount = 0,
+  length,
+  songKey,
   tempo,
-  tracks,
+  time,
+  albums,
   lastWorked,
   plays,
   menuItems,
   onOpen,
   className,
-}: IdeaRowProps) {
+}: SongRowProps) {
+  const hasPlayCluster = Boolean(plays) || Boolean(length?.trim())
+
   return (
     <TableRow className={className} onClick={() => onOpen?.()}>
       <TableCell className="w-0 whitespace-nowrap">
-        {plays ? (
+        {hasPlayCluster ? (
           <div onClick={(event: MouseEvent) => event.stopPropagation()}>
-            <TableActions>{plays}</TableActions>
+            <TableActions>
+              {plays}
+              {length?.trim() ? <Length>{length}</Length> : null}
+            </TableActions>
           </div>
         ) : null}
       </TableCell>
-      <TableCell className="w-0 whitespace-nowrap">
-        <Badge tone="neutral">{role}</Badge>
-      </TableCell>
       <TableCell className="w-full min-w-0 font-medium">
-        <span className="block truncate">{title}</span>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="min-w-0 truncate">{title}</span>
+          {todoCount > 0 ? (
+            <Badge tone="outline" className="shrink-0">
+              {todoCount} to-do
+            </Badge>
+          ) : null}
+        </div>
+      </TableCell>
+      <TableCell className="w-0 whitespace-nowrap">
+        <Badge tone="neutral">{status}</Badge>
       </TableCell>
       <TableCell className="w-0 whitespace-nowrap label-mono text-muted-foreground">
-        {ideaKey?.trim() ? ideaKey : '—'}
+        {songKey?.trim() ? songKey : '—'}
       </TableCell>
       <TableCell className="w-0 whitespace-nowrap label-mono text-muted-foreground">
         {tempo != null ? String(tempo) : '—'}
       </TableCell>
       <TableCell className="w-0 whitespace-nowrap label-mono text-muted-foreground">
-        {tracks != null ? String(tracks) : '—'}
+        {time?.trim() ? time : '—'}
+      </TableCell>
+      <TableCell className="w-0 whitespace-nowrap label-mono text-muted-foreground">
+        {albums != null ? String(albums) : '—'}
       </TableCell>
       <TableCell className="w-0 whitespace-nowrap label-mono text-muted-foreground">
         {lastWorked?.trim() ? lastWorked : '—'}
@@ -65,7 +85,7 @@ export function IdeaRow({
         {menuItems && menuItems.length > 0 ? (
           <TableActions>
             <div onClick={(event: MouseEvent) => event.stopPropagation()}>
-              <Menu label="Idea" align="end" items={menuItems} />
+              <Menu label="Song" align="end" items={menuItems} />
             </div>
           </TableActions>
         ) : null}

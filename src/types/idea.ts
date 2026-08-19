@@ -21,8 +21,6 @@ export type SectionIntent =
   | 'solo'
   | 'unassigned'
 
-export type IdeaStatus = 'raw' | 'developed' | 'used' | 'archived'
-
 export type IdeaMediaType = 'audio' | 'midi' | 'image' | 'file'
 
 /** MIDI slot on an idea — zero-or-one of each. Null for non-MIDI media. */
@@ -67,7 +65,6 @@ export interface Idea {
   patchSettings: Record<string, string> | null
   lyrics: string | null
   notes: string | null
-  status: IdeaStatus
   createdAt: string
   updatedAt: string
 }

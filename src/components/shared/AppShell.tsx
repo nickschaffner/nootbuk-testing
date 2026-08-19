@@ -72,7 +72,7 @@ export function AppShell() {
               className={
                 isStyleguide
                   ? 'min-h-0 flex-1 overflow-auto p-0'
-                  : 'flex-1 overflow-auto p-4 pb-28 md:p-6 md:pb-6'
+                  : 'flex-1 overflow-auto px-4 pt-0 pb-28 md:px-6 md:pt-0 md:pb-6'
               }
             >
               <Outlet />

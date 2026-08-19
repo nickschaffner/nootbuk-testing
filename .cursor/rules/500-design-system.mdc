@@ -28,16 +28,19 @@ Every UI element in the app must come from the kit:
 - Status badges → `import { Badge } from '@/components/kit'`
 - Length / duration chips → `import { Length } from '@/components/kit'`
 - Mode switches → `import { SegmentedControl } from '@/components/kit'`
+- View / section tabs → `import { TabSwitcher } from '@/components/kit'`
 - Small square selectors → `import { Pick } from '@/components/kit'`
 - Card surfaces → `import { Panel } from '@/components/kit'`
 - Toolbar/recessed surfaces → `import { Recess } from '@/components/kit'`
 - Titled modals/dialogs → `import { Window } from '@/components/kit'`
 - Section dividers → `import { RedBar } from '@/components/kit'`
 - Section rule headers → `import { RuleHeader } from '@/components/kit'`
+- Page mastheads → `import { PageHeader } from '@/components/kit'`
 - Empty states → `import { EmptyState } from '@/components/kit'`
 - Status steppers → `import { StatusStepper } from '@/components/kit'`
 - Idea cards → `import { IdeaCard } from '@/components/kit'`
 - Idea pool rows → `import { IdeaRow } from '@/components/kit'`
+- Song list rows → `import { SongRow } from '@/components/kit'`
 - Data tables → `import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/kit'`
 - Song cards → `import { SongCard } from '@/components/kit'`
 - Album cards → `import { AlbumCard } from '@/components/kit'`
@@ -51,7 +54,7 @@ Every UI element in the app must come from the kit:
 
 ## Option Constants
 Use option constants from the kit for all selectors:
-- `IDEA_ROLES`, `SECTION_INTENTS`, `IDEA_STATUSES`
+- `IDEA_ROLES`, `SECTION_INTENTS`
 - `SONG_STATUSES`, `ALBUM_STATUSES`, `ALBUM_FORMATS`
 - `CHORD_TYPES`, `SYNTH_PATCHES`, `INSTRUMENT_TYPES`
 - `QUANTIZE_OPTIONS`, `BLOCK_WIDTHS`, `TIME_SIGNATURES`

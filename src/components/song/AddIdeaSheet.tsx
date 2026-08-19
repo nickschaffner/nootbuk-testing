@@ -65,7 +65,6 @@ export function AddIdeaSheet({
         patchSettings: null,
         lyrics: lyrics.trim() || null,
         notes: notes.trim() || null,
-        status: 'raw',
       })
       resetForm()
       onOpenChange(false)

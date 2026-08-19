@@ -34,13 +34,6 @@ export const SECTION_INTENTS: Option[] = [
   { value: 'unassigned', label: 'Unassigned' },
 ]
 
-export const IDEA_STATUSES: Option[] = [
-  { value: 'raw', label: 'Raw' },
-  { value: 'developed', label: 'Developed' },
-  { value: 'used', label: 'Used' },
-  { value: 'archived', label: 'Archived' },
-]
-
 // Song / album lifecycle -----------------------------------------------------
 export const SONG_STATUSES: Option[] = [
   { value: 'sketch', label: 'Sketch' },

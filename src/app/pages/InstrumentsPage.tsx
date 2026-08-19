@@ -1,18 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Plus } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { Button, PageHeader } from '@/components/kit'
 import {
   createInstrument,
   useAllInstruments,
@@ -21,37 +11,23 @@ import {
 import {
   defaultSynthPatchForType,
   formatInstrumentType,
-  INSTRUMENT_TYPES,
 } from '@/lib/instrument-utils'
-import type { InstrumentType } from '@/types/instrument'
 
 export function InstrumentsPage() {
   const navigate = useNavigate()
   const instruments = useAllInstruments()
   const ideaCounts = useIdeaCountsByInstrument()
-
-  const [showForm, setShowForm] = useState(false)
-  const [name, setName] = useState('')
-  const [type, setType] = useState<InstrumentType>('keys')
   const [isCreating, setIsCreating] = useState(false)
 
-  async function handleCreate() {
-    const trimmed = name.trim()
-    if (!trimmed) {
-      return
-    }
-
+  async function handleNewInstrument() {
     setIsCreating(true)
     try {
-      const enginePatch = defaultSynthPatchForType(type)
+      const enginePatch = defaultSynthPatchForType('other')
       const instrument = await createInstrument({
-        name: trimmed,
-        type,
+        name: 'Untitled Instrument',
+        type: 'other',
         defaultPatch: enginePatch === 'muted' ? null : enginePatch,
       })
-      setName('')
-      setType('keys')
-      setShowForm(false)
       navigate(`/instruments/${instrument.id}`)
     } catch {
       // createInstrument already logs
@@ -62,67 +38,19 @@ export function InstrumentsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Instruments</h1>
-          <p className="text-muted-foreground">
-            Your gear list — link ideas to real instruments.
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowForm((open) => !open)}
-          variant={showForm ? 'outline' : 'default'}
-        >
-          <Plus className="size-4" />
-          {showForm ? 'Cancel' : 'Add Instrument'}
-        </Button>
-      </div>
-
-      {showForm ? (
-        <div className="space-y-4 rounded-lg border p-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="new-instrument-name">Name</Label>
-              <Input
-                id="new-instrument-name"
-                value={name}
-                placeholder="Casio CT-X700"
-                onChange={(event) => setName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault()
-                    void handleCreate()
-                  }
-                }}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Type</Label>
-              <Select
-                value={type}
-                onValueChange={(next) => setType(next as InstrumentType)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INSTRUMENT_TYPES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {formatInstrumentType(item)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <PageHeader
+        title="Instruments"
+        action={
           <Button
-            disabled={!name.trim() || isCreating}
-            onClick={() => void handleCreate()}
+            variant="secondary"
+            size="sm"
+            disabled={isCreating}
+            onClick={() => void handleNewInstrument()}
           >
-            {isCreating ? 'Creating...' : 'Create'}
+            {isCreating ? 'Creating...' : '+ New Instrument'}
           </Button>
-        </div>
-      ) : null}
+        }
+      />
 
       {instruments === undefined ? (
         <p className="text-sm text-muted-foreground">Loading instruments...</p>

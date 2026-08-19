@@ -22,6 +22,9 @@ export type { PlayButtonProps } from './PlayButton'
 export { SegmentedControl } from './SegmentedControl'
 export type { SegmentedControlProps } from './SegmentedControl'
 
+export { TabSwitcher } from './TabSwitcher'
+export type { TabSwitcherProps } from './TabSwitcher'
+
 export { Toggle } from './Toggle'
 export type { ToggleProps } from './Toggle'
 
@@ -42,6 +45,9 @@ export type { PanelRaised } from './Surfaces'
 
 export { RuleHeader } from './RuleHeader'
 export type { RuleHeaderProps } from './RuleHeader'
+
+export { PageHeader } from './PageHeader'
+export type { PageHeaderProps } from './PageHeader'
 
 export { Noise } from './Noise'
 export type { NoiseProps, NoiseVariant } from './Noise'
@@ -69,6 +75,9 @@ export type { IdeaCardProps, MediaKind } from './IdeaCard'
 
 export { IdeaRow } from './IdeaRow'
 export type { IdeaRowProps } from './IdeaRow'
+
+export { SongRow } from './SongRow'
+export type { SongRowProps } from './SongRow'
 
 export {
   Table,

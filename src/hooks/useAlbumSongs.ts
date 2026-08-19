@@ -25,6 +25,24 @@ export function useAlbumsWithTitlesForSong(songId: string | undefined) {
   )
 }
 
+export function useAlbumCountsBySong() {
+  return useLiveQuery(async () => {
+    try {
+      const links = await db.albumSongs.toArray()
+      const counts: Record<string, number> = {}
+
+      for (const link of links) {
+        counts[link.songId] = (counts[link.songId] ?? 0) + 1
+      }
+
+      return counts
+    } catch (error) {
+      console.warn('useAlbumCountsBySong failed:', error)
+      throw error
+    }
+  }, [])
+}
+
 export async function getSongsForAlbum(
   albumId: string,
 ): Promise<Array<AlbumSong & { song: Song }>> {

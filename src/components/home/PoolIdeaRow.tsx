@@ -44,6 +44,7 @@ export function PoolIdeaRow({ idea, onOpen }: PoolIdeaRowProps) {
         title={getIdeaDisplayLabel(idea)}
         ideaKey={idea.key}
         tempo={idea.tempo}
+        tracks={idea.songId ? 1 : null}
         lastWorked={formatRelativeTime(idea.updatedAt)}
         plays={<IdeaMediaQuickPlay ideaId={idea.id} idea={idea} />}
         menuItems={[

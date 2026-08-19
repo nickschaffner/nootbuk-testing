@@ -33,6 +33,7 @@ import {
   KEY_MODES,
   MonoLabel,
   OnScreenKeyboard,
+  PageHeader,
   Panel,
   Pick,
   QUANTIZE_OPTIONS,
@@ -45,6 +46,7 @@ import {
   SearchBar,
   SECTION_INTENTS,
   SegmentedControl,
+  TabSwitcher,
   SONG_STATUSES,
   StatusStepper,
   StudioBar,
@@ -56,6 +58,7 @@ import {
   AudioVersionRow,
   IdeaCard,
   IdeaRow,
+  SongRow,
   Menu,
   SongCard,
   AlbumCard,
@@ -108,6 +111,7 @@ function Row({ children }: { children: ReactNode }) {
 
 const COLORS: { token: string; light: string; dark: string; role: string }[] = [
   { token: '--background', light: '#efe9dd', dark: '#14120d', role: 'Page ground' },
+  { token: '--deeper', light: '#c2bcaa', dark: '#171512', role: 'Desktop nav chrome' },
   { token: '--foreground', light: '#17150f', dark: '#ece5d5', role: 'Ink / text' },
   { token: '--card', light: '#f5f0e6', dark: '#1c1913', role: 'Panel fill' },
   { token: '--panel', light: '#e6dfd0', dark: '#24201a', role: 'Header / inset fill' },
@@ -136,9 +140,9 @@ const TABLE_SPEC_ROWS = [
 ]
 
 const IDEA_SPEC_ROWS = [
-  { role: 'Bassline', title: 'Bassline — Dm — 92 BPM', ideaKey: 'Dm', tempo: 92, lastWorked: '2h ago', updatedAt: 2 },
-  { role: 'Melody', title: 'Falling in the dark, again', ideaKey: 'Am', tempo: 108, lastWorked: '1d ago', updatedAt: 24 },
-  { role: 'Sample', title: 'Rain loop off the balcony', ideaKey: null as string | null, tempo: null as number | null, lastWorked: '3d ago', updatedAt: 72 },
+  { role: 'Bassline', title: 'Bassline — Dm — 92 BPM', ideaKey: 'Dm', tempo: 92, tracks: 1, lastWorked: '2h ago', updatedAt: 2 },
+  { role: 'Melody', title: 'Falling in the dark, again', ideaKey: 'Am', tempo: 108, tracks: 1, lastWorked: '1d ago', updatedAt: 24 },
+  { role: 'Sample', title: 'Rain loop off the balcony', ideaKey: null as string | null, tempo: null as number | null, tracks: null as number | null, lastWorked: '3d ago', updatedAt: 72 },
 ]
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -162,6 +166,7 @@ export default function KitPage() {
   const [main, setMain] = useState(true)
   const [tableSort, setTableSort] = useState<TableSort | null>(null)
   const [ideaTableSort, setIdeaTableSort] = useState<TableSort | null>(null)
+  const [view, setView] = useState('cards')
 
   const captureModes = [
     { value: 'audio', label: 'Audio' },
@@ -210,6 +215,12 @@ export default function KitPage() {
         if (b.tempo == null) return -1
         return (a.tempo - b.tempo) * direction
       }
+      if (ideaTableSort.column === 'tracks') {
+        if (a.tracks == null && b.tracks == null) return 0
+        if (a.tracks == null) return 1
+        if (b.tracks == null) return -1
+        return (a.tracks - b.tracks) * direction
+      }
       if (ideaTableSort.column === 'updated') {
         return (a.updatedAt - b.updatedAt) * direction
       }
@@ -235,6 +246,34 @@ export default function KitPage() {
           <div className="space-y-2">
             <MonoLabel>Title + subtitle</MonoLabel>
             <RuleHeader title="K.01" subtitle="Archivo · Archivo Expanded · Space Mono" />
+          </div>
+        </div>
+      </KitSection>
+
+      <KitSection no="K.016" title="Page Header" kicker="rule · title · rule · optional CTA">
+        <p className="mb-6 max-w-2xl text-sm text-muted-foreground">
+          List-page masthead. Locked to <code className="font-mono">h-16</code> — the same height as
+          the sidebar brand bar. Title is Display L (<code className="font-mono">text-3xl</code>) with{' '}
+          <code className="font-mono">leading-none</code>, flanked by 2px vermillion rules. The left
+          stub replaces the old icon slot; the right rule runs to the button (or the edge). Pass a{' '}
+          <code className="font-mono">Button variant=&quot;secondary&quot; size=&quot;sm&quot;</code> in{' '}
+          <code className="font-mono">action</code> for create pages; omit it on docs/dev pages.
+        </p>
+        <div className="flex flex-col gap-6">
+          <div className="space-y-2">
+            <MonoLabel>With CTA</MonoLabel>
+            <PageHeader
+              title="Songs"
+              action={
+                <Button variant="secondary" size="sm">
+                  + New Song
+                </Button>
+              }
+            />
+          </div>
+          <div className="space-y-2">
+            <MonoLabel>Title only</MonoLabel>
+            <PageHeader title="Calibration" />
           </div>
         </div>
       </KitSection>
@@ -429,13 +468,23 @@ export default function KitPage() {
       </KitSection>
 
       {/* ── Selection controls ─────────────────────────────────────────── */}
-      <KitSection no="K.05" title="Selection" kicker="Segmented · Toggle · Chip · Length · Pick">
+      <KitSection no="K.05" title="Selection" kicker="Segmented · Tabs · Toggle · Chip · Length · Pick">
         <div className="grid gap-8">
           <Spec name="SegmentedControl" note="capture modes">
             <div className="flex flex-col gap-3">
               <SegmentedControl options={captureModes} value={mode} onChange={setMode} />
               <SegmentedControl block options={KEY_MODES} value={keyMode} onChange={setKeyMode} />
             </div>
+          </Spec>
+          <Spec name="TabSwitcher" note="view / section tabs · vermillion rule">
+            <TabSwitcher
+              options={[
+                { value: 'cards', label: 'Cards' },
+                { value: 'table', label: 'Table' },
+              ]}
+              value={view}
+              onChange={setView}
+            />
           </Spec>
           <Spec name="Toggle" note="metronome · count-in">
             <Row>
@@ -747,14 +796,16 @@ export default function KitPage() {
               </TableBody>
             </Table>
           </Spec>
-          <Spec name="IdeaRow" note="pool composition · labeled heads sort · plays/menu have no head">
+          <Spec name="IdeaRow" note="pool composition · labeled heads sort · plays first · menu has no head">
             <Table sort={ideaTableSort} onSort={setIdeaTableSort}>
               <TableHeader>
                 <TableRow>
+                  <TableHead />
                   <TableHead column="role">Role</TableHead>
                   <TableHead column="title">Title</TableHead>
                   <TableHead column="key">Key</TableHead>
                   <TableHead column="tempo">BPM</TableHead>
+                  <TableHead column="tracks">Tracks</TableHead>
                   <TableHead column="updated">Updated</TableHead>
                   <TableHead />
                 </TableRow>
@@ -767,6 +818,7 @@ export default function KitPage() {
                     title={row.title}
                     ideaKey={row.ideaKey}
                     tempo={row.tempo}
+                    tracks={row.tracks}
                     lastWorked={row.lastWorked}
                     plays={
                       row.role === 'Sample' ? undefined : (
@@ -789,6 +841,46 @@ export default function KitPage() {
                     ]}
                   />
                 ))}
+              </TableBody>
+            </Table>
+          </Spec>
+          <Spec name="SongRow" note="todo chip after title · last col sticks · solo delete is trash">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead />
+                  <TableHead column="title">Title</TableHead>
+                  <TableHead column="status">Status</TableHead>
+                  <TableHead column="key">Key</TableHead>
+                  <TableHead column="tempo">Tempo</TableHead>
+                  <TableHead column="time">Time</TableHead>
+                  <TableHead column="albums">Albums</TableHead>
+                  <TableHead column="updated">Updated</TableHead>
+                  <TableHead />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <SongRow
+                  title="Nightdrive"
+                  status="Production"
+                  todoCount={3}
+                  length="3:41"
+                  songKey="Dm"
+                  tempo={92}
+                  time="4/4"
+                  albums={2}
+                  lastWorked="2d ago"
+                  plays={<PlayButton aria-label="Play song" />}
+                  menuItems={[{ label: 'Delete', destructive: true, onSelect: () => undefined }]}
+                />
+                <SongRow
+                  title="Static Bloom"
+                  status="Sketch"
+                  songKey="A"
+                  tempo={128}
+                  time="4/4"
+                  menuItems={[{ label: 'Delete', destructive: true, onSelect: () => undefined }]}
+                />
               </TableBody>
             </Table>
           </Spec>

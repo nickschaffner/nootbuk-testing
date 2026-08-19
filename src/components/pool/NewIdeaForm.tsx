@@ -36,7 +36,6 @@ export function NewIdeaForm() {
         patchSettings: null,
         lyrics: lyrics.trim() || null,
         notes: notes.trim() || null,
-        status: 'raw',
       })
 
       setLyrics('')

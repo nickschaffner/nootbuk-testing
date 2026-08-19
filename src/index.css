@@ -38,6 +38,7 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-panel: var(--ln-panel);
+  --color-deeper: var(--deeper);
   --color-hairline: var(--hairline);
   --color-grid-line: var(--grid-line);
   --color-keys-white: var(--ln-keys-white);
@@ -86,6 +87,7 @@
 
   --panel: #e6dfd0;
   --ln-panel: #e6dfd0;
+  --deeper: #c2bcaa;
   --hairline: #b7ad96;
   --grid-line: rgba(23, 21, 15, 0.1);
   --keys-white: #f5f0e6;
@@ -141,6 +143,7 @@
 
   --panel: #24201a;
   --ln-panel: #24201a;
+  --deeper: #171512;
   --hairline: #453d2f;
   --grid-line: rgba(236, 229, 213, 0.1);
   --keys-white: #ded6c5;
@@ -176,6 +179,7 @@
   --border: #342e24;
   --panel: #24201a;
   --ln-panel: #24201a;
+  --deeper: #171512;
   --hairline: #453d2f;
   --noise-opacity: 0.85;
 }
@@ -196,6 +200,7 @@
   --border: #cbc2ae;
   --panel: #e6dfd0;
   --ln-panel: #e6dfd0;
+  --deeper: #c2bcaa;
   --hairline: #b7ad96;
   --noise-opacity: 0.9;
 }
@@ -213,6 +218,10 @@
 
 .bg-panel {
   background-color: var(--panel);
+}
+
+.bg-deeper {
+  background-color: var(--deeper);
 }
 
 .bg-keys-white {

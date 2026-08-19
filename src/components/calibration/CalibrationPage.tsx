@@ -6,6 +6,7 @@ import { ExportImportDatabaseTool } from '@/components/calibration/ExportImportD
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { SeedSampleDataTool } from '@/components/calibration/SeedSampleDataTool'
 import { WipeDataTool } from '@/components/calibration/WipeDataTool'
+import { PageHeader } from '@/components/kit'
 
 export function CalibrationPage() {
   const [statsRefreshToken, setStatsRefreshToken] = useState(0)
@@ -20,16 +21,7 @@ export function CalibrationPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">
-          Dev tools
-        </p>
-        <h1 className="text-2xl font-semibold tracking-tight">Calibration</h1>
-        <p className="text-sm text-muted-foreground">
-          Local-only utilities for wiping, inspecting, backing up, and seeding
-          the client database. Not a user-facing feature.
-        </p>
-      </div>
+      <PageHeader title="Calibration" />
 
       <DexieCloudDebugTool />
       <WipeDataTool onComplete={refreshStats} />
