@@ -838,6 +838,7 @@ export default function KitPage() {
                       { label: 'Turn into Song', onSelect: () => undefined },
                       { label: 'Move to Song', onSelect: () => undefined },
                       { label: 'Copy to Song', onSelect: () => undefined },
+                      { label: 'Delete', icon: <Trash2 size={15} />, destructive: true, onSelect: () => undefined },
                     ]}
                   />
                 ))}
