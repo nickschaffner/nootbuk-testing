@@ -79,7 +79,7 @@ export function AudioImport({
       await addMediaToIdea({
         ideaId,
         type: 'audio',
-        source: null,
+        source: 'audio-import',
         filename: file.name,
         mimeType,
         blob,

@@ -82,7 +82,7 @@ export function IdeaCard({
 
 // exported so catalogs / consumers can reference the quick-play glyph set
 export const QUICK_PLAY_SOURCES = [
-  { source: 'notepicker', icon: Music2, label: 'Play Note Picker' },
-  { source: 'recording', icon: AudioLines, label: 'Play MIDI Record' },
-  { source: 'audio', icon: Mic, label: 'Play Audio' },
+  { source: 'step-input', icon: Music2, label: 'Play Note Picker' },
+  { source: 'midi-recording', icon: AudioLines, label: 'Play MIDI Record' },
+  { source: 'audio-recording', icon: Mic, label: 'Play Audio' },
 ] as const

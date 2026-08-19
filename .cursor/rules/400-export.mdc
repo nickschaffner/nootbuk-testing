@@ -18,9 +18,9 @@ When exporting a song, create this structure:
 ```
 /SongTitle/
   /audio/
-    [sectionIntent]-[role]-[###].[ext]    (e.g., verse-bassline-001.wav)
+    [sectionIntent]-[role]-[source]-[###].[ext]    (e.g., verse-bassline-audio-recording-001.wav)
   /midi/
-    [sectionIntent]-[role]-[###].mid      (e.g., intro-chords-001.mid)
+    [sectionIntent]-[role]-[source]-[###].mid      (e.g., intro-chords-step-input-001.mid)
   /images/
     [original-filename].[ext]             (e.g., amp-settings-001.jpg)
   /notes/

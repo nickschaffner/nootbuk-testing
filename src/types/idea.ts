@@ -23,8 +23,14 @@ export type SectionIntent =
 
 export type IdeaMediaType = 'audio' | 'midi' | 'image' | 'file'
 
-/** MIDI slot on an idea — zero-or-one of each. Null for non-MIDI media. */
-export type IdeaMediaSource = 'notepicker' | 'recording' | 'extraction'
+/** Capture slot on an idea — zero-or-one of each. Null for image/file. */
+export type IdeaMediaSource =
+  | 'audio-recording'
+  | 'audio-import'
+  | 'midi-recording'
+  | 'step-input'
+  | 'midi-extraction'
+  | 'midi-import'
 
 export type NoteDuration =
   | 'whole'
@@ -73,7 +79,7 @@ export interface IdeaMedia {
   id: string
   ideaId: string
   type: IdeaMediaType
-  /** Set for midi only; null for audio/image/file. */
+  /** Set for audio and midi slots; null for image/file. */
   source: IdeaMediaSource | null
   filename: string
   mimeType: string

@@ -5,33 +5,13 @@ import { Button } from '@/components/ui/button'
 import { useIdeaPlaybackPatch } from '@/hooks/useIdeaPlaybackPatch'
 import { useMediaForIdea } from '@/hooks/useMedia'
 import { useSynth } from '@/hooks/useSynth'
-import type { Idea, IdeaMediaSource, NoteEvent } from '@/types/idea'
+import { inferIdeaMediaSource } from '@/lib/idea-media-source'
+import type { Idea, NoteEvent } from '@/types/idea'
 import type { PlaybackPatchId } from '@/lib/instrument-utils'
 
 interface IdeaMediaQuickPlayProps {
   ideaId: string
   idea?: Idea
-}
-
-function midiSourceOf(item: {
-  source?: IdeaMediaSource | null
-  filename?: string
-}): IdeaMediaSource {
-  if (
-    item.source === 'notepicker' ||
-    item.source === 'recording' ||
-    item.source === 'extraction'
-  ) {
-    return item.source
-  }
-  const name = (item.filename ?? '').toLowerCase()
-  if (name.startsWith('recording-') || name.includes('-recording-')) {
-    return 'recording'
-  }
-  if (name.startsWith('extraction-') || name.includes('-extraction-')) {
-    return 'extraction'
-  }
-  return 'notepicker'
 }
 
 export function IdeaMediaQuickPlay({ ideaId, idea }: IdeaMediaQuickPlayProps) {
@@ -44,23 +24,25 @@ export function IdeaMediaQuickPlay({ ideaId, idea }: IdeaMediaQuickPlayProps) {
         item.type === 'midi' && item.noteData && item.noteData.length > 0,
     ) ?? []
 
-  const notepicker = midiItems.find(
-    (item) => midiSourceOf(item) === 'notepicker',
+  const stepInput = midiItems.find(
+    (item) => inferIdeaMediaSource(item) === 'step-input',
   )
-  const recording = midiItems.find((item) => midiSourceOf(item) === 'recording')
+  const recording = midiItems.find(
+    (item) => inferIdeaMediaSource(item) === 'midi-recording',
+  )
   const extraction = midiItems.find(
-    (item) => midiSourceOf(item) === 'extraction',
+    (item) => inferIdeaMediaSource(item) === 'midi-extraction',
   )
 
-  if (!audioItem && !notepicker && !recording && !extraction) {
+  if (!audioItem && !stepInput && !recording && !extraction) {
     return null
   }
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
-      {notepicker?.noteData ? (
+      {stepInput?.noteData ? (
         <CompactMidiPlay
-          notes={notepicker.noteData}
+          notes={stepInput.noteData}
           patchId={playbackPatch}
           icon="notepicker"
           label="Play Note Picker"

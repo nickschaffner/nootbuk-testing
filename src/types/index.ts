@@ -9,6 +9,7 @@ export type {
 export type {
   Idea,
   IdeaMedia,
+  IdeaMediaSource,
   IdeaMediaType,
   IdeaRole,
   NoteDuration,

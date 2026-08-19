@@ -6,6 +6,7 @@ import { getIdeasForSong } from '@/hooks/useIdeas'
 import { getMediaForIdea } from '@/hooks/useMedia'
 import { getSongWithSections } from '@/hooks/useSongs'
 import { getFileExtension } from '@/lib/audio'
+import { inferIdeaMediaSource } from '@/lib/idea-media-source'
 import { noteEventsToMidiBlob } from '@/lib/midi'
 import type { Idea, IdeaMedia } from '@/types/idea'
 import type { SongJournalEntry } from '@/types/song'
@@ -229,8 +230,9 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
     for (const media of mediaItems) {
       if (media.type === 'audio') {
         audioCount += 1
+        const audioSource = inferIdeaMediaSource(media) ?? 'audio-recording'
         files.push({
-          path: `audio/${allocator.nextMediaFilename(prefix, getAudioExtension(media))}`,
+          path: `audio/${allocator.nextMediaFilename(`${prefix}-${audioSource}`, getAudioExtension(media))}`,
           content: media.blob,
           category: 'audio',
         })
@@ -249,12 +251,7 @@ export async function gatherSongExportData(songId: string): Promise<SongExportDa
               : null
 
         if (blob) {
-          const midiSource =
-            media.source === 'recording' ||
-            media.source === 'extraction' ||
-            media.source === 'notepicker'
-              ? media.source
-              : 'notepicker'
+          const midiSource = inferIdeaMediaSource(media) ?? 'step-input'
           files.push({
             path: `midi/${allocator.nextMediaFilename(`${prefix}-${midiSource}`, '.mid')}`,
             content: blob,

@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
 
 import { getMidiDuration, noteEventsToMidiBlob } from '@/lib/midi'
+import { inferIdeaMediaSource } from '@/lib/idea-media-source'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
 import type { Album, AlbumReference, AlbumSong } from '@/types/album'
 import type { Idea, IdeaMedia, SequenceNote } from '@/types/idea'
@@ -520,6 +521,12 @@ export class NootbukDatabase extends Dexie {
           delete idea.status
         })
       })
+
+    this.version(12).upgrade(async (tx) => {
+      await tx.table('ideaMedia').toCollection().modify((item) => {
+        item.source = inferIdeaMediaSource(item)
+      })
+    })
   }
 }
 

@@ -36,7 +36,7 @@ export function MidiImport({
       await addMediaToIdea({
         ideaId,
         type: 'midi',
-        source: 'notepicker',
+        source: 'midi-import',
         filename: file.name,
         mimeType: 'audio/midi',
         blob: file,

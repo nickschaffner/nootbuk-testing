@@ -1,4 +1,5 @@
 import type { IdeaMedia, NoteEvent } from '@/types/idea'
+import { inferIdeaMediaSource } from '@/lib/idea-media-source'
 
 export type QuickCaptureBlockType =
   | 'audio'
@@ -142,21 +143,16 @@ function midiSourceToBlockType(
   source: IdeaMedia['source'],
   filename: string,
 ): 'notes' | 'midi' | 'extraction' {
-  if (source === 'recording') {
-    return 'midi'
-  }
-  if (source === 'extraction') {
-    return 'extraction'
-  }
-  if (source === 'notepicker') {
-    return 'notes'
-  }
+  const resolved = inferIdeaMediaSource({
+    type: 'midi',
+    source,
+    filename,
+  })
 
-  const name = filename.toLowerCase()
-  if (name.startsWith('recording-') || name.includes('-recording-')) {
+  if (resolved === 'midi-recording') {
     return 'midi'
   }
-  if (name.startsWith('extraction-') || name.includes('-extraction-')) {
+  if (resolved === 'midi-extraction') {
     return 'extraction'
   }
   return 'notes'
@@ -168,10 +164,11 @@ export function mediaItemsToBlocks(media: IdeaMedia[]): QuickCaptureBlock[] {
 
   for (const item of media) {
     if (item.type === 'audio') {
+      const audioSource = inferIdeaMediaSource(item)
       blocks.push({
         id: crypto.randomUUID(),
         type: 'audio',
-        source: 'import',
+        source: audioSource === 'audio-recording' ? 'record' : 'import',
         blob: item.blob,
         filename: item.filename,
         mediaId: item.id,

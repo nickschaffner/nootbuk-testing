@@ -31,7 +31,7 @@ export function AudioMediaPanel({ ideaId, media }: AudioMediaPanelProps) {
           await addMediaToIdea({
             ideaId,
             type: 'midi',
-            source: 'extraction',
+            source: 'midi-extraction',
             filename: `extraction-${timestamp}.mid`,
             mimeType: 'audio/midi',
             blob,

@@ -2,6 +2,7 @@ import { useLiveQuery } from 'dexie-react-hooks'
 
 import { getAudioMimeType, normalizeAudioBlob } from '@/lib/audio'
 import { db } from '@/lib/db'
+import { inferIdeaMediaSource, isIdeaMediaSource } from '@/lib/idea-media-source'
 import { getMidiDuration, midiBlobToNoteEvents, noteEventsToMidiBlob } from '@/lib/midi'
 import { sequenceNotesToNoteEvents } from '@/lib/sequence-playback'
 import { toStorageError } from '@/lib/storage'
@@ -39,42 +40,15 @@ async function nextMediaSortOrder(ideaId: string): Promise<number> {
   return Math.max(...media.map((item) => item.sortOrder)) + 1
 }
 
-function inferMidiSource(item: {
-  source?: IdeaMediaSource | null
-  filename?: string
-}): IdeaMediaSource {
-  if (item.source === 'notepicker' || item.source === 'recording' || item.source === 'extraction') {
-    return item.source
-  }
-
-  const name = (item.filename ?? '').toLowerCase()
-  if (name.startsWith('recording-') || name.includes('-recording-')) {
-    return 'recording'
-  }
-  if (name.startsWith('extraction-') || name.includes('-extraction-')) {
-    return 'extraction'
-  }
-  return 'notepicker'
-}
-
-/** Audio: zero-or-one per idea. MIDI: zero-or-one per (ideaId, source). */
+/** Zero-or-one of each IdeaMediaSource per idea. */
 async function removeExistingExclusiveMedia(
   ideaId: string,
-  type: 'audio' | 'midi',
-  source?: IdeaMediaSource | null,
+  source: IdeaMediaSource,
 ): Promise<void> {
   const existing = await db.ideaMedia
     .where('ideaId')
     .equals(ideaId)
-    .filter((item) => {
-      if (item.type !== type) {
-        return false
-      }
-      if (type === 'audio') {
-        return true
-      }
-      return inferMidiSource(item) === (source ?? 'notepicker')
-    })
+    .filter((item) => inferIdeaMediaSource(item) === source)
     .toArray()
 
   if (existing.length === 0) {
@@ -103,10 +77,10 @@ export async function getMediaForIdea(ideaId: string): Promise<IdeaMedia[]> {
 }
 
 async function rehydrateMedia(item: IdeaMedia): Promise<IdeaMedia> {
-  const withSource: IdeaMedia =
-    item.type === 'midi'
-      ? { ...item, source: inferMidiSource(item) }
-      : { ...item, source: item.source ?? null }
+  const withSource: IdeaMedia = {
+    ...item,
+    source: inferIdeaMediaSource(item),
+  }
 
   if (withSource.type === 'midi') {
     if (withSource.noteData && withSource.noteData.length > 0) {
@@ -176,14 +150,18 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
     const noteData =
       input.type === 'midi' ? sanitizeNoteData(input.noteData) : input.noteData ?? null
     const source =
-      input.type === 'midi'
-        ? (input.source ?? inferMidiSource({ filename: input.filename }))
-        : null
+      input.type === 'image' || input.type === 'file'
+        ? null
+        : isIdeaMediaSource(input.source)
+          ? input.source
+          : inferIdeaMediaSource({
+              type: input.type,
+              source: input.source,
+              filename: input.filename,
+            })
 
-    if (input.type === 'audio') {
-      await removeExistingExclusiveMedia(input.ideaId, 'audio')
-    } else if (input.type === 'midi') {
-      await removeExistingExclusiveMedia(input.ideaId, 'midi', source)
+    if (source) {
+      await removeExistingExclusiveMedia(input.ideaId, source)
     }
 
     const media = {
@@ -207,7 +185,7 @@ export async function addMediaToIdea(input: AddMediaInput): Promise<IdeaMedia> {
   }
 }
 
-/** Save a manual note sequence as the idea's Note Picker MIDI source. */
+/** Save a manual note sequence as the idea's step-input MIDI source. */
 export async function addMidiFromSequenceNotes(input: {
   ideaId: string
   notes: SequenceNote[]
@@ -226,7 +204,7 @@ export async function addMidiFromSequenceNotes(input: {
   return addMediaToIdea({
     ideaId: input.ideaId,
     type: 'midi',
-    source: 'notepicker',
+    source: 'step-input',
     filename,
     mimeType: 'audio/midi',
     blob,

@@ -13,7 +13,7 @@ All tables use UUIDs (crypto.randomUUID()) as primary keys. All timestamps are I
 
 ## Core Tables
 - ideas — the atomic creative unit. songId=null means it's in the Idea Pool. Has optional instrumentId FK to instruments table.
-- ideaMedia — audio, midi, image, file blobs attached to ideas. ZERO OR ONE audio and ZERO OR ONE midi per idea. Images and files unlimited. Note sequences from the note picker are stored as IdeaMedia type midi with noteData. There is NO separate IdeaNoteSequence table.
+- ideaMedia — audio, midi, image, file blobs attached to ideas. ZERO OR ONE of each IdeaMedia.source per idea: audio-recording, audio-import, midi-recording, step-input, midi-extraction, midi-import. Images and files unlimited (source null). Note sequences from step input are stored as IdeaMedia type midi with source step-input and notes in noteData. There is NO separate IdeaNoteSequence table.
 - songs — song workspace metadata. No albumId — songs connect to albums via albumSongs junction.
 - songSections — user-defined sections within a song (Verse 1, Chorus, etc.) No section-level lyrics.
 - songJournalEntries — production journal entries (plain text, NOT HTML), each with an optional topic.

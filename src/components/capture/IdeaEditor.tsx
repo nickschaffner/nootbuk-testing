@@ -770,7 +770,8 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'audio',
-          source: null,
+          source:
+            block.source === 'import' ? 'audio-import' : 'audio-recording',
           filename,
           mimeType: getAudioMimeType(filename, block.blob.type),
           blob: block.blob,
@@ -785,7 +786,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'midi',
-          source: 'recording',
+          source: 'midi-recording',
           filename: `recording-${timestamp}.mid`,
           mimeType: 'audio/midi',
           blob,
@@ -804,7 +805,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'midi',
-          source: 'notepicker',
+          source: 'step-input',
           filename: `notes-${timestamp}.mid`,
           mimeType: 'audio/midi',
           blob,
@@ -823,7 +824,7 @@ export function IdeaEditor() {
         await addMediaToIdea({
           ideaId: targetIdeaId,
           type: 'midi',
-          source: 'extraction',
+          source: 'midi-extraction',
           filename: `extraction-${timestamp}.mid`,
           mimeType: 'audio/midi',
           blob,
