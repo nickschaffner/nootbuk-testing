@@ -12,7 +12,7 @@ import {
   Wrench,
 } from 'lucide-react'
 
-import { IconButton } from '@/components/kit'
+import { IconButton, MonoLabel } from '@/components/kit'
 import { isDevMode } from '@/components/calibration/isDevMode'
 import { ThemeModeButton } from '@/components/shared/AppNav'
 import { cn } from '@/lib/utils'
@@ -73,7 +73,10 @@ export function MobileTabBar({
   }, [moreOpen])
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 md:hidden">
+    <div
+      className="fixed inset-x-0 bottom-0 z-40 md:hidden"
+      style={{ boxShadow: '#000000 0 -20px 40px' }}
+    >
       {moreOpen ? (
         <div
           className="fixed inset-0 z-40 bg-foreground/25"
@@ -130,8 +133,10 @@ export function MobileTabBar({
           <div className="flex items-end">
             {TABS.slice(0, 2).map(({ to, label, icon: Icon, match }) => (
               <NavLink key={to} to={to} className={tabClass(match(pathname))}>
-                <Icon className="size-5" />
-                <span className="label-mono leading-none">{label}</span>
+                <Icon className="size-4" />
+                <MonoLabel className={match(pathname) ? 'text-foreground' : undefined}>
+                  {label}
+                </MonoLabel>
               </NavLink>
             ))}
 
@@ -144,14 +149,16 @@ export function MobileTabBar({
                 className="-mt-4 mb-1"
                 onClick={() => open()}
               >
-                <Plus size={24} />
+                <Plus className="size-4" />
               </IconButton>
             </div>
 
             {TABS.slice(2).map(({ to, label, icon: Icon, match }) => (
               <NavLink key={to} to={to} className={tabClass(match(pathname))}>
-                <Icon className="size-5" />
-                <span className="label-mono leading-none">{label}</span>
+                <Icon className="size-4" />
+                <MonoLabel className={match(pathname) ? 'text-foreground' : undefined}>
+                  {label}
+                </MonoLabel>
               </NavLink>
             ))}
 
@@ -162,8 +169,8 @@ export function MobileTabBar({
               onClick={() => setMoreOpen((value) => !value)}
               className={cn('focusable', tabClass(moreActive))}
             >
-              <MoreHorizontal className="size-5" />
-              <span className="label-mono leading-none">More</span>
+              <MoreHorizontal className="size-4" />
+              <MonoLabel className={moreActive ? 'text-foreground' : undefined}>More</MonoLabel>
             </button>
           </div>
         </nav>
