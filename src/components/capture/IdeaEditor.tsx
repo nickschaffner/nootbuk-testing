@@ -46,7 +46,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { createIdea, deleteIdea, updateIdea } from '@/hooks/useIdeas'
-import { addMediaToIdea, getMediaForIdea, removeMedia } from '@/hooks/useMedia'
+import { addMediaToIdea, getMediaForIdea } from '@/hooks/useMedia'
 import { useAllSongs } from '@/hooks/useSongs'
 import { useSynth } from '@/hooks/useSynth'
 import {
@@ -61,7 +61,7 @@ import { getMidiDuration, midiBlobToNoteEvents, noteEventsToMidiBlob } from '@/l
 import { GRID_BEAT } from '@/lib/timeline-notes'
 import { timeSignatureFromSong } from '@/lib/time-signature'
 import { useQuickCapture } from '@/stores/quickCapture'
-import type { Idea, IdeaMedia, IdeaMediaSource, IdeaRole, NoteEvent, SectionIntent } from '@/types/idea'
+import type { IdeaMedia, IdeaMediaSource, IdeaRole, NoteEvent, SectionIntent } from '@/types/idea'
 
 const ALWAYS_TAB: CaptureTab = 'record-audio'
 const ALWAYS_TABS: CaptureTab[] = [
@@ -235,7 +235,7 @@ export function IdeaEditor({
   const [extractSeed, setExtractSeed] = useState<NoteEvent[]>([])
   const [importSeed, setImportSeed] = useState<NoteEvent[]>([])
   const [recKey, setRecKey] = useState(0)
-  const [stepKey, setStepKey] = useState(0)
+  const stepKey = 0
   const [extractKey, setExtractKey] = useState(0)
   const [importKey, setImportKey] = useState(0)
 
@@ -273,7 +273,7 @@ export function IdeaEditor({
   const midiSupported =
     typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator
 
-  const present = useMemo(() => {
+  const present = useMemo((): CaptureSource[] => {
     const sources = presentSources(media)
     if (extractSeed.length > 0 && !sources.includes('midi-extraction')) {
       return [...sources, 'midi-extraction']

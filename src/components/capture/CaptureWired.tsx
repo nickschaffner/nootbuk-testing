@@ -18,7 +18,6 @@ import {
   Trash2,
   Undo2,
   Upload,
-  Wand2,
 } from 'lucide-react'
 import {
   useEffect,
