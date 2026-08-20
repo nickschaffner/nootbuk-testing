@@ -9,9 +9,14 @@ const BLACK_NOTES = [
   { name: 'A#', afterWhiteIndex: 5 },
 ] as const
 
+type KeyLit = 'primary' | 'secondary' | null
+
 interface PianoKeyboardProps {
   octaves: number[]
-  highlightedKeys?: ReadonlySet<string>
+  /** Pressed / root keys — full primary orange. */
+  primaryKeys?: ReadonlySet<string>
+  /** Auto chord tones — softer orange. */
+  secondaryKeys?: ReadonlySet<string>
   isEditing?: boolean
   editingLabel?: string | null
   disabled?: boolean
@@ -21,16 +26,32 @@ interface PianoKeyboardProps {
   className?: string
 }
 
+function keyLit(
+  keyId: string,
+  primaryKeys?: ReadonlySet<string>,
+  secondaryKeys?: ReadonlySet<string>,
+): KeyLit {
+  if (primaryKeys?.has(keyId)) {
+    return 'primary'
+  }
+  if (secondaryKeys?.has(keyId)) {
+    return 'secondary'
+  }
+  return null
+}
+
 function OctaveKeyboard({
   octave,
-  highlightedKeys,
+  primaryKeys,
+  secondaryKeys,
   disabled = false,
   onNoteEnter,
   onNoteLeave,
   onNoteClick,
 }: {
   octave: number
-  highlightedKeys?: ReadonlySet<string>
+  primaryKeys?: ReadonlySet<string>
+  secondaryKeys?: ReadonlySet<string>
   disabled?: boolean
   onNoteEnter?: (noteName: string, octave: number) => void
   onNoteLeave?: () => void
@@ -40,7 +61,7 @@ function OctaveKeyboard({
     <div className="relative flex h-36 min-w-0 flex-1 gap-0.5">
       {WHITE_NOTES.map((name) => {
         const keyId = `${name}${octave}`
-        const lit = highlightedKeys?.has(keyId)
+        const lit = keyLit(keyId, primaryKeys, secondaryKeys)
         return (
           <button
             key={keyId}
@@ -48,11 +69,18 @@ function OctaveKeyboard({
             disabled={disabled}
             className={cn(
               'relative flex flex-1 flex-col justify-end rounded-b-md border border-border bg-background pb-2 text-xs font-medium transition-colors',
-              lit && 'bg-primary/25',
+              lit === 'primary' && 'bg-primary text-primary-foreground',
+              lit === 'secondary' && 'bg-primary/30 text-foreground',
               disabled
                 ? 'cursor-not-allowed opacity-50'
-                : 'hover:bg-muted/80',
+                : !lit && 'hover:bg-muted/80',
             )}
+            onPointerDown={(event) => {
+              if (disabled || event.button !== 0) {
+                return
+              }
+              onNoteEnter?.(name, octave)
+            }}
             onMouseEnter={() => {
               if (!disabled) {
                 onNoteEnter?.(name, octave)
@@ -69,14 +97,14 @@ function OctaveKeyboard({
               }
             }}
           >
-            <span className="text-muted-foreground">{name}</span>
+            <span className={cn(!lit && 'text-muted-foreground')}>{name}</span>
           </button>
         )
       })}
 
       {BLACK_NOTES.map(({ name, afterWhiteIndex }) => {
         const keyId = `${name}${octave}`
-        const lit = highlightedKeys?.has(keyId)
+        const lit = keyLit(keyId, primaryKeys, secondaryKeys)
         const leftPercent =
           ((afterWhiteIndex + 1) / WHITE_NOTES.length) * 100 -
           100 / WHITE_NOTES.length / 2
@@ -87,12 +115,19 @@ function OctaveKeyboard({
             disabled={disabled}
             className={cn(
               'absolute top-0 z-10 flex h-[58%] w-[9%] -translate-x-1/2 flex-col justify-end rounded-b-md border border-border bg-foreground pb-1.5 text-[10px] font-medium text-background transition-colors',
-              lit && 'bg-primary text-primary-foreground',
+              lit === 'primary' && 'bg-primary text-primary-foreground',
+              lit === 'secondary' && 'bg-primary/45 text-primary-foreground',
               disabled
                 ? 'cursor-not-allowed opacity-50'
-                : 'hover:bg-foreground/90',
+                : !lit && 'hover:bg-foreground/90',
             )}
             style={{ left: `${leftPercent}%` }}
+            onPointerDown={(event) => {
+              if (disabled || event.button !== 0) {
+                return
+              }
+              onNoteEnter?.(name, octave)
+            }}
             onMouseEnter={() => {
               if (!disabled) {
                 onNoteEnter?.(name, octave)
@@ -119,7 +154,8 @@ function OctaveKeyboard({
 
 export function PianoKeyboard({
   octaves,
-  highlightedKeys,
+  primaryKeys,
+  secondaryKeys,
   isEditing = false,
   editingLabel,
   disabled = false,
@@ -146,7 +182,8 @@ export function PianoKeyboard({
           <OctaveKeyboard
             key={octave}
             octave={octave}
-            highlightedKeys={highlightedKeys}
+            primaryKeys={primaryKeys}
+            secondaryKeys={secondaryKeys}
             disabled={disabled}
             onNoteEnter={onNoteEnter}
             onNoteLeave={onNoteLeave}

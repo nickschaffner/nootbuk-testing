@@ -27,7 +27,7 @@ export function getUnsupportedFeatureMessages(): string[] {
   return messages
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+function isEditableFocusTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false
   }
@@ -41,5 +41,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 }
 
 export function shouldIgnoreGlobalShortcut(event: KeyboardEvent): boolean {
-  return isEditableTarget(event.target)
+  return isEditableFocusTarget(event.target)
 }
+
+export { isEditableFocusTarget }

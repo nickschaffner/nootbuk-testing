@@ -10,7 +10,7 @@ import { PianoKeyboard } from '@/components/capture/note-picker/PianoKeyboard'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useSynth } from '@/hooks/useSynth'
-import { shouldIgnoreGlobalShortcut } from '@/lib/browser-capabilities'
+import { isEditableFocusTarget, shouldIgnoreGlobalShortcut } from '@/lib/browser-capabilities'
 import {
   CHORD_PRESETS,
   formatChordBlockLabel,
@@ -47,6 +47,52 @@ import {
 } from '@/lib/timeline-notes'
 import { cn } from '@/lib/utils'
 import type { NoteEvent } from '@/types/idea'
+
+/** Standard DAW computer-keyboard → piano map (relative to current octave). */
+const COMPUTER_PIANO_KEYS: Record<
+  string,
+  { note: string; octaveOffset: number }
+> = {
+  KeyA: { note: 'C', octaveOffset: 0 },
+  KeyW: { note: 'C#', octaveOffset: 0 },
+  KeyS: { note: 'D', octaveOffset: 0 },
+  KeyE: { note: 'D#', octaveOffset: 0 },
+  KeyD: { note: 'E', octaveOffset: 0 },
+  KeyF: { note: 'F', octaveOffset: 0 },
+  KeyT: { note: 'F#', octaveOffset: 0 },
+  KeyG: { note: 'G', octaveOffset: 0 },
+  KeyY: { note: 'G#', octaveOffset: 0 },
+  KeyH: { note: 'A', octaveOffset: 0 },
+  KeyU: { note: 'A#', octaveOffset: 0 },
+  KeyJ: { note: 'B', octaveOffset: 0 },
+  KeyK: { note: 'C', octaveOffset: 1 },
+  KeyO: { note: 'C#', octaveOffset: 1 },
+  KeyL: { note: 'D', octaveOffset: 1 },
+  KeyP: { note: 'D#', octaveOffset: 1 },
+  Semicolon: { note: 'E', octaveOffset: 1 },
+}
+
+const COMPUTER_PIANO_VELOCITY = 100
+const OCTAVE_MIN = 0
+const OCTAVE_MAX = 7
+
+function canCaptureComputerPiano(panel: HTMLElement | null): boolean {
+  if (!panel) {
+    return false
+  }
+  const active = document.activeElement
+  if (isEditableFocusTarget(active)) {
+    return false
+  }
+  if (
+    !active ||
+    active === document.body ||
+    active === document.documentElement
+  ) {
+    return true
+  }
+  return panel.contains(active)
+}
 
 type InputMode = 'preview' | 'commit'
 
@@ -134,7 +180,16 @@ export function NotePicker({
   const [loopEnabled, setLoopEnabled] = useState(true)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
-  const [hoverHighlights, setHoverHighlights] = useState<Set<string>>(
+  const [hoverPrimaryKeys, setHoverPrimaryKeys] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [hoverSecondaryKeys, setHoverSecondaryKeys] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [heldPrimaryKeys, setHeldPrimaryKeys] = useState<Set<string>>(
+    () => new Set(),
+  )
+  const [heldSecondaryKeys, setHeldSecondaryKeys] = useState<Set<string>>(
     () => new Set(),
   )
   const [isPlaying, setIsPlaying] = useState(false)
@@ -172,6 +227,17 @@ export function NotePicker({
   const timelineOriginBeatRef = useRef(0)
   const ensureIdleTransportRef = useRef<() => void>(() => {})
   const restartPlaybackLoopRef = useRef<() => void>(() => {})
+  const heldComputerKeysRef = useRef<
+    Map<
+      string,
+      { pitches: number[]; rootKeyId: string; companionKeyIds: string[] }
+    >
+  >(new Map())
+  const octaveRef = useRef(octave)
+  octaveRef.current = octave
+  const placeFromPianoRef = useRef<
+    (noteName: string, keyOctave: number, playClick: boolean) => number[]
+  >(() => [])
 
   const displayedOctaves = useMemo(() => {
     if (!isMd) {
@@ -193,15 +259,38 @@ export function NotePicker({
   const selectedBlock =
     blocks.find((block) => block.id === selectedBlockId) ?? null
 
-  const pianoHighlights = useMemo(() => {
-    const keys = new Set(hoverHighlights)
+  const pianoPrimaryKeys = useMemo(() => {
+    const keys = new Set(hoverPrimaryKeys)
+    for (const keyId of heldPrimaryKeys) {
+      keys.add(keyId)
+    }
+    if (isEditing && selectedBlock && selectedBlock.pitches.length > 0) {
+      keys.add(midiToNoteName(selectedBlock.pitches[0]))
+    }
+    return keys
+  }, [hoverPrimaryKeys, heldPrimaryKeys, isEditing, selectedBlock])
+
+  const pianoSecondaryKeys = useMemo(() => {
+    const keys = new Set(hoverSecondaryKeys)
+    for (const keyId of heldSecondaryKeys) {
+      keys.add(keyId)
+    }
     if (isEditing && selectedBlock) {
-      for (const pitch of selectedBlock.pitches) {
+      for (const pitch of selectedBlock.pitches.slice(1)) {
         keys.add(midiToNoteName(pitch))
       }
     }
+    for (const keyId of pianoPrimaryKeys) {
+      keys.delete(keyId)
+    }
     return keys
-  }, [hoverHighlights, isEditing, selectedBlock])
+  }, [
+    hoverSecondaryKeys,
+    heldSecondaryKeys,
+    isEditing,
+    selectedBlock,
+    pianoPrimaryKeys,
+  ])
 
   useEffect(() => {
     onDraftChangeRef.current = onDraftChange
@@ -760,14 +849,20 @@ export function NotePicker({
     setSelectedBlockId(id)
   }
 
-  function applySoundToSelected(rootPitch: number, asChord: boolean) {
+  function applySoundToSelected(
+    rootPitch: number,
+    asChord: boolean,
+    play = true,
+  ) {
     if (!selectedBlockId || !isEditing) {
       return
     }
 
     if (asChord) {
       const pitches = getChordPitches(rootPitch, chordType)
-      void synth.playChord(pitches, 100, 0.35)
+      if (play) {
+        void synth.playChord(pitches, 100, 0.35)
+      }
       pushHistory()
       setBlocks((current) =>
         updateBlockSound(current, selectedBlockId, {
@@ -779,7 +874,9 @@ export function NotePicker({
       return
     }
 
-    void synth.playNote(rootPitch, 100, 0.25)
+    if (play) {
+      void synth.playNote(rootPitch, 100, 0.25)
+    }
     pushHistory()
     setBlocks((current) =>
       updateBlockSound(current, selectedBlockId, {
@@ -790,19 +887,26 @@ export function NotePicker({
     )
   }
 
-  function handlePianoNote(noteName: string, keyOctave: number) {
+  /** Place / ghost / edit from piano. Returns sounding pitches. */
+  function placeFromPiano(
+    noteName: string,
+    keyOctave: number,
+    playClick: boolean,
+  ): number[] {
     const pitch = noteNameToMidi(`${noteName}${keyOctave}`)
 
     if (isEditing && selectedBlockId) {
-      applySoundToSelected(pitch, chordMode)
-      return
+      applySoundToSelected(pitch, chordMode, playClick)
+      return chordMode ? getChordPitches(pitch, chordType) : [pitch]
     }
 
     const startBeat = Math.max(0, quantizeBeat(cursorBeat, gridBeat))
 
     if (chordMode) {
       const pitches = getChordPitches(pitch, chordType)
-      void synth.playChord(pitches, 100, 0.35)
+      if (playClick) {
+        void synth.playChord(pitches, 100, 0.35)
+      }
       const block = createChordBlock(
         pitch,
         chordType,
@@ -815,26 +919,170 @@ export function NotePicker({
       } else {
         showGhost(block)
       }
-      return
+      return pitches
     }
 
-    void synth.playNote(pitch, 100, 0.25)
+    if (playClick) {
+      void synth.playNote(pitch, 100, 0.25)
+    }
     const block = createNoteBlock(pitch, startBeat, blockWidth)
     if (inputMode === 'commit') {
       placeBlock(block)
     } else {
       showGhost(block)
     }
+    return [pitch]
   }
 
-  function handleChordHover(noteName: string, keyOctave: number) {
-    if (!chordMode) {
-      setHoverHighlights(new Set())
+  placeFromPianoRef.current = placeFromPiano
+
+  function handlePianoNote(noteName: string, keyOctave: number) {
+    placeFromPiano(noteName, keyOctave, true)
+  }
+
+  function releaseComputerKey(code: string) {
+    const held = heldComputerKeysRef.current.get(code)
+    if (!held) {
       return
     }
-    const rootPitch = noteNameToMidi(`${noteName}${keyOctave}`)
+    heldComputerKeysRef.current.delete(code)
+    for (const pitch of held.pitches) {
+      void synth.stopNote(pitch)
+    }
+    setHeldPrimaryKeys((current) => {
+      const next = new Set(current)
+      next.delete(held.rootKeyId)
+      return next
+    })
+    setHeldSecondaryKeys((current) => {
+      const next = new Set(current)
+      for (const keyId of held.companionKeyIds) {
+        next.delete(keyId)
+      }
+      return next
+    })
+  }
+
+  function releaseAllComputerKeys() {
+    for (const code of [...heldComputerKeysRef.current.keys()]) {
+      releaseComputerKey(code)
+    }
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!canCaptureComputerPiano(pickerRootRef.current)) {
+        return
+      }
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return
+      }
+
+      if (event.code === 'KeyZ') {
+        event.preventDefault()
+        if (event.repeat) {
+          return
+        }
+        setOctave((current) => Math.max(OCTAVE_MIN, current - 1))
+        return
+      }
+
+      if (event.code === 'KeyX') {
+        event.preventDefault()
+        if (event.repeat) {
+          return
+        }
+        setOctave((current) => Math.min(OCTAVE_MAX, current + 1))
+        return
+      }
+
+      const mapping = COMPUTER_PIANO_KEYS[event.code]
+      if (!mapping) {
+        return
+      }
+
+      event.preventDefault()
+      if (event.repeat || heldComputerKeysRef.current.has(event.code)) {
+        return
+      }
+      if (!synth.patchReady) {
+        return
+      }
+
+      const keyOctave = octaveRef.current + mapping.octaveOffset
+      let pitches: number[]
+      try {
+        pitches = placeFromPianoRef.current(mapping.note, keyOctave, false)
+      } catch (caught) {
+        console.warn('Computer piano note out of range:', caught)
+        return
+      }
+
+      const keyIds = pitches.map((pitch) => midiToNoteName(pitch))
+      const rootKeyId = keyIds[0] ?? `${mapping.note}${keyOctave}`
+      const companionKeyIds = keyIds.slice(1)
+      heldComputerKeysRef.current.set(event.code, {
+        pitches,
+        rootKeyId,
+        companionKeyIds,
+      })
+      setHeldPrimaryKeys((current) => {
+        const next = new Set(current)
+        next.add(rootKeyId)
+        return next
+      })
+      setHeldSecondaryKeys((current) => {
+        const next = new Set(current)
+        for (const keyId of companionKeyIds) {
+          next.add(keyId)
+        }
+        return next
+      })
+
+      for (const pitch of pitches) {
+        void synth.playNote(pitch, COMPUTER_PIANO_VELOCITY)
+      }
+    }
+
+    function onKeyUp(event: KeyboardEvent) {
+      if (
+        event.code === 'KeyZ' ||
+        event.code === 'KeyX' ||
+        !COMPUTER_PIANO_KEYS[event.code]
+      ) {
+        return
+      }
+      releaseComputerKey(event.code)
+    }
+
+    function onWindowBlur() {
+      releaseAllComputerKeys()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onWindowBlur)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onWindowBlur)
+      releaseAllComputerKeys()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- synth methods + panel lifetime
+  }, [synth])
+
+  function handleChordHover(noteName: string, keyOctave: number) {
+    const rootKeyId = `${noteName}${keyOctave}`
+    if (!chordMode) {
+      setHoverPrimaryKeys(new Set([rootKeyId]))
+      setHoverSecondaryKeys(new Set())
+      return
+    }
+    const rootPitch = noteNameToMidi(rootKeyId)
     const pitches = getChordPitches(rootPitch, chordType)
-    setHoverHighlights(new Set(pitches.map((pitch) => midiToNoteName(pitch))))
+    const keyIds = pitches.map((pitch) => midiToNoteName(pitch))
+    setHoverPrimaryKeys(new Set([keyIds[0] ?? rootKeyId]))
+    setHoverSecondaryKeys(new Set(keyIds.slice(1)))
   }
 
   function handleChordTypeChange(nextType: ChordType) {
@@ -904,26 +1152,31 @@ export function NotePicker({
   return (
     <div
       ref={pickerRootRef}
+      tabIndex={0}
       className={cn(
-        'space-y-4',
+        'space-y-4 outline-none',
         !embedded && 'rounded-lg border p-4',
         className,
       )}
     >
       <PianoKeyboard
         octaves={displayedOctaves}
-        highlightedKeys={pianoHighlights}
+        primaryKeys={pianoPrimaryKeys}
+        secondaryKeys={pianoSecondaryKeys}
         isEditing={isEditing}
         editingLabel={isEditing ? selectedBlock?.label : null}
         disabled={!synth.patchReady}
         onNoteEnter={handleChordHover}
-        onNoteLeave={() => setHoverHighlights(new Set())}
+        onNoteLeave={() => {
+          setHoverPrimaryKeys(new Set())
+          setHoverSecondaryKeys(new Set())
+        }}
         onNoteClick={handlePianoNote}
       />
 
       <div className="flex flex-wrap items-center gap-2">
         <Label className="text-xs text-muted-foreground">OCT</Label>
-        {Array.from({ length: 8 }, (_, octaveValue) => (
+        {Array.from({ length: OCTAVE_MAX - OCTAVE_MIN + 1 }, (_, octaveValue) => (
           <Button
             key={octaveValue}
             type="button"
