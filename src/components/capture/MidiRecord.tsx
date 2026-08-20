@@ -118,7 +118,7 @@ export function MidiRecord({
   const [isRecording, setIsRecording] = useState(false)
   const [countInEnabled, setCountInEnabled] = useState(false)
   const [isCountingIn, setIsCountingIn] = useState(false)
-  const [loopEnabled, setLoopEnabled] = useState(false)
+  const [loopEnabled, setLoopEnabled] = useState(true)
   const [loopStartBeat, setLoopStartBeat] = useState(0)
   const [loopEndBeat, setLoopEndBeat] = useState(
     () => Math.max(1, beatsPerBar) * DEFAULT_LOOP_BARS,
@@ -1313,7 +1313,7 @@ export function MidiRecord({
           className={
             isRecording || isCountingIn
               ? undefined
-              : 'bg-red-600 text-white hover:bg-red-700'
+              : 'bg-recorder-red text-primary-foreground hover:brightness-110'
           }
           variant={isRecording || isCountingIn ? 'destructive' : 'default'}
           disabled={

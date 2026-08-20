@@ -695,7 +695,7 @@ export function FoldedPianoRoll({
                   }
                   return (
                     <div
-                      className="pointer-events-none absolute top-0 z-[2] h-full bg-red-600/25"
+                      className="pointer-events-none absolute top-0 z-[2] h-full bg-recorder-red/25"
                       style={{
                         left: overlayStart * beatWidthPx,
                         width: (overlayEnd - overlayStart) * beatWidthPx,
@@ -716,7 +716,7 @@ export function FoldedPianoRoll({
                         key={note.id}
                         className={cn(
                           'pointer-events-none absolute z-[5] rounded-[1px]',
-                          isRecordedTake ? 'bg-red-600' : 'bg-primary/80',
+                          isRecordedTake ? 'bg-recorder-red' : 'bg-primary/80',
                         )}
                         style={{
                           top:

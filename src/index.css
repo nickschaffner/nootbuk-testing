@@ -39,10 +39,12 @@
   --color-background: var(--background);
   --color-panel: var(--ln-panel);
   --color-deeper: var(--deeper);
+  --color-deepest: var(--deepest);
   --color-hairline: var(--hairline);
   --color-grid-line: var(--grid-line);
   --color-keys-white: var(--ln-keys-white);
   --color-keys-black: var(--ln-keys-black);
+  --color-recorder-red: var(--recorder-red);
   --color-meter: var(--meter);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -94,6 +96,8 @@
   --keys-black: #17150f;
   --ln-keys-white: #f5f0e6;
   --ln-keys-black: #17150f;
+  --deepest: #17150f;
+  --recorder-red: #cd1a1a;
   --meter: #17150f;
   --radius-xs: 1px;
   --noise-opacity: 0.9;
@@ -150,6 +154,8 @@
   --keys-black: #0c0a07;
   --ln-keys-white: #ded6c5;
   --ln-keys-black: #0c0a07;
+  --deepest: #0c0a07;
+  --recorder-red: #cd1a1a;
   --meter: #ece5d5;
   --radius-xs: 1px;
   --noise-opacity: 0.85;
@@ -232,8 +238,24 @@
   background-color: var(--keys-black);
 }
 
+.bg-recorder-red {
+  background-color: var(--recorder-red);
+}
+
+.dark .studio-bar-transport {
+  background-color: var(--deepest);
+}
+
+.bg-deepest {
+  background-color: var(--deepest);
+}
+
 .border-keys-black {
   border-color: var(--keys-black);
+}
+
+.border-recorder-red {
+  border-color: var(--recorder-red);
 }
 
 .text-keys-white {
@@ -242,6 +264,10 @@
 
 .text-keys-black {
   color: var(--keys-black);
+}
+
+.text-recorder-red {
+  color: var(--recorder-red);
 }
 
 .noise,

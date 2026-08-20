@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import {
   Album,
   AudioLines,
@@ -73,6 +73,8 @@ import {
   Window,
 } from './index'
 
+const LucideIconGallery = lazy(() => import('./LucideIconGallery'))
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Local layout helpers — the catalog scaffold (not part of the kit itself).
 // ═══════════════════════════════════════════════════════════════════════════
@@ -116,12 +118,14 @@ const COLORS: { token: string; light: string; dark: string; role: string }[] = [
   { token: '--card', light: '#f5f0e6', dark: '#1c1913', role: 'Panel fill' },
   { token: '--panel', light: '#e6dfd0', dark: '#24201a', role: 'Header / inset fill' },
   { token: '--primary', light: '#e5330c', dark: '#f4471f', role: 'Vermillion accent' },
+  { token: '--recorder-red', light: '#cd1a1a', dark: '#cd1a1a', role: 'Record controls & dots' },
   { token: '--muted', light: '#ded6c5', dark: '#2a251d', role: 'Muted fill' },
   { token: '--muted-foreground', light: '#6a6355', dark: '#9a917d', role: 'Muted text' },
   { token: '--border', light: '#cbc2ae', dark: '#342e24', role: 'Border' },
   { token: '--hairline', light: '#b7ad96', dark: '#453d2f', role: 'Hairline rule' },
   { token: '--keys-white', light: '#f5f0e6', dark: '#ded6c5', role: 'White keys' },
   { token: '--keys-black', light: '#17150f', dark: '#0c0a07', role: 'Black keys' },
+  { token: '--deepest', light: '#17150f', dark: '#0c0a07', role: 'Studio transport / deepest fill' },
 ]
 
 const TYPE_SCALE: { label: string; cls: string; sample: string; spec: string }[] = [
@@ -947,6 +951,12 @@ export default function KitPage() {
             </table>
           </div>
         </Panel>
+      </KitSection>
+
+      <KitSection no="K.12" title="Lucide Icons" kicker="lucide-react · full set · click to copy name">
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading icon library…</p>}>
+          <LucideIconGallery />
+        </Suspense>
       </KitSection>
     </div>
   )

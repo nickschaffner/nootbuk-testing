@@ -28,7 +28,7 @@ export interface StudioTransportHandlers {
 
 export const IDLE_STUDIO_TRANSPORT: StudioTransportState = {
   isPlaying: false,
-  loopEnabled: false,
+  loopEnabled: true,
   canUndo: false,
   canRedo: false,
   transportLocked: false,

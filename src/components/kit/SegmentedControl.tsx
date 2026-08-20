@@ -16,6 +16,8 @@ export interface SegmentedControlProps<T extends string = string> {
   className?: string
   /** Fill the parent width, dividing evenly. */
   block?: boolean
+  /** Drop the outer frame so a parent can own the border. Default look unchanged. */
+  embedded?: boolean
 }
 
 export function SegmentedControl<T extends string = string>({
@@ -25,13 +27,15 @@ export function SegmentedControl<T extends string = string>({
   size = 'md',
   className,
   block = false,
+  embedded = false,
 }: SegmentedControlProps<T>) {
   const pad = size === 'sm' ? 'h-7 px-2.5 text-[0.6875rem]' : 'h-8 px-3 text-xs'
   return (
     <div
       role="radiogroup"
       className={cn(
-        'inline-flex rounded-xs border border-hairline bg-card p-0.5',
+        'inline-flex bg-card',
+        embedded ? 'p-0' : 'rounded-xs border border-hairline p-0.5',
         block && 'flex w-full',
         className,
       )}
@@ -46,7 +50,8 @@ export function SegmentedControl<T extends string = string>({
             aria-checked={active}
             onClick={() => onChange?.(opt.value)}
             className={cn(
-              'focusable rounded-xs font-bold uppercase tracking-wider whitespace-nowrap transition-colors',
+              'focusable font-bold uppercase tracking-wider whitespace-nowrap transition-colors',
+              embedded ? 'rounded-none' : 'rounded-xs',
               pad,
               block && 'flex-1',
               active

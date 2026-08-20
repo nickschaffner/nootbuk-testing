@@ -1,10 +1,10 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
-import { Circle, Square } from 'lucide-react'
+import { Circle } from 'lucide-react'
 import { cn } from './cn'
 
 // ─────────────────────────────────────────────────────────────────────────
-// RecordButton — the unmistakable capture control. Idle shows a red dot;
-// recording shows a stop square and pulses. Round or square framing.
+// RecordButton — the unmistakable capture control. Outer ring stays put;
+// inner dot morphs to a same-size stop square while recording (pulses).
 // Purely presentational: pass `recording` and an `onClick`.
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -33,18 +33,21 @@ export const RecordButton = forwardRef<HTMLButtonElement, RecordButtonProps>(fun
       aria-pressed={recording}
       aria-label={recording ? 'Stop recording' : 'Start recording'}
       className={cn(
-        'focusable inline-flex items-center justify-center border-2 border-primary text-primary transition-colors',
+        'focusable inline-flex items-center justify-center border-2 border-recorder-red bg-transparent text-recorder-red transition-colors hover:bg-recorder-red/10',
         shape === 'round' ? 'rounded-full' : 'rounded-xs',
-        recording ? 'noise bg-primary text-primary-foreground rec-pulse' : 'bg-transparent hover:bg-primary/10',
         s.box,
         className,
       )}
       {...rest}
     >
       {recording ? (
-        <Square size={s.glyph} fill="currentColor" strokeWidth={0} />
+        <span
+          className="rec-pulse shrink-0 rounded-[1px] bg-recorder-red"
+          style={{ width: s.glyph, height: s.glyph }}
+          aria-hidden
+        />
       ) : (
-        <Circle size={s.glyph} fill="currentColor" strokeWidth={0} />
+        <Circle size={s.glyph} fill="currentColor" strokeWidth={0} aria-hidden />
       )}
     </button>
   )

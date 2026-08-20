@@ -11,24 +11,21 @@ import { getIdeaDisplayLabel } from '@/lib/idea-label'
 import type { Idea } from '@/types/idea'
 
 export function sortIdeas(ideas: Idea[], sort: TableSort | null): Idea[] {
-  if (!sort) {
-    return ideas
-  }
-
-  const direction = sort.direction === 'asc' ? 1 : -1
+  const direction = sort?.direction === 'asc' ? 1 : -1
+  const column = sort?.column ?? 'updated'
 
   return [...ideas].sort((a, b) => {
-    if (sort.column === 'role') {
+    if (column === 'role') {
       return a.role.localeCompare(b.role) * direction
     }
-    if (sort.column === 'title') {
+    if (column === 'title') {
       return (
         getIdeaDisplayLabel(a).localeCompare(getIdeaDisplayLabel(b), undefined, {
           sensitivity: 'base',
         }) * direction
       )
     }
-    if (sort.column === 'key') {
+    if (column === 'key') {
       const left = a.key?.trim() ?? ''
       const right = b.key?.trim() ?? ''
       if (!left && !right) return 0
@@ -36,13 +33,13 @@ export function sortIdeas(ideas: Idea[], sort: TableSort | null): Idea[] {
       if (!right) return -1
       return left.localeCompare(right, undefined, { sensitivity: 'base' }) * direction
     }
-    if (sort.column === 'tempo') {
+    if (column === 'tempo') {
       if (a.tempo == null && b.tempo == null) return 0
       if (a.tempo == null) return 1
       if (b.tempo == null) return -1
       return (a.tempo - b.tempo) * direction
     }
-    if (sort.column === 'tracks') {
+    if (column === 'tracks') {
       const left = a.songId ? 1 : null
       const right = b.songId ? 1 : null
       if (left == null && right == null) return 0
@@ -50,12 +47,10 @@ export function sortIdeas(ideas: Idea[], sort: TableSort | null): Idea[] {
       if (right == null) return -1
       return (left - right) * direction
     }
-    if (sort.column === 'updated') {
-      return (
-        (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()) * direction
-      )
-    }
-    return 0
+    // Default / "updated": newest first when direction is desc
+    return (
+      (new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime()) * direction
+    )
   })
 }
 

@@ -55,6 +55,12 @@ export type { NoiseProps, NoiseVariant } from './Noise'
 export { StudioBar } from './StudioBar'
 export type { StudioBarProps } from './StudioBar'
 
+export { CaptureStudioStack } from './CaptureStudioStack'
+export type { CaptureStudioStackProps } from './CaptureStudioStack'
+
+export { CaptureModeTabs } from './CaptureModeTabs'
+export type { CaptureModeTabsProps } from './CaptureModeTabs'
+
 export { OnScreenKeyboard } from './OnScreenKeyboard'
 export type { OnScreenKeyboardProps } from './OnScreenKeyboard'
 

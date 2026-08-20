@@ -78,7 +78,7 @@ export function AppShell() {
               <Outlet />
             </main>
             <MobileTabBar dark={dark} onDarkChange={handleDarkChange} />
-            <IdeaEditor />
+            <IdeaEditor sidebarCollapsed={collapsed} />
           </div>
         </div>
       </TooltipProvider>

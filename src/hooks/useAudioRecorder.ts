@@ -42,6 +42,7 @@ export function useAudioRecorder() {
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
       streamRef.current = stream
+      setIsRecording(true)
 
       const context = new AudioContext()
       contextRef.current = context

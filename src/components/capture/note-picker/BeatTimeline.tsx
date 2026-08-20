@@ -253,7 +253,7 @@ export function BeatTimeline({
                   }
                   return (
                     <div
-                      className="pointer-events-none absolute top-0 z-[2] h-full bg-red-600/25"
+                      className="pointer-events-none absolute top-0 z-[2] h-full bg-recorder-red/25"
                       style={{
                         left: `${((overlayStart - range.startBeat) / beatsInLine) * 100}%`,
                         width: `${((overlayEnd - overlayStart) / beatsInLine) * 100}%`,
@@ -281,7 +281,7 @@ export function BeatTimeline({
                           'absolute top-8 z-[5] flex h-10 items-center justify-center gap-1 overflow-hidden rounded-md border bg-background px-1.5 text-xs font-medium shadow-sm',
                           isSelected && 'border-primary ring-2 ring-primary/40',
                           isRecordedTake &&
-                            'border-red-600 bg-red-600 text-white',
+                            'border-recorder-red bg-recorder-red text-primary-foreground',
                         )}
                         style={{
                           left: `${((block.startBeat - range.startBeat) / beatsInLine) * 100}%`,

@@ -27,6 +27,8 @@ export interface StudioBarProps {
   onTimeSigChange?: (v: string) => void
   onGridChange?: (v: string) => void
   onPatchChange?: (v: string) => void
+  /** Drop the outer card chrome so a parent can own the border. Default look unchanged. */
+  embedded?: boolean
   className?: string
 }
 
@@ -55,12 +57,20 @@ export function StudioBar({
   onTimeSigChange,
   onGridChange,
   onPatchChange,
+  embedded = false,
   className,
 }: StudioBarProps) {
   return (
-    <div className={cn('overflow-hidden rounded-xs border border-hairline bg-card', className)}>
+    <div
+      className={cn(
+        embedded
+          ? 'bg-card'
+          : 'overflow-hidden rounded-xs border border-hairline bg-card',
+        className,
+      )}
+    >
       {/* transport strip */}
-      <div className="flex items-center justify-between gap-2 border-b border-hairline bg-panel px-3 py-2">
+      <div className="studio-bar-transport noise flex items-center justify-between gap-2 border-b border-hairline bg-panel px-3 py-2">
         <div className="flex items-center gap-1.5">
           <IconButton
             aria-label={playing ? 'Pause' : 'Play'}

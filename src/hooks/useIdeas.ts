@@ -70,9 +70,13 @@ export function useIdeasForSection(sectionId: string | undefined) {
 
 export async function getIdeasInPool(): Promise<Idea[]> {
   try {
-    return await db.ideas
+    const ideas = await db.ideas
       .filter((idea) => idea.songId === null)
-      .sortBy('sortOrder')
+      .toArray()
+    return ideas.sort(
+      (a, b) =>
+        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
+    )
   } catch (error) {
     console.warn('getIdeasInPool failed:', error)
     throw error
@@ -139,9 +143,17 @@ export async function updateIdea(input: UpdateIdeaInput): Promise<Idea> {
       throw new Error(`Idea not found: ${input.id}`)
     }
 
+    const { id: _id, updatedAt: _touch, ...patch } = input
+    const changed = (Object.keys(patch) as (keyof typeof patch)[]).some(
+      (key) => !Object.is(existing[key], patch[key]),
+    )
+    if (!changed) {
+      return existing
+    }
+
     const updated: Idea = {
       ...existing,
-      ...input,
+      ...patch,
       updatedAt: new Date().toISOString(),
     }
 

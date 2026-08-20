@@ -15,7 +15,10 @@ export function IdeasPage() {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<IdeaRole[]>([])
-  const [sort, setSort] = useState<TableSort | null>(null)
+  const [sort, setSort] = useState<TableSort | null>({
+    column: 'updated',
+    direction: 'desc',
+  })
 
   const filteredIdeas = useMemo(() => {
     if (!ideas) {

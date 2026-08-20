@@ -36,7 +36,10 @@ export function HomePage() {
 
   const [roleFilter, setRoleFilter] = useState<IdeaRole[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [poolSort, setPoolSort] = useState<TableSort | null>(null)
+  const [poolSort, setPoolSort] = useState<TableSort | null>({
+    column: 'updated',
+    direction: 'desc',
+  })
   const [poolExpanded, setPoolExpanded] = useState(false)
   const [creatingSong, setCreatingSong] = useState(false)
   const [creatingAlbum, setCreatingAlbum] = useState(false)

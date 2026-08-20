@@ -112,7 +112,7 @@ export function AudioRecorder({
           <Button
             type="button"
             size="lg"
-            className="bg-red-600 text-white hover:bg-red-700"
+            className="bg-recorder-red text-primary-foreground hover:brightness-110"
             onClick={() => void startRecording()}
           >
             <Mic className="size-5" />

@@ -11,6 +11,16 @@ interface WaveformCanvasProps {
   onSeek?: (progress: number) => void
 }
 
+function themeColor(token: string, fallback: string): string {
+  if (typeof document === 'undefined') {
+    return fallback
+  }
+  const value = getComputedStyle(document.documentElement)
+    .getPropertyValue(token)
+    .trim()
+  return value || fallback
+}
+
 export function WaveformCanvas({
   peaks = [],
   analyser = null,
@@ -42,20 +52,30 @@ export function WaveformCanvas({
       const height = canvas.height
       context.clearRect(0, 0, width, height)
 
+      const primary = themeColor('--primary', '#e5330c')
+      const muted = themeColor('--muted-foreground', '#6a6355')
       const barWidth = width / Math.max(peaks.length, 1)
       const playedWidth = width * progress
 
       peaks.forEach((peak, index) => {
-        const barHeight = Math.max(2, peak * height * 0.9)
+        const barHeight = Math.max(1, peak * height * 0.9)
         const x = index * barWidth
         const y = (height - barHeight) / 2
         const isPlayed = x < playedWidth
 
-        context.fillStyle = isPlayed
-          ? 'oklch(0.7 0.15 250)'
-          : 'oklch(0.45 0 0)'
-        context.fillRect(x, y, Math.max(1, barWidth - 1), barHeight)
+        context.fillStyle = isPlayed ? primary : muted
+        context.fillRect(x, y, Math.max(1, barWidth - 0.5), barHeight)
       })
+
+      if (!isLive && peaks.length > 0) {
+        const playheadX = Math.min(width, Math.max(0, playedWidth))
+        context.strokeStyle = primary
+        context.lineWidth = 2
+        context.beginPath()
+        context.moveTo(playheadX, 0)
+        context.lineTo(playheadX, height)
+        context.stroke()
+      }
     }
 
     const drawLive = () => {
@@ -68,8 +88,8 @@ export function WaveformCanvas({
       const width = canvas.width
       const height = canvas.height
       context.clearRect(0, 0, width, height)
-      context.lineWidth = 2
-      context.strokeStyle = 'oklch(0.7 0.15 250)'
+      context.lineWidth = 1
+      context.strokeStyle = themeColor('--primary', '#e5330c')
       context.beginPath()
 
       const sliceWidth = width / timeDomainData.length
@@ -121,6 +141,7 @@ export function WaveformCanvas({
     return () => {
       cancelAnimationFrame(animationFrame)
       observer.disconnect()
+      context.clearRect(0, 0, canvas.width, canvas.height)
     }
   }, [analyser, isLive, peaks, progress])
 

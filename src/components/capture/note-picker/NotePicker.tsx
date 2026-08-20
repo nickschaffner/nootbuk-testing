@@ -131,7 +131,7 @@ export function NotePicker({
   const [ghost, setGhost] = useState<TimelineBlock | null>(null)
   const [internalGridBeat] = useState(GRID_BEAT)
   const gridBeat = gridBeatProp ?? internalGridBeat
-  const [loopEnabled, setLoopEnabled] = useState(false)
+  const [loopEnabled, setLoopEnabled] = useState(true)
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [hoverHighlights, setHoverHighlights] = useState<Set<string>>(
